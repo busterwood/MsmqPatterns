@@ -9,7 +9,8 @@ namespace MsmqPatterns
 {
     static class MessageQueueExtensions
     {
-        public const int MQ_SINGLE_MESSAGE = 3;
+        const int MQ_SINGLE_MESSAGE = 3;
+        const int MQ_MOVE_MESSAGE = 4; // System.Messaging does not support moving, we have to open the queue ourselves
 
         [DllImport("mqrt.dll", CharSet = CharSet.Unicode)]
         public static extern int MQMoveMessage(IntPtr sourceQueue, SafeHandle targetQueue, long lookupId, IntPtr pTransaction);
@@ -18,14 +19,13 @@ namespace MsmqPatterns
         public static void MoveMessage(this MessageQueue queue, string subqueueName, long lookupId, bool? transactional = null)
         {
             var txn = transactional ?? queue.Transactional ? (IntPtr)MQ_SINGLE_MESSAGE : IntPtr.Zero;
-            using (var handle = Msmq.OpenQueue(queue.FormatName + ";" + subqueueName, 4, 0))
+            using (var handle = Msmq.OpenQueue(queue.FormatName + ";" + subqueueName, MQ_MOVE_MESSAGE, 0))
             {
                 int result = MQMoveMessage(queue.ReadHandle, handle, lookupId, txn);
                 if (result != 0)
                     throw new Win32Exception(result);
             }
         }
-
 
         /// <summary>Async receive by <paramref name = "correlationId"/> for non-transactional queues</summary>
         public static async Task<Message> ReceiveByCorrelationIdAsync(this MessageQueue queue, string correlationId)
@@ -45,44 +45,9 @@ namespace MsmqPatterns
                             return queue.Receive(TimeSpan.MaxValue, cursor);
                         }
                     }
-
                     action = PeekAction.Next;
                 }
             }
-        }
-    }
-
-    static class Msmq
-    {
-        [DllImport("mqrt.dll", CharSet = CharSet.Unicode)]
-        static extern int MQOpenQueue(string formatName, int access, int shareMode, out MsmqSafeHandle hQueue);
-
-        public static SafeHandle OpenQueue(string formatName, int access, int shareMode)
-        {
-            MsmqSafeHandle handle;
-            int result = MQOpenQueue(formatName, access, shareMode, out handle);
-            if (result != 0)
-                throw new Win32Exception(result);
-            return handle;
-        }
-    }
-
-    class MsmqSafeHandle : SafeHandleZeroOrMinusOneIsInvalid
-    {
-        [DllImport("mqrt.dll", CharSet = CharSet.Unicode)]
-        public static extern int MQCloseQueue(IntPtr hQueue);
-
-        public MsmqSafeHandle() : base(true)
-        {
-        }
-
-        public override bool IsInvalid => base.IsInvalid || IsClosed;
-
-        protected override bool ReleaseHandle()
-        {
-            if (MQCloseQueue(handle) != 0)
-                return false;
-            return true;
         }
     }
 }

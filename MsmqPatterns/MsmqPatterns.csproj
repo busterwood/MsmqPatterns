@@ -39,6 +39,8 @@
   <ItemGroup>
     <Compile Include="AcknowledgmentException.cs" />
     <Compile Include="Ascii85.cs" />
+    <Compile Include="Msmq.cs" />
+    <Compile Include="MsmqSafeHandle.cs" />
     <Compile Include="SubQueueFilterRouter.cs" />
     <Compile Include="IProcessor.cs" />
     <Compile Include="MessageQueueExtensions.cs" />
