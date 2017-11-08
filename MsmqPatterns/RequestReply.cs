@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Messaging;
 using System.Threading.Tasks;
@@ -11,15 +12,19 @@ namespace MsmqPatterns
         readonly MessageQueue _responseQueue;
         readonly MessageQueue _adminQueue; // for timeout acknowledgements
 
-        public RequestReply(MessageQueue requestQueue, MessageQueue responseQueue, MessageQueue adminQueue)
+        public RequestReply(string requestQueue, string replyQueue, string adminQueue) 
+            : this(new MessageQueue(requestQueue, QueueAccessMode.Send), new MessageQueue(replyQueue, QueueAccessMode.Receive), new MessageQueue(adminQueue, QueueAccessMode.Receive))
+        { }
+
+        public RequestReply(MessageQueue requestQueue, MessageQueue replyQueue, MessageQueue adminQueue)
         {
             Contract.Requires(adminQueue != null);
-            Contract.Requires(responseQueue != null);
+            Contract.Requires(replyQueue != null);
             Contract.Requires(requestQueue != null);
             _requestQueue = requestQueue;
-            _responseQueue = responseQueue;
+            _responseQueue = replyQueue;
             _adminQueue = adminQueue;
-            _responseQueue.MessageReadPropertyFilter = new MessagePropertyFilter { Body = true, CorrelationId = true, Label = true, Extension = true };
+            _responseQueue.MessageReadPropertyFilter = new MessagePropertyFilter { Body = true, AppSpecific = true, CorrelationId = true, Label = true, Extension = true };
         }
 
         public Message SendRequest(Message request)
@@ -67,7 +72,6 @@ namespace MsmqPatterns
         {
             Contract.Requires(request != null);
 
-            request.CorrelationId = NewCorrelationId();
             request.Recoverable = false; // express mode
             request.ResponseQueue = _responseQueue;
 
@@ -76,6 +80,8 @@ namespace MsmqPatterns
             request.AcknowledgeType = AcknowledgeTypes.NegativeReceive | AcknowledgeTypes.FullReceive | AcknowledgeTypes.NotAcknowledgeReceive | AcknowledgeTypes.NotAcknowledgeReachQueue;
             request.AdministrationQueue = _adminQueue;
 
+            var sw = new Stopwatch();
+            sw.Start();
             _requestQueue.Send(request);
 
             // wait for acknowledgement of receive on the admin queue
@@ -91,15 +97,19 @@ namespace MsmqPatterns
                         throw new AcknowledgmentException(ack.Acknowledgment);
                 }
             }
-
+            
             try
             {
                 //TODO: how long do we wait for a response?
-                return await _responseQueue.ReceiveByCorrelationIdAsync(request.CorrelationId);
+                return await _responseQueue.ReceiveByCorrelationIdAsync(request.Id);
             }
             catch (MessageQueueException e) when (e.MessageQueueErrorCode == MessageQueueErrorCode.IOTimeout)
             {
                 throw new TimeoutException();
+            }
+            finally
+            {
+                Console.WriteLine($"Getting reply took {sw.ElapsedMilliseconds:N0}ms");
             }
         }
 

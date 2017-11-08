@@ -37,12 +37,12 @@ namespace MsmqPatterns
                 var action = PeekAction.Current;
                 for (;;)
                 {
-                    using (var peeked = await Task.Factory.FromAsync(queue.BeginPeek(TimeSpan.MaxValue, cursor, action, null, null), queue.EndPeek))
+                    using (var peeked = await Task.Factory.FromAsync(queue.BeginPeek(MessageQueue.InfiniteTimeout, cursor, action, null, null), queue.EndPeek))
                     {
                         if (peeked.CorrelationId == correlationId)
                         {
                             queue.MessageReadPropertyFilter = currentFilter;
-                            return queue.Receive(TimeSpan.MaxValue, cursor);
+                            return queue.Receive(MessageQueue.InfiniteTimeout, cursor);
                         }
                     }
                     action = PeekAction.Next;
