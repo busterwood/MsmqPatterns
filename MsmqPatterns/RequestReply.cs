@@ -31,8 +31,9 @@ namespace MsmqPatterns
         {
             Contract.Requires(request != null);
             Contract.Ensures(Contract.Result<Message>() != null);
+            var sw = new Stopwatch();
+            sw.Start();
 
-            request.CorrelationId = NewCorrelationId();
             request.Recoverable = false; // express mode
             request.ResponseQueue = _responseQueue;
 
@@ -60,17 +61,23 @@ namespace MsmqPatterns
             try
             {
                 //TODO: how long do we wait for a response?
-                return _responseQueue.ReceiveByCorrelationId(request.CorrelationId);
+                return _responseQueue.ReceiveByCorrelationId(request.Id);
             }
             catch (MessageQueueException e) when (e.MessageQueueErrorCode == MessageQueueErrorCode.IOTimeout)
             {
                 throw new TimeoutException();
+            }
+            finally
+            {
+                Console.WriteLine($"Getting reply took {sw.ElapsedMilliseconds:N0}ms");
             }
         }
 
         public async Task<Message> SendRequestAsync(Message request)
         {
             Contract.Requires(request != null);
+            var sw = new Stopwatch();
+            sw.Start();
 
             request.Recoverable = false; // express mode
             request.ResponseQueue = _responseQueue;
@@ -80,8 +87,6 @@ namespace MsmqPatterns
             request.AcknowledgeType = AcknowledgeTypes.NegativeReceive | AcknowledgeTypes.FullReceive | AcknowledgeTypes.NotAcknowledgeReceive | AcknowledgeTypes.NotAcknowledgeReachQueue;
             request.AdministrationQueue = _adminQueue;
 
-            var sw = new Stopwatch();
-            sw.Start();
             _requestQueue.Send(request);
 
             // wait for acknowledgement of receive on the admin queue
@@ -112,10 +117,6 @@ namespace MsmqPatterns
                 Console.WriteLine($"Getting reply took {sw.ElapsedMilliseconds:N0}ms");
             }
         }
-
-        /// <summary>encode a GUID with Ascii85 so it fits in 20 bytes</summary>
-        static string NewCorrelationId() => new Ascii85().Encode(Guid.NewGuid().ToByteArray());
     }
-
     
 }

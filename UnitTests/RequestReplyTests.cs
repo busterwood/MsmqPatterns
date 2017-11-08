@@ -50,7 +50,46 @@ namespace UnitTests
         }
 
         [Test, Timeout(1000)]
-        public async Task can_get_reply()
+        public void can_get_reply()
+        {
+            var key = Environment.TickCount;
+            var rr = new RequestReply(requestQueueName, replyQueueName, adminQueueName);
+
+            using (var request = new Message { Label = "my.sq", AppSpecific = key, Recoverable = false })
+            {
+                var serverTask = Task.Run(() => Server(1));
+                using (var reply = rr.SendRequest(request))
+                {
+                    Assert.AreEqual(request.Label, reply.Label);
+                    Assert.AreEqual(request.AppSpecific, reply.AppSpecific);
+                }
+            }
+        }
+
+
+        [Test, Timeout(1000)]
+        public void can_get_multiple_replies()
+        {
+            var key = Environment.TickCount;
+            var rr = new RequestReply(requestQueueName, replyQueueName, adminQueueName);
+
+            var serverTask = Task.Run(() => Server(10));
+
+            for (int i = 0; i < 10; i++)
+            {
+                using (var request = new Message { Label = "my.sq", AppSpecific = key+i, Recoverable = false })
+                {
+                    using (var reply = rr.SendRequest(request))
+                    {
+                        Assert.AreEqual(request.Label, reply.Label);
+                        Assert.AreEqual(request.AppSpecific, reply.AppSpecific);
+                    }
+                }
+            }
+        }
+
+        [Test, Timeout(1000)]
+        public async Task can_get_reply_async()
         {
             var key = Environment.TickCount;
             var rr = new RequestReply(requestQueueName, replyQueueName, adminQueueName);
@@ -68,7 +107,7 @@ namespace UnitTests
 
 
         [Test, Timeout(1000)]
-        public async Task can_get_multiple_replies()
+        public async Task can_get_multiple_replies_async()
         {
             var key = Environment.TickCount;
             var rr = new RequestReply(requestQueueName, replyQueueName, adminQueueName);
