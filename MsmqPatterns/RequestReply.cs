@@ -45,7 +45,7 @@ namespace MsmqPatterns
             _requestQueue.Send(request);
 
             // wait for acknowledgement of receive on the admin queue
-            using (Message ack = _adminQueue.ReceiveByCorrelationId(request.Id))
+            using (Message ack = _adminQueue.ReceiveByCorrelationId(request.Id, MessageQueue.InfiniteTimeout))
             {
                 switch (ack.Acknowledgment)
                 {
@@ -61,7 +61,7 @@ namespace MsmqPatterns
             try
             {
                 //TODO: how long do we wait for a response?
-                return _responseQueue.ReceiveByCorrelationId(request.Id);
+                return _responseQueue.ReceiveByCorrelationId(request.Id, MessageQueue.InfiniteTimeout);
             }
             catch (MessageQueueException e) when (e.MessageQueueErrorCode == MessageQueueErrorCode.IOTimeout)
             {
