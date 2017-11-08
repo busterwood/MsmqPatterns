@@ -13,12 +13,20 @@ namespace UnitTests
         readonly string replyQueueName = $".\\private$\\{nameof(RequestReplyTests)}.Reply";
         readonly string adminQueueName = $".\\private$\\{nameof(RequestReplyTests)}.Admin";
 
-        [SetUp]
-        public void Setup()
+        [TestFixtureSetUp]
+        public void FixtureSetup()
         {
             CreateOrClear(requestQueueName);
             CreateOrClear(replyQueueName);
             CreateOrClear(adminQueueName);
+        }
+
+        [SetUp]
+        public void Setup()
+        {
+            ReadAllMessages(requestQueueName);
+            ReadAllMessages(replyQueueName);
+            ReadAllMessages(adminQueueName);
         }
 
         private void CreateOrClear(string qname)
@@ -39,7 +47,7 @@ namespace UnitTests
                 {
                     try
                     {
-                        q.Receive(TimeSpan.FromMilliseconds(50)).Dispose();
+                        q.Receive(TimeSpan.FromMilliseconds(10)).Dispose();
                     }
                     catch (MessageQueueException ex) when (ex.MessageQueueErrorCode == MessageQueueErrorCode.IOTimeout)
                     {
@@ -78,12 +86,10 @@ namespace UnitTests
             for (int i = 0; i < 10; i++)
             {
                 using (var request = new Message { Label = "my.sq", AppSpecific = key+i, Recoverable = false })
+                using (var reply = rr.SendRequest(request))
                 {
-                    using (var reply = rr.SendRequest(request))
-                    {
-                        Assert.AreEqual(request.Label, reply.Label);
-                        Assert.AreEqual(request.AppSpecific, reply.AppSpecific);
-                    }
+                    Assert.AreEqual(request.Label, reply.Label);
+                    Assert.AreEqual(request.AppSpecific, reply.AppSpecific);
                 }
             }
         }
@@ -117,12 +123,10 @@ namespace UnitTests
             for (int i = 0; i < 10; i++)
             {
                 using (var request = new Message { Label = "my.sq", AppSpecific = key+i, Recoverable = false })
+                using (var reply = await rr.SendRequestAsync(request))
                 {
-                    using (var reply = await rr.SendRequestAsync(request))
-                    {
-                        Assert.AreEqual(request.Label, reply.Label);
-                        Assert.AreEqual(request.AppSpecific, reply.AppSpecific);
-                    }
+                    Assert.AreEqual(request.Label, reply.Label);
+                    Assert.AreEqual(request.AppSpecific, reply.AppSpecific);
                 }
             }
         }

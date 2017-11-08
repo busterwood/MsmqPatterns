@@ -11,6 +11,13 @@ namespace UnitTests
     {
         string testQueue = $".\\private$\\{nameof(SubQueueFilterRouterTests)}";
 
+        [TestFixtureSetUp]
+        public void FixtureSetup()
+        {
+            if (!MessageQueue.Exists(testQueue))
+                MessageQueue.Create(testQueue);
+        }
+
         [SetUp]
         public void Setup()
         {
@@ -18,8 +25,6 @@ namespace UnitTests
             {
                 ReadAllMessages(testQueue);
             }
-            else
-                MessageQueue.Create(testQueue);
 
             if (MessageQueue.Exists(testQueue + ";sq"))
                 ReadAllMessages(testQueue + ";sq");
@@ -33,7 +38,7 @@ namespace UnitTests
                 {
                     try
                     {
-                        q.Receive(TimeSpan.FromMilliseconds(50)).Dispose();
+                        q.Receive(TimeSpan.FromMilliseconds(10)).Dispose();
                     }
                     catch (MessageQueueException ex) when (ex.MessageQueueErrorCode == MessageQueueErrorCode.IOTimeout)
                     {
