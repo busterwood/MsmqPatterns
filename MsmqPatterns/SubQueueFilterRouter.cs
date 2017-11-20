@@ -10,19 +10,21 @@ namespace MsmqPatterns
     /// This is a safe way to filter messages with explicit transaction control. The alternative, directly using a cursor, 
     /// is not safe as the cursor position does not update when a receive transaction is rolled-back.
     /// </summary>
-    public abstract class SubQueueFilterRouter : IProcessor
+    public class SubQueueFilterRouter : IProcessor
     {
         protected readonly MessageQueue _input;
+        protected readonly Func<Message, string> _getSubQueueName;
         protected readonly TimeSpan _receiveTimeout = TimeSpan.FromMilliseconds(100);
         protected MessagePropertyFilter _peekFilter;
         volatile bool _stop;
         Task _run;
 
-        public SubQueueFilterRouter(MessageQueue input)
+        public SubQueueFilterRouter(MessageQueue input, Func<Message, string> getSubQueueName)
         {
             Contract.Requires(input != null);
+            Contract.Requires(getSubQueueName != null);
             _input = input;
-
+            _getSubQueueName = getSubQueueName;
             _peekFilter = new MessagePropertyFilter
             {
                 AppSpecific = true,
@@ -50,7 +52,7 @@ namespace MsmqPatterns
                     {
                         if (peeked == null)
                             continue;
-                        var sqn = GetSubQueueName(peeked);
+                        var sqn = _getSubQueueName(peeked);
                         if (sqn != null)
                             _input.MoveMessage(sqn, peeked.LookupId);
                         action = PeekAction.Next;
@@ -77,8 +79,6 @@ namespace MsmqPatterns
             }
         }
 
-        /// <summary>Override this method to determine where the message should be routed to</summary>
-        /// <returns>The subqueue name to move the message to, or NULL to leave the message on the main queue</returns>
-        protected abstract string GetSubQueueName(Message peeked);
     }
+
 }

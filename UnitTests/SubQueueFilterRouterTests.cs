@@ -53,7 +53,7 @@ namespace UnitTests
         {
             var key = Environment.TickCount;
             var q = new MessageQueue(testQueue, QueueAccessMode.SendAndReceive);
-            var fr = new MySubQueueFilterRouter(q);
+            var fr = new SubQueueFilterRouter(q, GetSubQueueName);
             await fr.StartAsync();
             try
             {
@@ -81,7 +81,7 @@ namespace UnitTests
         {
             var key = Environment.TickCount;
             var q = new MessageQueue(testQueue, QueueAccessMode.SendAndReceive);
-            var fr = new MySubQueueFilterRouter(q);
+            var fr = new SubQueueFilterRouter(q, GetSubQueueName);
             await fr.StartAsync();
             try
             {
@@ -118,7 +118,7 @@ namespace UnitTests
         {
             var key = Environment.TickCount;
             var q = new MessageQueue(testQueue, QueueAccessMode.SendAndReceive);
-            var fr = new MySubQueueFilterRouter(q);
+            var fr = new SubQueueFilterRouter(q, GetSubQueueName);
             await fr.StartAsync();
             try
             {
@@ -144,15 +144,8 @@ namespace UnitTests
                 await fr.StopAsync();
             }
         }
-    }
 
-    class MySubQueueFilterRouter : SubQueueFilterRouter
-    {
-        public MySubQueueFilterRouter(MessageQueue input) : base(input)
-        {
-        }
-
-        protected override string GetSubQueueName(Message peeked)
+        static string GetSubQueueName(Message peeked)
         {
             if (peeked.Label.EndsWith("sq", StringComparison.OrdinalIgnoreCase))
                 return "sq";
@@ -160,4 +153,5 @@ namespace UnitTests
             return null;
         }
     }
+
 }
