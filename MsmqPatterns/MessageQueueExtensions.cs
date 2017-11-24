@@ -7,13 +7,13 @@ using System.Threading.Tasks;
 
 namespace MsmqPatterns
 {
-    static class MessageQueueExtensions
+    public static class MessageQueueExtensions
     {
         const int MQ_SINGLE_MESSAGE = 3;
         const int MQ_MOVE_MESSAGE = 4; // System.Messaging does not support moving, we have to open the queue ourselves
 
         [DllImport("mqrt.dll", CharSet = CharSet.Unicode)]
-        public static extern int MQMoveMessage(IntPtr sourceQueue, SafeHandle targetQueue, long lookupId, IntPtr pTransaction);
+        internal static extern int MQMoveMessage(IntPtr sourceQueue, SafeHandle targetQueue, long lookupId, IntPtr pTransaction);
 
         /// <summary>Move a message to a subqueue</summary>
         public static void MoveMessage(this MessageQueue queue, string subqueueName, long lookupId, bool? transactional = null)
@@ -48,6 +48,18 @@ namespace MsmqPatterns
                     action = PeekAction.Next;
                 }
             }
+        }
+
+        public static Message SendRequest(this MessageQueue requestQueue, Message request, MessageQueue replyQueue, MessageQueue adminQueue)
+        {
+            var rr = new RequestReply(requestQueue, replyQueue, adminQueue);
+            return rr.SendRequest(request);
+        }
+
+        public static Task<Message> SendRequestAsync(this MessageQueue requestQueue, Message request, MessageQueue replyQueue, MessageQueue adminQueue)
+        {
+            var rr = new RequestReply(requestQueue, replyQueue, adminQueue);
+            return rr.SendRequestAsync(request);
         }
     }
 }

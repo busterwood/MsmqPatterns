@@ -74,6 +74,25 @@ namespace UnitTests
             }
         }
 
+        [Test, Timeout(1000)]
+        public void can_get_reply_via_extension()
+        {
+            var key = Environment.TickCount;
+            var requestQueue = new MessageQueue(requestQueueName, QueueAccessMode.Send);
+            var replyQueue = new MessageQueue(replyQueueName, QueueAccessMode.Receive);
+            var adminQueue = new MessageQueue(adminQueueName, QueueAccessMode.Receive);
+
+            using (var request = new Message { Label = "my.sq", AppSpecific = key, Recoverable = false })
+            {
+                var serverTask = Task.Run(() => Server(1));
+                using (var reply = requestQueue.SendRequest(request, replyQueue, adminQueue))
+                {
+                    Assert.AreEqual(request.Label, reply.Label);
+                    Assert.AreEqual(request.AppSpecific, reply.AppSpecific);
+                }
+            }
+        }
+
 
         [Test, Timeout(1000)]
         public void can_get_multiple_replies()

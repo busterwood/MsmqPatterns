@@ -23,30 +23,13 @@ namespace UnitTests
         {
             if (MessageQueue.Exists(testQueue))
             {
-                ReadAllMessages(testQueue);
+                TestSupport.ReadAllMessages(testQueue);
             }
 
             if (MessageQueue.Exists(testQueue + ";sq"))
-                ReadAllMessages(testQueue + ";sq");
+                TestSupport.ReadAllMessages(testQueue + ";sq");
         }
 
-        private void ReadAllMessages(string path)
-        {
-            using (var q = new MessageQueue(path, QueueAccessMode.Receive))
-            {
-                for (;;)
-                {
-                    try
-                    {
-                        q.Receive(TimeSpan.FromMilliseconds(10)).Dispose();
-                    }
-                    catch (MessageQueueException ex) when (ex.MessageQueueErrorCode == MessageQueueErrorCode.IOTimeout)
-                    {
-                        break;
-                    }
-                }
-            }
-        }
 
         [Test]
         public async Task can_route_one_message()
