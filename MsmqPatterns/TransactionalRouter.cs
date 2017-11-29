@@ -105,8 +105,6 @@ namespace MsmqPatterns
         public DtcTransactionalRouter(MessageQueue input, MessageQueue deadletter, Func<Message, MessageQueue> route)
             : base(input, deadletter, route)
         {
-            Contract.Requires(input.Transactional);
-            Contract.Requires(deadletter.Transactional);
         }
 
         protected override void OnNewMessage(Message peeked)
