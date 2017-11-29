@@ -103,6 +103,20 @@ namespace MsmqPatterns
         }
 
         /// <summary>Returns the next message from the <paramref name="queue"/>, or NULL if the <paramref name="timeout"/> is reached</summary>
+        public static async Task<Message> RecieveWithTimeoutAsync(this MessageQueue queue, TimeSpan timeout)
+        {
+            Contract.Requires(queue != null);
+            try
+            {
+                return await Task.Factory.FromAsync(queue.BeginReceive(timeout), queue.EndReceive);
+            }
+            catch (MessageQueueException ex) when (ex.MessageQueueErrorCode == MessageQueueErrorCode.IOTimeout)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>Returns the next message from the <paramref name="queue"/>, or NULL if the <paramref name="timeout"/> is reached</summary>
         public static Message RecieveWithTimeout(this MessageQueue queue, TimeSpan timeout, MessageQueueTransaction txn)
         {
             Contract.Requires(queue != null);

@@ -2,7 +2,6 @@
 using System.Diagnostics.Contracts;
 using System.Messaging;
 using System.Threading.Tasks;
-using System.Transactions;
 
 namespace MsmqPatterns
 {
@@ -11,13 +10,22 @@ namespace MsmqPatterns
     {
         protected readonly MessageQueue _input;
         protected readonly MessageQueue _deadLetter;
-        protected MessagePropertyFilter _peekFilter;
         protected readonly Func<Message, MessageQueue> _route;
-        volatile bool _stop;
+        protected volatile bool _stop;
         Task _run;
 
-        /// <summary>Timeout used so <see cref="StopAsync"/> can stop this processor</summary>
-        public TimeSpan ReceiveTimeout { get; set; } = TimeSpan.FromMilliseconds(100);
+        /// <summary>Timeout used when peeking for messages</summary>
+        /// <remarks>the higher this value the slower the <see cref="StopAsync"/> method will be</remarks>
+        public TimeSpan StopTime { get; set; } = TimeSpan.FromMilliseconds(100);
+
+        /// <summary>The filter used when peeking messages, the default does NOT include the message body</summary>
+        public MessagePropertyFilter PeekFilter { get; } = new MessagePropertyFilter
+        {
+            AppSpecific = true,
+            Label = true,
+            Extension = true,
+            LookupId = true,
+        };
 
         /// <summary>
         /// Static factory method for creating the appropriate <see cref="Router"/> 
@@ -28,7 +36,7 @@ namespace MsmqPatterns
             try
             {
                 if (input.Transactional)
-                    return new TransactionalRouter(input, deadletter, route);
+                    return new MsmqTransactionalRouter(input, deadletter, route);
                 else
                     return new NonTransactionalRouter(input, deadletter, route);
             }
@@ -47,13 +55,6 @@ namespace MsmqPatterns
             _input = input;
             _deadLetter = deadletter;
             _route = route;
-
-            _peekFilter = new MessagePropertyFilter
-            {
-                AppSpecific = true,
-                Label = true,
-                Extension = true,
-            };
         }
 
         public Task<Task> StartAsync()
@@ -63,17 +64,7 @@ namespace MsmqPatterns
             return Task.FromResult(_run);
         }
 
-        async Task Run()
-        {
-            while (!_stop)
-            {
-                using (Message peeked = await PeekAsync())
-                {
-                    if (peeked != null)
-                        RouteMessage(peeked);
-                }
-            }
-        }
+        protected abstract Task Run();
 
         public Task StopAsync()
         {
@@ -81,131 +72,13 @@ namespace MsmqPatterns
             return _run;
         }
 
-
         public void Dispose()
         {
             StopAsync()?.Wait();
             _input?.Dispose();
             _deadLetter?.Dispose();
         }
-
-        private async Task<Message> PeekAsync()
-        {
-            var current = _input.MessageReadPropertyFilter; // save filter so it can be restored after peek
-
-            try
-            {
-                _input.MessageReadPropertyFilter = _peekFilter;
-                return await _input.PeekAsync(ReceiveTimeout);
-            }
-            finally
-            {
-                _input.MessageReadPropertyFilter = current; // restore filter
-            }
-        }
-
-        protected abstract void RouteMessage(Message peeked);
-    }
-
-
-    /// <summary>Routes messages between local <see cref="MessageQueue"/></summary>
-    public class NonTransactionalRouter : Router
-    {
-
-        public NonTransactionalRouter(MessageQueue input, MessageQueue deadletter, Func<Message, MessageQueue> route) 
-            : base(input, deadletter, route)
-        {
-            Contract.Requires(route != null);
-            Contract.Requires(!input.Transactional);
-        }
-
-        protected override void RouteMessage(Message peeked)
-        {
-            using (var msg = _input.RecieveWithTimeout(ReceiveTimeout))
-            {
-                if (msg == null) // message has been received by another process or thread
-                    return;
-
-                var dest = _route(msg) ?? _deadLetter;
-                try
-                {
-                    dest.Send(msg);
-                }
-                catch (Exception)
-                {
-                    return; //TODO: we cannot process this message, what to do?
-                }
-            }
-        }
+       
     }
     
-    /// <summary>Routes messages between local <see cref="MessageQueue"/> using a local MSMQ transaction</summary>
-    public class TransactionalRouter : Router
-    {
-        public TransactionalRouter(MessageQueue input, MessageQueue deadletter, Func<Message, MessageQueue> route) 
-            : base(input, deadletter, route)
-        {
-            Contract.Requires(input.Transactional);
-            Contract.Requires(deadletter.Transactional);
-        }
-
-        protected override void RouteMessage(Message peeked)
-        {
-            using (var txn = new MessageQueueTransaction())
-            {
-                txn.Begin();
-
-                using (Message msg = _input.RecieveWithTimeout(ReceiveTimeout, txn))
-                {
-                    if (msg == null) // message has been received by another process or thread
-                        return;
-
-                    var dest = _route(msg) ?? _deadLetter;
-                    try
-                    {
-                        dest.Send(msg, txn);
-                        txn.Commit();
-                    }
-                    catch (Exception)
-                    {
-                        return; //TODO: we cannot process this message, what to do?
-                    }
-                }
-            }
-        }
-    }
-
-    /// <summary>Routes messages in local or remote queues using DTC <see cref="TransactionScope"/></summary>
-    public class DtcTransactionalRouter : Router
-    {
-        public DtcTransactionalRouter(MessageQueue input, MessageQueue deadletter, Func<Message, MessageQueue> route) 
-            : base(input, deadletter, route)
-        {
-            Contract.Requires(input.Transactional);
-            Contract.Requires(deadletter.Transactional);
-        }
-
-        protected override void RouteMessage(Message peeked)
-        {
-            using (var txn = new TransactionScope(TransactionScopeOption.RequiresNew))
-            {
-                using (Message msg = _input.RecieveWithTimeout(ReceiveTimeout, MessageQueueTransactionType.Automatic))
-                {
-                    if (msg == null) // message has been received by another process or thread
-                        return;
-
-                    var dest = _route(msg) ?? _deadLetter;
-                    try
-                    {
-                        dest.Send(msg, MessageQueueTransactionType.Automatic);
-                        txn.Complete();
-                    }
-                    catch (Exception)
-                    {
-                        return; //TODO: we cannot process this message, what to do?
-                    }
-                }
-            }
-        }
-    }
 }

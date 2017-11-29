@@ -38,8 +38,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AcknowledgmentException.cs" />
+    <Compile Include="Class1.cs" />
+    <Compile Include="TransactionalRouter.cs" />
     <Compile Include="Msmq.cs" />
     <Compile Include="MsmqSafeHandle.cs" />
+    <Compile Include="NonTransactionalRouter.cs" />
     <Compile Include="SubQueueFilterRouter.cs" />
     <Compile Include="IProcessor.cs" />
     <Compile Include="MessageQueueExtensions.cs" />

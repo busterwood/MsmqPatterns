@@ -57,7 +57,7 @@ namespace UnitTests
         {
             using (var router = Router.New(input, dead, msg => msg.Label.Contains("1") ? out1 : out2))
             {
-                router.ReceiveTimeout = TimeSpan.FromMilliseconds(20);
+                router.StopTime = TimeSpan.FromMilliseconds(20);
                 var rtask = router.StartAsync();
                 try
                 {
@@ -77,7 +77,7 @@ namespace UnitTests
         {
             using (var router = Router.New(input, dead, msg => msg.Label.Contains("1") ? out1 : out2))
             {
-                router.ReceiveTimeout = TimeSpan.FromMilliseconds(20);
+                router.StopTime = TimeSpan.FromMilliseconds(20);
                 var rtask = router.StartAsync();
                 try
                 {
@@ -97,7 +97,7 @@ namespace UnitTests
         {
             using (var router = Router.New(input, dead, msg => null))
             {
-                router.ReceiveTimeout = TimeSpan.FromMilliseconds(20);
+                router.StopTime = TimeSpan.FromMilliseconds(20);
                 var rtask = router.StartAsync();
                 try
                 {
