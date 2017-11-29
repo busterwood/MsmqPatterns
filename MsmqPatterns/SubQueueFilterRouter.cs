@@ -12,12 +12,23 @@ namespace MsmqPatterns
     /// </summary>
     public class SubQueueFilterRouter : IProcessor
     {
-        protected readonly MessageQueue _input;
-        protected readonly Func<Message, string> _getSubQueueName;
-        protected readonly TimeSpan _receiveTimeout = TimeSpan.FromMilliseconds(100);
-        protected MessagePropertyFilter _peekFilter;
+        readonly MessageQueue _input;
+        readonly Func<Message, string> _getSubQueueName;
         volatile bool _stop;
         Task _run;
+
+        /// <summary>The filter used when peeking messages, the default does NOT include the message body</summary>
+        public MessagePropertyFilter PeekFilter { get; }
+
+        /// <summary>Timeout used so <see cref="StopAsync"/> can stop this processor</summary>
+        public TimeSpan ReceiveTimeout { get; set; } = TimeSpan.FromMilliseconds(100);
+
+        public SubQueueFilterRouter(string inputQueue, Func<Message, string> getSubQueueName) 
+            : this(new MessageQueue(inputQueue, QueueAccessMode.Receive), getSubQueueName)
+        {
+            Contract.Requires(inputQueue != null);
+            Contract.Requires(getSubQueueName != null);
+        }
 
         public SubQueueFilterRouter(MessageQueue input, Func<Message, string> getSubQueueName)
         {
@@ -25,7 +36,7 @@ namespace MsmqPatterns
             Contract.Requires(getSubQueueName != null);
             _input = input;
             _getSubQueueName = getSubQueueName;
-            _peekFilter = new MessagePropertyFilter
+            PeekFilter = new MessagePropertyFilter
             {
                 AppSpecific = true,
                 Label = true,
@@ -33,7 +44,7 @@ namespace MsmqPatterns
                 LookupId = true,
             };
         }
-    
+
         public Task<Task> StartAsync()
         {
             _stop = false;
@@ -43,12 +54,14 @@ namespace MsmqPatterns
 
         async Task RunAsync()
         {
+            _input.MessageReadPropertyFilter = PeekFilter;
+
             var action = PeekAction.Current;
             using (var cur = _input.CreateCursor())
             {
                 while (!_stop)
                 {
-                    using (Message peeked = await PeekAsync(cur, action))
+                    using (Message peeked = await _input.PeekAsync(ReceiveTimeout, cur, action))
                     {
                         if (peeked == null)
                             continue;
@@ -56,7 +69,7 @@ namespace MsmqPatterns
                         if (sqn != null)
                             _input.MoveMessage(sqn, peeked.LookupId);
                         action = PeekAction.Next;
-                    }                
+                    }
                 }
             }
         }
@@ -67,18 +80,5 @@ namespace MsmqPatterns
             return _run;
         }
 
-        async Task<Message> PeekAsync(Cursor cur, PeekAction action)
-        {
-            try
-            {
-                return await Task.Factory.FromAsync(_input.BeginPeek(_receiveTimeout, cur, action, null, null), _input.EndPeek);
-            }
-            catch (MessageQueueException ex) when (ex.MessageQueueErrorCode == MessageQueueErrorCode.IOTimeout)
-            {
-                return null;
-            }
-        }
-
     }
-
 }

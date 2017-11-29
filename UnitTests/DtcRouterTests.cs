@@ -56,6 +56,7 @@ namespace UnitTests
         public async Task can_route_transactional()
         {
             var router = new DtcTransactionalRouter(input, dead, msg => msg.Label.Contains("1") ? out1 : out2);
+            router.ReceiveTimeout = TimeSpan.FromMilliseconds(20);
             var rtask = router.StartAsync();
             try
             {
@@ -73,6 +74,7 @@ namespace UnitTests
         public async Task can_route_transactional_to_other_queue()
         {
             var router = new DtcTransactionalRouter(input, dead, msg => msg.Label.Contains("1") ? out1 : out2);
+            router.ReceiveTimeout = TimeSpan.FromMilliseconds(20);
             var rtask = router.StartAsync();
             try
             {
@@ -90,6 +92,7 @@ namespace UnitTests
         public async Task can_route_transactional_to_deadletter()
         {
             var router = new DtcTransactionalRouter(input, dead, msg => null);
+            router.ReceiveTimeout = TimeSpan.FromMilliseconds(20);
             var rtask = router.StartAsync();
             try
             {

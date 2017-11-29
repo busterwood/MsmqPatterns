@@ -6,18 +6,19 @@ using System.Transactions;
 
 namespace MsmqPatterns
 {
-
     /// <summary>A router of messages between <see cref="MessageQueue"/></summary>
     public abstract class Router : IProcessor
     {
         protected readonly MessageQueue _input;
         protected readonly MessageQueue _deadLetter;
-        protected readonly TimeSpan _receiveTimeout = TimeSpan.FromSeconds(0.1);
         protected MessagePropertyFilter _peekFilter;
         protected readonly Func<Message, MessageQueue> _route;
         volatile bool _stop;
         Task _run;
-        
+
+        /// <summary>Timeout used so <see cref="StopAsync"/> can stop this processor</summary>
+        public TimeSpan ReceiveTimeout { get; set; } = TimeSpan.FromMilliseconds(100);
+
         /// <summary>
         /// Static factory method for creating the appropriate <see cref="Router"/> 
         /// based on the <see cref="MessageQueue.Transactional"/> property
@@ -83,14 +84,11 @@ namespace MsmqPatterns
         private async Task<Message> PeekAsync()
         {
             var current = _input.MessageReadPropertyFilter; // save filter so it can be restored after peek
+
             try
             {
                 _input.MessageReadPropertyFilter = _peekFilter;
-                return await Task.Factory.FromAsync(_input.BeginPeek(_receiveTimeout), _input.EndPeek);
-            }
-            catch (MessageQueueException ex) when (ex.MessageQueueErrorCode == MessageQueueErrorCode.IOTimeout)
-            {
-                return null;
+                return await _input.PeekAsync(ReceiveTimeout);
             }
             finally
             {
@@ -115,18 +113,11 @@ namespace MsmqPatterns
 
         protected override void RouteMessage(Message peeked)
         {
-            Message msg;
-            try
+            using (var msg = _input.RecieveWithTimeout(ReceiveTimeout))
             {
-                msg = _input.Receive(_receiveTimeout);
-            }
-            catch (MessageQueueException ex) when (ex.MessageQueueErrorCode == MessageQueueErrorCode.IOTimeout)
-            {
-                // message has been received by another process or thread
-                return;
-            }
-            using (msg)
-            {
+                if (msg == null) // message has been received by another process or thread
+                    return;
+
                 var dest = _route(msg) ?? _deadLetter;
                 try
                 {
@@ -155,18 +146,12 @@ namespace MsmqPatterns
             using (var txn = new MessageQueueTransaction())
             {
                 txn.Begin();
-                Message msg;
-                try
+
+                using (Message msg = _input.RecieveWithTimeout(ReceiveTimeout, txn))
                 {
-                    msg = _input.Receive(_receiveTimeout, txn);
-                }
-                catch (MessageQueueException ex) when (ex.MessageQueueErrorCode == MessageQueueErrorCode.IOTimeout)
-                {
-                    // message has been received by another process or thread
-                    return;
-                }
-                using (msg)
-                {
+                    if (msg == null) // message has been received by another process or thread
+                        return;
+
                     var dest = _route(msg) ?? _deadLetter;
                     try
                     {
@@ -182,30 +167,25 @@ namespace MsmqPatterns
         }
     }
 
-
     /// <summary>Routes messages in local or remote queues using DTC <see cref="TransactionScope"/></summary>
     public class DtcTransactionalRouter : Router
     {
         public DtcTransactionalRouter(MessageQueue input, MessageQueue deadletter, Func<Message, MessageQueue> route) 
-            : base(input, deadletter, route) { }
+            : base(input, deadletter, route)
+        {
+            Contract.Requires(input.Transactional);
+            Contract.Requires(deadletter.Transactional);
+        }
 
         protected override void RouteMessage(Message peeked)
         {
             using (var txn = new TransactionScope(TransactionScopeOption.RequiresNew))
             {
-                Message msg;
-                try
+                using (Message msg = _input.RecieveWithTimeout(ReceiveTimeout, MessageQueueTransactionType.Automatic))
                 {
-                    msg = _input.Receive(_receiveTimeout, MessageQueueTransactionType.Automatic);
-                }
-                catch (MessageQueueException ex) when (ex.MessageQueueErrorCode == MessageQueueErrorCode.IOTimeout)
-                {
-                    // message has been received by another process or thread
-                    return;
-                }
+                    if (msg == null) // message has been received by another process or thread
+                        return;
 
-                using (msg)
-                {
                     var dest = _route(msg) ?? _deadLetter;
                     try
                     {

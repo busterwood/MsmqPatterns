@@ -14,7 +14,11 @@ namespace MsmqPatterns
 
         public RequestReply(string requestQueue, string replyQueue, string adminQueue) 
             : this(new MessageQueue(requestQueue, QueueAccessMode.Send), new MessageQueue(replyQueue, QueueAccessMode.Receive), new MessageQueue(adminQueue, QueueAccessMode.Receive))
-        { }
+        {
+            Contract.Requires(adminQueue != null);
+            Contract.Requires(replyQueue != null);
+            Contract.Requires(requestQueue != null);
+        }
 
         public RequestReply(MessageQueue requestQueue, MessageQueue replyQueue, MessageQueue adminQueue)
         {
@@ -31,8 +35,6 @@ namespace MsmqPatterns
         {
             Contract.Requires(request != null);
             Contract.Ensures(Contract.Result<Message>() != null);
-            var sw = new Stopwatch();
-            sw.Start();
 
             request.Recoverable = false; // express mode
             request.ResponseQueue = _responseQueue;
@@ -67,17 +69,11 @@ namespace MsmqPatterns
             {
                 throw new TimeoutException();
             }
-            finally
-            {
-                Console.WriteLine($"Getting reply took {sw.ElapsedMilliseconds:N0}ms");
-            }
         }
 
         public async Task<Message> SendRequestAsync(Message request)
         {
             Contract.Requires(request != null);
-            var sw = new Stopwatch();
-            sw.Start();
 
             request.Recoverable = false; // express mode
             request.ResponseQueue = _responseQueue;
@@ -111,10 +107,6 @@ namespace MsmqPatterns
             catch (MessageQueueException e) when (e.MessageQueueErrorCode == MessageQueueErrorCode.IOTimeout)
             {
                 throw new TimeoutException();
-            }
-            finally
-            {
-                Console.WriteLine($"Getting reply took {sw.ElapsedMilliseconds:N0}ms");
             }
         }
     }

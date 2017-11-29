@@ -1,9 +1,9 @@
-﻿using Microsoft.Win32.SafeHandles;
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Messaging;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using System.Diagnostics.Contracts;
 
 namespace MsmqPatterns
 {
@@ -18,7 +18,10 @@ namespace MsmqPatterns
         /// <summary>Move a message to a subqueue</summary>
         public static void MoveMessage(this MessageQueue queue, string subqueueName, long lookupId, bool? transactional = null)
         {
+            Contract.Requires(queue != null);
             var txn = transactional ?? queue.Transactional ? (IntPtr)MQ_SINGLE_MESSAGE : IntPtr.Zero;
+            
+            //TODO: add cache of subqueues as opening the queue is quite slow
             using (var handle = Msmq.OpenQueue(queue.FormatName + ";" + subqueueName, MQ_MOVE_MESSAGE, 0))
             {
                 int result = MQMoveMessage(queue.ReadHandle, handle, lookupId, txn);
@@ -30,6 +33,9 @@ namespace MsmqPatterns
         /// <summary>Async receive by <paramref name = "correlationId"/> for non-transactional queues</summary>
         public static async Task<Message> ReceiveByCorrelationIdAsync(this MessageQueue queue, string correlationId)
         {
+            Contract.Requires(queue != null);
+            Contract.Requires(correlationId != null);
+
             var currentFilter = queue.MessageReadPropertyFilter;
             queue.MessageReadPropertyFilter = new MessagePropertyFilter{CorrelationId = true};
             using (var cursor = queue.CreateCursor())
@@ -47,6 +53,78 @@ namespace MsmqPatterns
                     }
                     action = PeekAction.Next;
                 }
+            }
+        }
+
+        /// <summary>Returns a message from a cursor, or NULL if the timeout is reached</summary>
+        public static async Task<Message> PeekAsync(this MessageQueue queue, TimeSpan timeout)
+        {
+            Contract.Requires(queue != null);
+            try
+            {
+                return await Task.Factory.FromAsync(queue.BeginPeek(timeout), queue.EndPeek);
+            }
+            catch (MessageQueueException ex) when (ex.MessageQueueErrorCode == MessageQueueErrorCode.IOTimeout)
+            {
+                return null;
+            }
+        }
+        
+        /// <summary>Returns a message from a cursor, or NULL if the timeout is reached</summary>
+        public static async Task<Message> PeekAsync(this MessageQueue queue, TimeSpan timeout, Cursor cursor, PeekAction action)
+        {
+            Contract.Requires(queue != null);
+            Contract.Requires(cursor != null);
+            try
+            {
+                return await Task.Factory.FromAsync(queue.BeginPeek(timeout, cursor, action, null, null), queue.EndPeek);
+            }
+            catch (MessageQueueException ex) when (ex.MessageQueueErrorCode == MessageQueueErrorCode.IOTimeout)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>Returns the next message from the <paramref name="queue"/>, or NULL if the <paramref name="timeout"/> is reached</summary>
+        public static Message RecieveWithTimeout(this MessageQueue queue, TimeSpan timeout)
+        {
+            Contract.Requires(queue != null);
+            try
+            {
+                return queue.Receive(timeout);
+            }
+            catch (MessageQueueException ex) when (ex.MessageQueueErrorCode == MessageQueueErrorCode.IOTimeout)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>Returns the next message from the <paramref name="queue"/>, or NULL if the <paramref name="timeout"/> is reached</summary>
+        public static Message RecieveWithTimeout(this MessageQueue queue, TimeSpan timeout, MessageQueueTransaction txn)
+        {
+            Contract.Requires(queue != null);
+            Contract.Requires(txn != null);
+            try
+            {
+                return queue.Receive(timeout, txn);
+            }
+            catch (MessageQueueException ex) when (ex.MessageQueueErrorCode == MessageQueueErrorCode.IOTimeout)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>Returns the next message from the <paramref name="queue"/>, or NULL if the <paramref name="timeout"/> is reached</summary>
+        public static Message RecieveWithTimeout(this MessageQueue queue, TimeSpan timeout, MessageQueueTransactionType txnType)
+        {
+            Contract.Requires(queue != null);
+            try
+            {
+                return queue.Receive(timeout, txnType);
+            }
+            catch (MessageQueueException ex) when (ex.MessageQueueErrorCode == MessageQueueErrorCode.IOTimeout)
+            {
+                return null;
             }
         }
 

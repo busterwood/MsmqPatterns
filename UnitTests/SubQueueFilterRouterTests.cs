@@ -36,8 +36,9 @@ namespace UnitTests
         {
             var key = Environment.TickCount;
             var q = new MessageQueue(testQueue, QueueAccessMode.SendAndReceive);
-            var fr = new SubQueueFilterRouter(q, GetSubQueueName);
-            await fr.StartAsync();
+            var router = new SubQueueFilterRouter(q, GetSubQueueName);
+            router.ReceiveTimeout = TimeSpan.FromMilliseconds(20);
+            await router.StartAsync();
             try
             {
                 using (var msg = new Message { Label = "my.sq", AppSpecific = key })
@@ -55,7 +56,7 @@ namespace UnitTests
             }
             finally
             {
-                await fr.StopAsync();
+                await router.StopAsync();
             }
         }
 
@@ -64,8 +65,9 @@ namespace UnitTests
         {
             var key = Environment.TickCount;
             var q = new MessageQueue(testQueue, QueueAccessMode.SendAndReceive);
-            var fr = new SubQueueFilterRouter(q, GetSubQueueName);
-            await fr.StartAsync();
+            var router = new SubQueueFilterRouter(q, GetSubQueueName);
+            router.ReceiveTimeout = TimeSpan.FromMilliseconds(20);
+            await router.StartAsync();
             try
             {
                 using (var msg = new Message { Label = "my.sq", AppSpecific = key })
@@ -92,7 +94,7 @@ namespace UnitTests
             }
             finally
             {
-                await fr.StopAsync();
+                await router.StopAsync();
             }
         }
 
@@ -101,8 +103,9 @@ namespace UnitTests
         {
             var key = Environment.TickCount;
             var q = new MessageQueue(testQueue, QueueAccessMode.SendAndReceive);
-            var fr = new SubQueueFilterRouter(q, GetSubQueueName);
-            await fr.StartAsync();
+            var router = new SubQueueFilterRouter(q, GetSubQueueName);
+            router.ReceiveTimeout = TimeSpan.FromMilliseconds(20);
+            await router.StartAsync();
             try
             {
                 using (var msg = new Message { Label = "skipped", AppSpecific = key-1 })
@@ -124,7 +127,7 @@ namespace UnitTests
             }
             finally
             {
-                await fr.StopAsync();
+                await router.StopAsync();
             }
         }
 
