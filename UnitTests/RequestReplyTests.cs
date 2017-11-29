@@ -62,13 +62,13 @@ namespace UnitTests
         public void can_get_reply()
         {
             var key = Environment.TickCount;
+            var serverTask = Task.Run(() => Server(1));
             using (var rr = new RequestReply(requestQueueName, replyQueueName, adminQueueName))
             {
                 var sw = new Stopwatch();
                 sw.Start();
                 using (var request = new Message { Label = "my.sq", AppSpecific = key, Recoverable = false })
                 {
-                    var serverTask = Task.Run(() => Server(1));
                     using (var reply = rr.SendRequest(request))
                     {
                         Assert.AreEqual(request.Label, reply?.Label);
@@ -84,13 +84,13 @@ namespace UnitTests
         public void can_get_reply_via_extension()
         {
             var key = Environment.TickCount;
+            var serverTask = Task.Run(() => Server(1));
             var requestQueue = new MessageQueue(requestQueueName, QueueAccessMode.Send);
             var replyQueue = new MessageQueue(replyQueueName, QueueAccessMode.Receive);
             var adminQueue = new MessageQueue(adminQueueName, QueueAccessMode.Receive);
 
             using (var request = new Message { Label = "my.sq", AppSpecific = key, Recoverable = false })
             {
-                var serverTask = Task.Run(() => Server(1));
                 using (var reply = requestQueue.SendRequest(request, replyQueue, adminQueue))
                 {
                     Assert.AreEqual(request.Label, reply?.Label);
@@ -103,18 +103,22 @@ namespace UnitTests
         public void can_get_multiple_replies()
         {
             var key = Environment.TickCount;
+            var serverTask = Task.Run(() => Server(10));
             using (var rr = new RequestReply(requestQueueName, replyQueueName, adminQueueName))
             {
-                var serverTask = Task.Run(() => Server(10));
-
+                var sw = new Stopwatch();
                 for (int i = 0; i < 10; i++)
                 {
+                    sw.Restart();
                     using (var request = new Message { Label = "my.sq", AppSpecific = key + i, Recoverable = false })
                     using (var reply = rr.SendRequest(request))
                     {
                         Assert.AreEqual(request.Label, reply?.Label);
                         Assert.AreEqual(request.AppSpecific, reply?.AppSpecific);
                     }
+                    sw.Stop();
+                    Console.WriteLine($"took {sw.ElapsedMilliseconds:N0}ms");
+                    key++;
                 }
             }
         }
@@ -123,13 +127,13 @@ namespace UnitTests
         public async Task can_get_reply_async()
         {
             var key = Environment.TickCount;
+            var serverTask = Task.Run(() => Server(1));
             using (var rr = new RequestReply(requestQueueName, replyQueueName, adminQueueName))
             {
                 var sw = new Stopwatch();
                 sw.Start();
                 using (var request = new Message { Label = "my.sq", AppSpecific = key, Recoverable = false })
                 {
-                    var serverTask = Task.Run(() => Server(1));
                     using (var reply = await rr.SendRequestAsync(request))
                     {
                         Assert.AreEqual(request.Label, reply?.Label);
@@ -145,11 +149,10 @@ namespace UnitTests
         public async Task can_get_multiple_replies_async()
         {
             var key = Environment.TickCount;
+            var serverTask = Task.Run(() => Server(10));
             using (var rr = new RequestReply(requestQueueName, replyQueueName, adminQueueName))
             {
-                var serverTask = Task.Run(() => Server(10));
                 var sw = new Stopwatch();
-
                 for (int i = 0; i < 10; i++)
                 {
                     sw.Restart();
@@ -161,6 +164,7 @@ namespace UnitTests
                     }
                     sw.Stop();
                     Console.WriteLine($"took {sw.ElapsedMilliseconds:N0}ms");
+                    key++;
                 }
             }
         }
