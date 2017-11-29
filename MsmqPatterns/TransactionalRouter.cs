@@ -23,25 +23,26 @@ namespace MsmqPatterns
         /// </summary>
         public int MaxBatchSize { get; set; } = 100;
 
-        protected override async Task Run()
+        protected override async Task RunAsync()
         {
             while (!_stop)
             {
-                using (Message peeked = await PeekAsync())
-                {
-                    if (peeked != null)
-                        OnNewMessage(peeked);
-                }
+                bool got = await NewMessageAsync();
+                if (got)
+                    OnNewMessage();
             }
         }
 
-        async Task<Message> PeekAsync()
+        async Task<bool> NewMessageAsync()
         {
             var current = _input.MessageReadPropertyFilter; // save filter so it can be restored after peek
             try
             {
                 _input.MessageReadPropertyFilter = PeekFilter;
-                return await _input.PeekAsync(StopTime);
+                using (var msg = await _input.PeekAsync(StopTime))
+                {
+                    return msg != null;
+                }
             }
             finally
             {
@@ -49,7 +50,7 @@ namespace MsmqPatterns
             }
         }
 
-        protected abstract void OnNewMessage(Message peeked);
+        protected abstract void OnNewMessage();
     }
 
     /// <summary>Routes messages between local <see cref="MessageQueue"/> using a local MSMQ transaction</summary>
@@ -62,7 +63,7 @@ namespace MsmqPatterns
             Contract.Requires(deadletter.Transactional);
         }
 
-        protected override void OnNewMessage(Message peeked)
+        protected override void OnNewMessage()
         {
             using (var txn = new MessageQueueTransaction())
             {
@@ -78,12 +79,12 @@ namespace MsmqPatterns
             int count = 0;
             for (int i = 0; i < MaxBatchSize; i++)
             {
-                using (Message msg = _input.RecieveWithTimeout(TimeSpan.Zero, txn))
+                using (Message msg = _input.RecieveWithTimeout(TimeSpan.Zero, txn)) //note: no waiting
                 {
-                    if (msg == null) // message has been received by another process or thread
+                    if (msg == null)
                         break;
 
-                    var dest = _route(msg) ?? _deadLetter; //TODO: what if route fails?
+                    var dest = GetRoute(msg);
                     dest.Send(msg, txn); // TODO: what if we cannot send?
                     count++;
                 }
@@ -100,7 +101,7 @@ namespace MsmqPatterns
         {
         }
 
-        protected override void OnNewMessage(Message peeked)
+        protected override void OnNewMessage()
         {
             using (var txn = new TransactionScope(TransactionScopeOption.RequiresNew))
             {
@@ -115,12 +116,12 @@ namespace MsmqPatterns
             int count = 0;
             for (int i = 0; i < MaxBatchSize; i++)
             {
-                using (Message msg = _input.RecieveWithTimeout(TimeSpan.Zero, MessageQueueTransactionType.Automatic))
+                using (Message msg = _input.RecieveWithTimeout(TimeSpan.Zero, MessageQueueTransactionType.Automatic))  //note: no waiting
                 {
-                    if (msg == null) // message has been received by another process or thread
+                    if (msg == null)
                         break;
 
-                    var dest = _route(msg) ?? _deadLetter; //TODO: what if route fails?
+                    var dest = GetRoute(msg);
                     dest.Send(msg, MessageQueueTransactionType.Automatic); // TODO: what if we cannot send?
                     count++;
                 }

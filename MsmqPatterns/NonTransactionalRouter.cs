@@ -17,7 +17,7 @@ namespace MsmqPatterns
             Contract.Requires(!input.Transactional);
         }
 
-        protected override async Task Run()
+        protected override async Task RunAsync()
         {
             while (!_stop)
             {
@@ -26,7 +26,7 @@ namespace MsmqPatterns
                     if (msg == null) // message has been received by another process or thread
                         continue;
 
-                    var dest = _route(msg) ?? _deadLetter;
+                    var dest = GetRoute(msg);
                     dest.Send(msg); //TODO: how to handle errors?
                 }
             }

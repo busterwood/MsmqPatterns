@@ -60,11 +60,13 @@ namespace MsmqPatterns
         public Task<Task> StartAsync()
         {
             _stop = false;
-            _run = Run();
+            _run = RunAsync();
             return Task.FromResult(_run);
         }
 
-        protected abstract Task Run();
+        protected abstract Task RunAsync();
+
+        protected MessageQueue GetRoute(Message msg) => _route(msg) ?? _deadLetter; //TODO: what if route fails?
 
         public Task StopAsync()
         {
