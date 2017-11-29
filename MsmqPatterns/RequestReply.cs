@@ -12,6 +12,9 @@ namespace MsmqPatterns
         readonly MessageQueue _responseQueue;
         readonly MessageQueue _adminQueue; // for timeout acknowledgements
 
+        /// <summary>Max time for the request to be received by the process that handles the request.  Defaults to 30 seconds</summary>
+        public TimeSpan TimeToBeReceived { get; set; } = TimeSpan.FromSeconds(30);
+
         public RequestReply(string requestQueue, string replyQueue, string adminQueue) 
             : this(new MessageQueue(requestQueue, QueueAccessMode.Send), new MessageQueue(replyQueue, QueueAccessMode.Receive), new MessageQueue(adminQueue, QueueAccessMode.Receive))
         {
@@ -31,6 +34,11 @@ namespace MsmqPatterns
             _responseQueue.MessageReadPropertyFilter = new MessagePropertyFilter { Body = true, AppSpecific = true, CorrelationId = true, Label = true, Extension = true };
         }
 
+        /// <summary>Sends a request message and waits for a reply.</summary>
+        /// <param name="request">The message to send</param>
+        /// <returns>The reply message</returns>
+        /// <exception cref="TimeoutException">Thrown when the message has not been received by the target processor before <see cref="TimeToBeReceived"/></exception>
+        /// <exception cref="AcknowledgmentException">Thrown when the message cannot be delivered to the destination queue</exception>
         public Message SendRequest(Message request)
         {
             Contract.Requires(request != null);
@@ -40,7 +48,7 @@ namespace MsmqPatterns
             request.ResponseQueue = _responseQueue;
 
             // setup timeout with negative acknowledgement
-            request.TimeToBeReceived = TimeSpan.FromSeconds(30);
+            request.TimeToBeReceived = TimeToBeReceived;
             request.AcknowledgeType = AcknowledgeTypes.NegativeReceive | AcknowledgeTypes.FullReceive | AcknowledgeTypes.NotAcknowledgeReceive | AcknowledgeTypes.NotAcknowledgeReachQueue;
             request.AdministrationQueue = _adminQueue;
 
@@ -60,17 +68,15 @@ namespace MsmqPatterns
                 }
             }
 
-            try
-            {
-                //TODO: how long do we wait for a response?
-                return _responseQueue.ReceiveByCorrelationId(request.Id, MessageQueue.InfiniteTimeout);
-            }
-            catch (MessageQueueException e) when (e.MessageQueueErrorCode == MessageQueueErrorCode.IOTimeout)
-            {
-                throw new TimeoutException();
-            }
+            //TODO: maybe timeout the processing?
+            return _responseQueue.ReceiveByCorrelationId(request.Id, MessageQueue.InfiniteTimeout);
         }
 
+        /// <summary>Sends a request message and waits for a reply.</summary>
+        /// <param name="request">The message to send</param>
+        /// <returns>The reply message</returns>
+        /// <exception cref="TimeoutException">Thrown when the message has not been received by the target processor before <see cref="TimeToBeReceived"/></exception>
+        /// <exception cref="AcknowledgmentException">Thrown when the message cannot be delivered to the destination queue</exception>
         public async Task<Message> SendRequestAsync(Message request)
         {
             Contract.Requires(request != null);
@@ -79,7 +85,7 @@ namespace MsmqPatterns
             request.ResponseQueue = _responseQueue;
 
             // setup timeout with negative acknowledgement
-            request.TimeToBeReceived = TimeSpan.FromSeconds(30);
+            request.TimeToBeReceived = TimeToBeReceived;
             request.AcknowledgeType = AcknowledgeTypes.NegativeReceive | AcknowledgeTypes.FullReceive | AcknowledgeTypes.NotAcknowledgeReceive | AcknowledgeTypes.NotAcknowledgeReachQueue;
             request.AdministrationQueue = _adminQueue;
 
@@ -98,16 +104,9 @@ namespace MsmqPatterns
                         throw new AcknowledgmentException(ack.Acknowledgment);
                 }
             }
-            
-            try
-            {
-                //TODO: how long do we wait for a response?
-                return await _responseQueue.ReceiveByCorrelationIdAsync(request.Id);
-            }
-            catch (MessageQueueException e) when (e.MessageQueueErrorCode == MessageQueueErrorCode.IOTimeout)
-            {
-                throw new TimeoutException();
-            }
+
+            //TODO: maybe timeout the processing?
+            return await _responseQueue.ReceiveByCorrelationIdAsync(request.Id);            
         }
     }
     

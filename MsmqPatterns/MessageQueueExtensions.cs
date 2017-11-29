@@ -15,10 +15,13 @@ namespace MsmqPatterns
         [DllImport("mqrt.dll", CharSet = CharSet.Unicode)]
         internal static extern int MQMoveMessage(IntPtr sourceQueue, SafeHandle targetQueue, long lookupId, IntPtr pTransaction);
 
-        /// <summary>Move a message to a subqueue</summary>
+        /// <summary>Move a message from the <paramref name="queue"/> to a subqueue</summary>
+        /// <exception cref="Win32Exception">Thrown when the move fails</exception>
         public static void MoveMessage(this MessageQueue queue, string subqueueName, long lookupId, bool? transactional = null)
         {
             Contract.Requires(queue != null);
+            Contract.Requires(subqueueName != null);
+
             var txn = transactional ?? queue.Transactional ? (IntPtr)MQ_SINGLE_MESSAGE : IntPtr.Zero;
             
             //TODO: add cache of subqueues as opening the queue is quite slow
@@ -56,7 +59,7 @@ namespace MsmqPatterns
             }
         }
 
-        /// <summary>Returns a message from a cursor, or NULL if the timeout is reached</summary>
+        /// <summary>Returns a message from a cursor, or NULL if the <paramref name="timeout"/> is reached</summary>
         public static async Task<Message> PeekAsync(this MessageQueue queue, TimeSpan timeout)
         {
             Contract.Requires(queue != null);
@@ -70,7 +73,7 @@ namespace MsmqPatterns
             }
         }
         
-        /// <summary>Returns a message from a cursor, or NULL if the timeout is reached</summary>
+        /// <summary>Returns a message from a cursor, or NULL if the <paramref name="timeout"/> is reached</summary>
         public static async Task<Message> PeekAsync(this MessageQueue queue, TimeSpan timeout, Cursor cursor, PeekAction action)
         {
             Contract.Requires(queue != null);
