@@ -18,7 +18,13 @@ namespace MsmqPatterns
         Task _run;
 
         /// <summary>The filter used when peeking messages, the default does NOT include the message body</summary>
-        public MessagePropertyFilter PeekFilter { get; }
+        public MessagePropertyFilter PeekFilter { get; } = new MessagePropertyFilter
+        {
+            AppSpecific = true,
+            Label = true,
+            Extension = true,
+            LookupId = true,
+        };
 
         /// <summary>Timeout used so <see cref="StopAsync"/> can stop this processor</summary>
         public TimeSpan ReceiveTimeout { get; set; } = TimeSpan.FromMilliseconds(100);
@@ -36,13 +42,6 @@ namespace MsmqPatterns
             Contract.Requires(getSubQueueName != null);
             _input = input;
             _getSubQueueName = getSubQueueName;
-            PeekFilter = new MessagePropertyFilter
-            {
-                AppSpecific = true,
-                Label = true,
-                Extension = true,
-                LookupId = true,
-            };
         }
 
         public Task<Task> StartAsync()
@@ -80,5 +79,10 @@ namespace MsmqPatterns
             return _run;
         }
 
+        public void Dispose()
+        {
+            StopAsync()?.Wait();
+            _input.Dispose();
+        }
     }
 }

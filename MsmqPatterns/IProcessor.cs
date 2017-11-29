@@ -1,7 +1,8 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 namespace MsmqPatterns
 {
-    public interface IProcessor
+    public interface IProcessor : IDisposable
     {
         Task<Task> StartAsync();
         Task StopAsync();

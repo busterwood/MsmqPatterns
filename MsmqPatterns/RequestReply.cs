@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MsmqPatterns
 {
-    public class RequestReply
+    public class RequestReply : IDisposable
     {
         readonly MessageQueue _requestQueue;
         readonly MessageQueue _responseQueue;
@@ -107,6 +107,13 @@ namespace MsmqPatterns
 
             //TODO: maybe timeout the processing?
             return await _responseQueue.ReceiveByCorrelationIdAsync(request.Id);            
+        }
+
+        public void Dispose()
+        {
+            _requestQueue.Dispose();
+            _responseQueue.Dispose();
+            _adminQueue.Dispose();
         }
     }
     

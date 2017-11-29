@@ -55,54 +55,60 @@ namespace UnitTests
         [Test]
         public async Task can_route_non_transactional()
         {
-            var router = Router.New(input, dead, msg => msg.Label.Contains("1") ? out1 : out2);
-            router.ReceiveTimeout = TimeSpan.FromMilliseconds(20);
-            var rtask = router.StartAsync();
-            try
+            using (var router = Router.New(input, dead, msg => msg.Label.Contains("1") ? out1 : out2))
             {
-                input.Send(new Message { Label = "1", AppSpecific = 1 });
-                var got = out1.Receive();
-                Assert.AreEqual("1", got.Label);
-            }
-            finally
-            {
-                await router.StopAsync();
+                router.ReceiveTimeout = TimeSpan.FromMilliseconds(20);
+                var rtask = router.StartAsync();
+                try
+                {
+                    input.Send(new Message { Label = "1", AppSpecific = 1 });
+                    var got = out1.Receive();
+                    Assert.AreEqual("1", got.Label);
+                }
+                finally
+                {
+                    await router.StopAsync();
+                }
             }
         }
 
         [Test]
         public async Task can_route_non_transactional_to_other_queue()
         {
-            var router = Router.New(input, dead, msg => msg.Label.Contains("1") ? out1 : out2);
-            router.ReceiveTimeout = TimeSpan.FromMilliseconds(20);
-            var rtask = router.StartAsync();
-            try
+            using (var router = Router.New(input, dead, msg => msg.Label.Contains("1") ? out1 : out2))
             {
-                input.Send(new Message { Label = "2", AppSpecific = 1 });
-                var got = out2.Receive();
-                Assert.AreEqual("2", got.Label);
-            }
-            finally
-            {
-                await router.StopAsync();
+                router.ReceiveTimeout = TimeSpan.FromMilliseconds(20);
+                var rtask = router.StartAsync();
+                try
+                {
+                    input.Send(new Message { Label = "2", AppSpecific = 1 });
+                    var got = out2.Receive();
+                    Assert.AreEqual("2", got.Label);
+                }
+                finally
+                {
+                    await router.StopAsync();
+                }
             }
         }
 
         [Test]
         public async Task can_route_non_transactional_to_deadletter()
         {
-            var router = Router.New(input, dead, msg => null);
-            router.ReceiveTimeout = TimeSpan.FromMilliseconds(20);
-            var rtask = router.StartAsync();
-            try
+            using (var router = Router.New(input, dead, msg => null))
             {
-                input.Send(new Message { Label = "3", AppSpecific = 1 });
-                var got = dead.Receive();
-                Assert.AreEqual("3", got.Label);
-            }
-            finally
-            {
-                await router.StopAsync();
+                router.ReceiveTimeout = TimeSpan.FromMilliseconds(20);
+                var rtask = router.StartAsync();
+                try
+                {
+                    input.Send(new Message { Label = "3", AppSpecific = 1 });
+                    var got = dead.Receive();
+                    Assert.AreEqual("3", got.Label);
+                }
+                finally
+                {
+                    await router.StopAsync();
+                }
             }
         }
     }

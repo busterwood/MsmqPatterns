@@ -81,6 +81,14 @@ namespace MsmqPatterns
             return _run;
         }
 
+
+        public void Dispose()
+        {
+            StopAsync()?.Wait();
+            _input?.Dispose();
+            _deadLetter?.Dispose();
+        }
+
         private async Task<Message> PeekAsync()
         {
             var current = _input.MessageReadPropertyFilter; // save filter so it can be restored after peek

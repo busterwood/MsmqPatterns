@@ -36,27 +36,29 @@ namespace UnitTests
         {
             var key = Environment.TickCount;
             var q = new MessageQueue(testQueue, QueueAccessMode.SendAndReceive);
-            var router = new SubQueueFilterRouter(q, GetSubQueueName);
-            router.ReceiveTimeout = TimeSpan.FromMilliseconds(20);
-            await router.StartAsync();
-            try
+            using (var router = new SubQueueFilterRouter(q, GetSubQueueName))
             {
-                using (var msg = new Message { Label = "my.sq", AppSpecific = key })
+                router.ReceiveTimeout = TimeSpan.FromMilliseconds(20);
+                await router.StartAsync();
+                try
                 {
-                    q.Send(msg);
-                }
-                using (var sq = new MessageQueue(testQueue + ";sq", QueueAccessMode.Receive))
-                {
-                    sq.MessageReadPropertyFilter.AppSpecific = true;
-                    using (var got = sq.Receive(TimeSpan.FromMilliseconds(500)))
+                    using (var msg = new Message { Label = "my.sq", AppSpecific = key })
                     {
-                        Assert.AreEqual(key, got.AppSpecific);
+                        q.Send(msg);
+                    }
+                    using (var sq = new MessageQueue(testQueue + ";sq", QueueAccessMode.Receive))
+                    {
+                        sq.MessageReadPropertyFilter.AppSpecific = true;
+                        using (var got = sq.Receive(TimeSpan.FromMilliseconds(500)))
+                        {
+                            Assert.AreEqual(key, got.AppSpecific);
+                        }
                     }
                 }
-            }
-            finally
-            {
-                await router.StopAsync();
+                finally
+                {
+                    await router.StopAsync();
+                }
             }
         }
 
@@ -65,36 +67,38 @@ namespace UnitTests
         {
             var key = Environment.TickCount;
             var q = new MessageQueue(testQueue, QueueAccessMode.SendAndReceive);
-            var router = new SubQueueFilterRouter(q, GetSubQueueName);
-            router.ReceiveTimeout = TimeSpan.FromMilliseconds(20);
-            await router.StartAsync();
-            try
+            using (var router = new SubQueueFilterRouter(q, GetSubQueueName))
             {
-                using (var msg = new Message { Label = "my.sq", AppSpecific = key })
+                router.ReceiveTimeout = TimeSpan.FromMilliseconds(20);
+                await router.StartAsync();
+                try
                 {
-                    q.Send(msg);
-                }
-                using (var msg = new Message { Label = "my.sq", AppSpecific = key+1 })
-                {
-                    q.Send(msg);
-                }
-                
-                using (var sq = new MessageQueue(testQueue + ";sq", QueueAccessMode.Receive))
-                {
-                    sq.MessageReadPropertyFilter.AppSpecific = true;
-                    using (var got = sq.Receive(TimeSpan.FromMilliseconds(500)))
+                    using (var msg = new Message { Label = "my.sq", AppSpecific = key })
                     {
-                        Assert.AreEqual(key, got.AppSpecific);
+                        q.Send(msg);
                     }
-                    using (var got = sq.Receive(TimeSpan.FromMilliseconds(500)))
+                    using (var msg = new Message { Label = "my.sq", AppSpecific = key + 1 })
                     {
-                        Assert.AreEqual(key+1, got.AppSpecific);
+                        q.Send(msg);
+                    }
+
+                    using (var sq = new MessageQueue(testQueue + ";sq", QueueAccessMode.Receive))
+                    {
+                        sq.MessageReadPropertyFilter.AppSpecific = true;
+                        using (var got = sq.Receive(TimeSpan.FromMilliseconds(500)))
+                        {
+                            Assert.AreEqual(key, got.AppSpecific);
+                        }
+                        using (var got = sq.Receive(TimeSpan.FromMilliseconds(500)))
+                        {
+                            Assert.AreEqual(key + 1, got.AppSpecific);
+                        }
                     }
                 }
-            }
-            finally
-            {
-                await router.StopAsync();
+                finally
+                {
+                    await router.StopAsync();
+                }
             }
         }
 
@@ -102,32 +106,34 @@ namespace UnitTests
         public async Task can_skip_one_then_route_one_message()
         {
             var key = Environment.TickCount;
-            var q = new MessageQueue(testQueue, QueueAccessMode.SendAndReceive);
-            var router = new SubQueueFilterRouter(q, GetSubQueueName);
-            router.ReceiveTimeout = TimeSpan.FromMilliseconds(20);
-            await router.StartAsync();
-            try
+            using (var q = new MessageQueue(testQueue, QueueAccessMode.SendAndReceive))
             {
-                using (var msg = new Message { Label = "skipped", AppSpecific = key-1 })
+                var router = new SubQueueFilterRouter(q, GetSubQueueName);
+                router.ReceiveTimeout = TimeSpan.FromMilliseconds(20);
+                await router.StartAsync();
+                try
                 {
-                    q.Send(msg);
-                }
-                using (var msg = new Message { Label = "my.sq", AppSpecific = key })
-                {
-                    q.Send(msg);
-                }
-                using (var sq = new MessageQueue(testQueue + ";sq", QueueAccessMode.Receive))
-                {
-                    sq.MessageReadPropertyFilter.AppSpecific = true;
-                    using (var got = sq.Receive(TimeSpan.FromMilliseconds(500)))
+                    using (var msg = new Message { Label = "skipped", AppSpecific = key - 1 })
                     {
-                        Assert.AreEqual(key, got.AppSpecific);
+                        q.Send(msg);
+                    }
+                    using (var msg = new Message { Label = "my.sq", AppSpecific = key })
+                    {
+                        q.Send(msg);
+                    }
+                    using (var sq = new MessageQueue(testQueue + ";sq", QueueAccessMode.Receive))
+                    {
+                        sq.MessageReadPropertyFilter.AppSpecific = true;
+                        using (var got = sq.Receive(TimeSpan.FromMilliseconds(500)))
+                        {
+                            Assert.AreEqual(key, got.AppSpecific);
+                        }
                     }
                 }
-            }
-            finally
-            {
-                await router.StopAsync();
+                finally
+                {
+                    await router.StopAsync();
+                }
             }
         }
 
