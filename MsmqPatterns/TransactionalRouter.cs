@@ -67,35 +67,28 @@ namespace MsmqPatterns
             using (var txn = new MessageQueueTransaction())
             {
                 txn.Begin();
-
-                using (Message msg = _input.RecieveWithTimeout(TimeSpan.Zero, txn))
-                {
-                    if (msg == null) // message has been received by another process or thread
-                        return;
-
-                    TryToRoute(msg, txn);
-                    msg.Dispose(); // release early
-
-                    // try to include multiple messages in a batch as it is MUCH faster (up to 10x)
-                    for (int i = 1; i < MaxBatchSize; i++)
-                    {
-                        using (Message msg2 = _input.RecieveWithTimeout(TimeSpan.Zero, txn))
-                        {
-                            if (msg2 == null) // message has been received by another process or thread
-                                break;
-                            TryToRoute(msg2, txn);
-                        }
-                    }
-                }
-
-                txn.Commit();
+                int count = RouteBatchOfMessages(txn);
+                if (count > 0)
+                    txn.Commit();
             }
         }
 
-        private void TryToRoute(Message msg, MessageQueueTransaction txn)
+        int RouteBatchOfMessages(MessageQueueTransaction txn)
         {
-            var dest = _route(msg) ?? _deadLetter; //TODO: what if route fails?
-            dest.Send(msg, txn); // TODO: what if we cannot send?
+            int count = 0;
+            for (int i = 0; i < MaxBatchSize; i++)
+            {
+                using (Message msg = _input.RecieveWithTimeout(TimeSpan.Zero, txn))
+                {
+                    if (msg == null) // message has been received by another process or thread
+                        break;
+
+                    var dest = _route(msg) ?? _deadLetter; //TODO: what if route fails?
+                    dest.Send(msg, txn); // TODO: what if we cannot send?
+                    count++;
+                }
+            }
+            return count;
         }
     }
 
@@ -111,34 +104,28 @@ namespace MsmqPatterns
         {
             using (var txn = new TransactionScope(TransactionScopeOption.RequiresNew))
             {
-                using (Message msg = _input.RecieveWithTimeout(TimeSpan.Zero, MessageQueueTransactionType.Automatic))
-                {
-                    if (msg == null) // message has been received by another process or thread
-                        return;
-
-                    TryToRoute(msg);
-                    msg.Dispose(); // release early
-
-                    // try to include multiple messages in a batch as it is MUCH faster (up to 10x)
-                    for (int i = 1; i < MaxBatchSize; i++)
-                    {
-                        using (Message msg2 = _input.RecieveWithTimeout(TimeSpan.Zero, MessageQueueTransactionType.Automatic))
-                        {
-                            if (msg2 == null) // message has been received by another process or thread
-                                break;
-                            TryToRoute(msg2);
-                        }
-                    }
-                }
-
-                txn.Complete(); //TODO: handle commit exceptions
+                int count = RouteBatchOfMessages();
+                if (count > 0)
+                    txn.Complete();
             }
         }
 
-        private void TryToRoute(Message msg)
+        int RouteBatchOfMessages()
         {
-            var dest = _route(msg) ?? _deadLetter; //TODO: what if route fails?
-            dest.Send(msg, MessageQueueTransactionType.Automatic); // TODO: what if we cannot send?
+            int count = 0;
+            for (int i = 0; i < MaxBatchSize; i++)
+            {
+                using (Message msg = _input.RecieveWithTimeout(TimeSpan.Zero, MessageQueueTransactionType.Automatic))
+                {
+                    if (msg == null) // message has been received by another process or thread
+                        break;
+
+                    var dest = _route(msg) ?? _deadLetter; //TODO: what if route fails?
+                    dest.Send(msg, MessageQueueTransactionType.Automatic); // TODO: what if we cannot send?
+                    count++;
+                }
+            }
+            return count;
         }
     }
 }
