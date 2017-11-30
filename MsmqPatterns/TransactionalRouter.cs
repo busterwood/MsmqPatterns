@@ -26,7 +26,7 @@ namespace MsmqPatterns
         /// Maximum number of messages batched into one transaction.
         /// We try to include multiple messages in a batch as it is MUCH faster (up to 10x)
         /// </summary>
-        public int MaxBatchSize { get; set; } = 128;                
+        public int MaxBatchSize { get; set; } = 100;                
 
     }
 
@@ -57,7 +57,7 @@ namespace MsmqPatterns
                 {
                     txn.Abort();
                     //TODO: log what happened and why
-                    Console.Error.WriteLine($"WARN {ex.Message} {{{ex.Destination?.FormatName}}}");
+                    Console.Error.WriteLine($"WARN {ex.Message}S {{Destination={ex.Destination?.FormatName}}}");
                     MoveToPoisonSubqueue(ex.LookupId, true);
                 }
             }
@@ -124,7 +124,7 @@ namespace MsmqPatterns
             catch (RouteException ex)
             {
                 //TODO: log what happened and why
-                Console.Error.WriteLine($"WARN {ex.Message} {{{ex.Destination?.FormatName}}}");
+                Console.Error.WriteLine($"WARN {ex.Message} {{Destination={ex.Destination?.FormatName}}}");
                 MoveToPoisonSubqueue(ex.LookupId, true);
             }
         }
