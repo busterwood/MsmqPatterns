@@ -1,19 +1,16 @@
 ﻿using MsmqPatterns;
 using NUnit.Framework;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Messaging;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace UnitTests
 {
-    [TestFixture]
+    [TestFixture, Timeout(5000)]
     public class DtcRouterTests
     {
-        string inputQueueName = $".\\private$\\{nameof(DtcRouterTests)}.Input";
-        string deadQueueName = $".\\private$\\{nameof(DtcRouterTests)}.Dead";
+        static string inputQueueName = $".\\private$\\{nameof(DtcRouterTests)}.Input";
+        string deadQueueName = $"{inputQueueName};Poison";
         string outputQueueName1 = $".\\private$\\{nameof(DtcRouterTests)}.Output.1";
         string outputQueueName2 = $".\\private$\\{nameof(DtcRouterTests)}.Output.2";
         MessageQueue input;
@@ -47,7 +44,7 @@ namespace UnitTests
                 TestSupport.ReadAllMessages(outputQueueName2);
 
             input = new MessageQueue(inputQueueName, QueueAccessMode.SendAndReceive);
-            dead = new MessageQueue(inputQueueName, QueueAccessMode.SendAndReceive);
+            dead = new MessageQueue(deadQueueName, QueueAccessMode.SendAndReceive);
             out1 = new MessageQueue(outputQueueName1, QueueAccessMode.SendAndReceive);
             out2 = new MessageQueue(outputQueueName2, QueueAccessMode.SendAndReceive);
         }
@@ -55,7 +52,7 @@ namespace UnitTests
         [Test]
         public async Task can_route_transactional()
         {
-            using (var router = new DtcTransactionalRouter(input, dead, msg => msg.Label.Contains("1") ? out1 : out2))
+            using (var router = new DtcTransactionalRouter(input, msg => msg.Label.Contains("1") ? out1 : out2))
             {
                 router.StopTime = TimeSpan.FromMilliseconds(20);
                 var rtask = router.StartAsync();
@@ -75,7 +72,7 @@ namespace UnitTests
         [Test]
         public async Task can_route_transactional_to_other_queue()
         {
-            using (var router = new DtcTransactionalRouter(input, dead, msg => msg.Label.Contains("1") ? out1 : out2))
+            using (var router = new DtcTransactionalRouter(input, msg => msg.Label.Contains("1") ? out1 : out2))
             {
                 router.StopTime = TimeSpan.FromMilliseconds(20);
                 var rtask = router.StartAsync();
@@ -95,7 +92,7 @@ namespace UnitTests
         [Test]
         public async Task can_route_transactional_to_deadletter()
         {
-            using (var router = new DtcTransactionalRouter(input, dead, msg => null))
+            using (var router = new DtcTransactionalRouter(input, msg => null))
             {
                 router.StopTime = TimeSpan.FromMilliseconds(20);
                 var rtask = router.StartAsync();

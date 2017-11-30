@@ -1,6 +1,8 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Diagnostics.Contracts;
 using System.Messaging;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
 
@@ -12,121 +14,154 @@ namespace MsmqPatterns
     /// </summary>
     public abstract class TransactionalRouter : Router
     {
-        protected TransactionalRouter(MessageQueue input, MessageQueue deadletter, Func<Message, MessageQueue> route)
-            : base(input, deadletter, route)
+
+        protected TransactionalRouter(MessageQueue input, Func<Message, MessageQueue> route)
+            : base(input, route)
         {
+            Contract.Requires(route != null);
+            Contract.Requires(input != null);
         }
 
         /// <summary>
         /// Maximum number of messages batched into one transaction.
         /// We try to include multiple messages in a batch as it is MUCH faster (up to 10x)
         /// </summary>
-        public int MaxBatchSize { get; set; } = 100;
+        public int MaxBatchSize { get; set; } = 128;                
 
-        protected override async Task RunAsync()
-        {
-            while (!_stop)
-            {
-                bool got = await NewMessageAsync();
-                if (got)
-                    OnNewMessage();
-            }
-        }
-
-        async Task<bool> NewMessageAsync()
-        {
-            var current = _input.MessageReadPropertyFilter; // save filter so it can be restored after peek
-            try
-            {
-                _input.MessageReadPropertyFilter = PeekFilter;
-                using (var msg = await _input.PeekAsync(StopTime))
-                {
-                    return msg != null;
-                }
-            }
-            finally
-            {
-                _input.MessageReadPropertyFilter = current; // restore filter
-            }
-        }
-
-        protected abstract void OnNewMessage();
     }
 
     /// <summary>Routes messages between local <see cref="MessageQueue"/> using a local MSMQ transaction</summary>
     public class MsmqTransactionalRouter : TransactionalRouter
     {
-        public MsmqTransactionalRouter(MessageQueue input, MessageQueue deadletter, Func<Message, MessageQueue> route)
-            : base(input, deadletter, route)
+        public MsmqTransactionalRouter(MessageQueue input, Func<Message, MessageQueue> route)
+            : base(input, route)
         {
+            Contract.Requires(route != null);
+            Contract.Requires(input != null);
             Contract.Requires(input.Transactional);
-            Contract.Requires(deadletter.Transactional);
         }
 
-        protected override void OnNewMessage()
+        protected override void OnNewMessage(Message peeked)
         {
             using (var txn = new MessageQueueTransaction())
             {
                 txn.Begin();
-                int count = RouteBatchOfMessages(txn);
-                if (count > 0)
-                    txn.Commit();
+                try
+                {
+
+                    int count = RouteBatchOfMessages(txn);
+                    if (count > 0)
+                        txn.Commit();
+                }
+                catch (RouteException ex)
+                {
+                    txn.Abort();
+                    //TODO: log what happened and why
+                    Console.Error.WriteLine($"WARN {ex.Message} {{{ex.Destination?.FormatName}}}");
+                    MoveToPoisonSubqueue(ex.LookupId, true);
+                }
             }
         }
 
         int RouteBatchOfMessages(MessageQueueTransaction txn)
         {
-            int count = 0;
+            int sent = 0;
             for (int i = 0; i < MaxBatchSize; i++)
             {
-                using (Message msg = _input.RecieveWithTimeout(TimeSpan.Zero, txn)) //note: no waiting
-                {
-                    if (msg == null)
-                        break;
+                if (RouteMessage(txn))
+                    sent++;
+                else
+                    break;
+            }
+            return sent;
+        }
 
-                    var dest = GetRoute(msg);
-                    dest.Send(msg, txn); // TODO: what if we cannot send?
-                    count++;
+        private bool RouteMessage(MessageQueueTransaction txn)
+        {
+            using (Message msg = _input.RecieveWithTimeout(TimeSpan.Zero, txn)) //note: no waiting
+            {
+                if (msg == null)
+                    return false;
+
+                var dest = GetRoute(msg);
+
+                try
+                {
+                    dest.Send(msg, txn);
+                    return true;
+                }
+                catch (MessageQueueException ex)
+                {
+                    // we cannot send to that queue
+                    throw new RouteException("Failed to send to destination", ex, msg.LookupId, dest);
                 }
             }
-            return count;
         }
     }
 
     /// <summary>Routes messages in local or remote queues using DTC <see cref="TransactionScope"/></summary>
     public class DtcTransactionalRouter : TransactionalRouter
     {
-        public DtcTransactionalRouter(MessageQueue input, MessageQueue deadletter, Func<Message, MessageQueue> route)
-            : base(input, deadletter, route)
+
+        public DtcTransactionalRouter(MessageQueue input, Func<Message, MessageQueue> route)
+            : base(input, route)
         {
+            Contract.Requires(input != null);
+            Contract.Requires(route != null);
         }
 
-        protected override void OnNewMessage()
+        protected override void OnNewMessage(Message peeked)
         {
-            using (var txn = new TransactionScope(TransactionScopeOption.RequiresNew))
+            try
             {
-                int count = RouteBatchOfMessages();
-                if (count > 0)
-                    txn.Complete();
+                using (var txn = new TransactionScope(TransactionScopeOption.RequiresNew))
+                {
+                    int count = RouteBatchOfMessages();
+                    if (count > 0)
+                        txn.Complete();
+                }
+            }
+            catch (RouteException ex)
+            {
+                //TODO: log what happened and why
+                Console.Error.WriteLine($"WARN {ex.Message} {{{ex.Destination?.FormatName}}}");
+                MoveToPoisonSubqueue(ex.LookupId, true);
             }
         }
 
         int RouteBatchOfMessages()
         {
-            int count = 0;
+            int sent = 0;
             for (int i = 0; i < MaxBatchSize; i++)
             {
-                using (Message msg = _input.RecieveWithTimeout(TimeSpan.Zero, MessageQueueTransactionType.Automatic))  //note: no waiting
-                {
-                    if (msg == null)
-                        break;
+                if (RouteMessage())
+                    sent++;
+                else
+                    break;
+            }
+            return sent;
+        }
 
-                    var dest = GetRoute(msg);
-                    dest.Send(msg, MessageQueueTransactionType.Automatic); // TODO: what if we cannot send?
-                    count++;
+        private bool RouteMessage()
+        {
+            using (Message msg = _input.RecieveWithTimeout(TimeSpan.Zero, MessageQueueTransactionType.Automatic))  //note: no waiting
+            {
+                if (msg == null)
+                    return false;
+
+                var dest = GetRoute(msg);
+
+                try
+                {
+                    dest.Send(msg, MessageQueueTransactionType.Automatic); 
+                    return true;
+                }
+                catch (MessageQueueException ex)
+                {
+                    // we cannot send to that queue
+                    throw new RouteException("Failed to send to destination", ex, msg.LookupId, dest);
                 }
             }
-            return count;
         }
     }
 }

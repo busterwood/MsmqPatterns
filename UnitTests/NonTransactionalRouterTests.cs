@@ -1,19 +1,16 @@
 ﻿using MsmqPatterns;
 using NUnit.Framework;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Messaging;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace UnitTests
 {
-    [TestFixture]
+    [TestFixture, Timeout(1000)]
     public class NonTransactionalRouterTests
     {
-        string inputQueueName = $".\\private$\\{nameof(NonTransactionalRouterTests)}.Input";
-        string deadQueueName = $".\\private$\\{nameof(NonTransactionalRouterTests)}.Dead";
+        static string inputQueueName = $".\\private$\\{nameof(NonTransactionalRouterTests)}.Input";
+        string deadQueueName = $"{inputQueueName};Poison";
         string outputQueueName1 = $".\\private$\\{nameof(NonTransactionalRouterTests)}.Output.1";
         string outputQueueName2 = $".\\private$\\{nameof(NonTransactionalRouterTests)}.Output.2";
         MessageQueue input;
@@ -47,7 +44,7 @@ namespace UnitTests
                 TestSupport.ReadAllMessages(outputQueueName2);
 
             input = new MessageQueue(inputQueueName, QueueAccessMode.SendAndReceive);
-            dead = new MessageQueue(inputQueueName, QueueAccessMode.SendAndReceive);
+            dead = new MessageQueue(deadQueueName, QueueAccessMode.SendAndReceive);
             out1 = new MessageQueue(outputQueueName1, QueueAccessMode.SendAndReceive);
             out2 = new MessageQueue(outputQueueName2, QueueAccessMode.SendAndReceive);
         }
@@ -55,7 +52,7 @@ namespace UnitTests
         [Test]
         public async Task can_route_non_transactional()
         {
-            using (var router = Router.New(input, dead, msg => msg.Label.Contains("1") ? out1 : out2))
+            using (var router = Router.New(input, msg => msg.Label.Contains("1") ? out1 : out2))
             {
                 router.StopTime = TimeSpan.FromMilliseconds(20);
                 var rtask = router.StartAsync();
@@ -75,7 +72,7 @@ namespace UnitTests
         [Test]
         public async Task can_route_non_transactional_to_other_queue()
         {
-            using (var router = Router.New(input, dead, msg => msg.Label.Contains("1") ? out1 : out2))
+            using (var router = Router.New(input, msg => msg.Label.Contains("1") ? out1 : out2))
             {
                 router.StopTime = TimeSpan.FromMilliseconds(20);
                 var rtask = router.StartAsync();
@@ -95,7 +92,7 @@ namespace UnitTests
         [Test]
         public async Task can_route_non_transactional_to_deadletter()
         {
-            using (var router = Router.New(input, dead, msg => null))
+            using (var router = Router.New(input, msg => null))
             {
                 router.StopTime = TimeSpan.FromMilliseconds(20);
                 var rtask = router.StartAsync();

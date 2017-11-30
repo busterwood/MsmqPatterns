@@ -1,6 +1,8 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Diagnostics.Contracts;
 using System.Messaging;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MsmqPatterns
@@ -9,7 +11,6 @@ namespace MsmqPatterns
     public abstract class Router : IProcessor
     {
         protected readonly MessageQueue _input;
-        protected readonly MessageQueue _deadLetter;
         protected readonly Func<Message, MessageQueue> _route;
         protected volatile bool _stop;
         Task _run;
@@ -17,6 +18,7 @@ namespace MsmqPatterns
         /// <summary>Timeout used when peeking for messages</summary>
         /// <remarks>the higher this value the slower the <see cref="StopAsync"/> method will be</remarks>
         public TimeSpan StopTime { get; set; } = TimeSpan.FromMilliseconds(100);
+
 
         /// <summary>The filter used when peeking messages, the default does NOT include the message body</summary>
         public MessagePropertyFilter PeekFilter { get; } = new MessagePropertyFilter
@@ -27,36 +29,41 @@ namespace MsmqPatterns
             LookupId = true,
         };
 
+        public string PoisonSubQueue { get; set; } = "Poison";
+
+        
         /// <summary>
         /// Static factory method for creating the appropriate <see cref="Router"/> 
         /// based on the <see cref="MessageQueue.Transactional"/> property
         /// </summary>
-        public static Router New(MessageQueue input, MessageQueue deadletter, Func<Message, MessageQueue> route)
+        public static Router New(MessageQueue input, Func<Message, MessageQueue> route)
         {
+            Contract.Requires(route != null);
+            Contract.Requires(input != null);
             try
             {
                 if (input.Transactional)
-                    return new MsmqTransactionalRouter(input, deadletter, route);
+                    return new MsmqTransactionalRouter(input, route);
                 else
-                    return new NonTransactionalRouter(input, deadletter, route);
+                    return new NonTransactionalRouter(input, route);
             }
             catch (MessageQueueException ex) when (ex.MessageQueueErrorCode == MessageQueueErrorCode.UnsupportedFormatNameOperation)
             {
-                return new DtcTransactionalRouter(input, deadletter, route);
+                return new DtcTransactionalRouter(input, route);
             }
         }
 
-        protected Router(MessageQueue input, MessageQueue deadletter, Func<Message, MessageQueue> route)
+        protected Router(MessageQueue input, Func<Message, MessageQueue> route)
         {
             Contract.Requires(input != null);
-            Contract.Requires(deadletter != null);
-            Contract.Requires(!deadletter.Transactional);
+            Contract.Requires(route != null);
 
             _input = input;
-            _deadLetter = deadletter;
             _route = route;
         }
 
+        /// <summary>Starts the asynchronous routing process</summary>
+        /// <returns></returns>
         public Task<Task> StartAsync()
         {
             _stop = false;
@@ -64,9 +71,50 @@ namespace MsmqPatterns
             return Task.FromResult(_run);
         }
 
-        protected abstract Task RunAsync();
+        async Task RunAsync()
+        {
+            while (!_stop)
+            {
+                using (var msg = await PeekAsync())
+                {
+                    if (msg != null)
+                        OnNewMessage(msg);
+                }
+            }
+        }
 
-        protected MessageQueue GetRoute(Message msg) => _route(msg) ?? _deadLetter; //TODO: what if route fails?
+        protected async Task<Message> PeekAsync()
+        {
+            var current = _input.MessageReadPropertyFilter; // save filter so it can be restored after peek
+            try
+            {
+                _input.MessageReadPropertyFilter = PeekFilter;
+                return await _input.PeekAsync(StopTime);
+            }
+            finally
+            {
+                _input.MessageReadPropertyFilter = current; // restore filter
+            }
+        }
+
+        //TODO: handle exception and vary batch size on exception: half it until it is 1, so we can discard the bad message, then double up after exception (up to MaxBatchSize
+        protected abstract void OnNewMessage(Message peeked);
+
+        protected MessageQueue GetRoute(Message msg)
+        {
+            MessageQueue r = null;
+            try
+            {
+                r = _route(msg);
+                if (r == null)
+                    throw new NullReferenceException("route");
+                return r;
+            }
+            catch (Exception ex)
+            {
+                throw new RouteException("Failed to get route", ex, msg.LookupId);
+            }
+        }
 
         public Task StopAsync()
         {
@@ -78,9 +126,26 @@ namespace MsmqPatterns
         {
             StopAsync()?.Wait();
             _input?.Dispose();
-            _deadLetter?.Dispose();
         }
-       
+
+        protected void MoveToPoisonSubqueue(long lookupId, bool? transactional = null)
+        {
+            const int MQ_ERROR_MESSAGE_NOT_FOUND = -1072824184;
+            for (int i = 0; i < 5; i++)
+            {
+                try
+                {
+                    _input.MoveMessage(PoisonSubQueue, lookupId, transactional);
+                    return;
+                }
+                catch (Win32Exception e) when (e.NativeErrorCode == MQ_ERROR_MESSAGE_NOT_FOUND)
+                {
+                    Thread.Sleep(100);
+                }
+            }
+            Console.Error.WriteLine($"WARN Failed to move message {{subqueue={PoisonSubQueue}}} {{lookupId={lookupId}}}");
+        }
+
     }
-    
+
 }
