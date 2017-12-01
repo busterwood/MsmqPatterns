@@ -60,7 +60,7 @@ namespace MsmqPatterns
             {
                 while (!_stop)
                 {
-                    using (Message peeked = await _input.PeekAsync(ReceiveTimeout, cur, action))
+                    using (Message peeked = await _input.TryPeekAsync(ReceiveTimeout, cur, action))
                     {
                         if (peeked == null)
                             continue;

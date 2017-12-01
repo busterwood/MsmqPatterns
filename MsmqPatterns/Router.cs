@@ -75,7 +75,7 @@ namespace MsmqPatterns
         {
             while (!_stop)
             {
-                using (var msg = await PeekAsync())
+                using (var msg = await TryPeekAsync())
                 {
                     if (msg != null)
                         OnNewMessage(msg);
@@ -83,13 +83,13 @@ namespace MsmqPatterns
             }
         }
 
-        protected async Task<Message> PeekAsync()
+        protected async Task<Message> TryPeekAsync()
         {
             var current = _input.MessageReadPropertyFilter; // save filter so it can be restored after peek
             try
             {
                 _input.MessageReadPropertyFilter = PeekFilter;
-                return await _input.PeekAsync(StopTime);
+                return await _input.TryPeekAsync(StopTime);
             }
             finally
             {
@@ -130,20 +130,15 @@ namespace MsmqPatterns
 
         protected void MoveToPoisonSubqueue(long lookupId, bool? transactional = null)
         {
-            const int MQ_ERROR_MESSAGE_NOT_FOUND = -1072824184;
-            for (int i = 0; i < 5; i++)
+            try
             {
-                try
-                {
-                    _input.MoveMessage(PoisonSubQueue, lookupId, transactional);
-                    return;
-                }
-                catch (Win32Exception e) when (e.NativeErrorCode == MQ_ERROR_MESSAGE_NOT_FOUND)
-                {
-                    Thread.Sleep(100);
-                }
+                _input.MoveMessage(PoisonSubQueue, lookupId, transactional);
+                return;
             }
-            Console.Error.WriteLine($"WARN Failed to move message {{subqueue={PoisonSubQueue}}} {{lookupId={lookupId}}}");
+            catch (Win32Exception e)
+            {
+                Console.Error.WriteLine($"WARN Failed to move message {{lookupId={lookupId}}} {{subqueue={PoisonSubQueue}}} {{error={e.Message}}}");
+            }            
         }
 
     }

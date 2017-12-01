@@ -78,7 +78,7 @@ namespace MsmqPatterns
 
         private bool RouteMessage(MessageQueueTransaction txn)
         {
-            using (Message msg = _input.RecieveWithTimeout(TimeSpan.Zero, txn)) //note: no waiting
+            using (Message msg = _input.TryRecieve(TimeSpan.Zero, txn)) //note: no waiting
             {
                 if (msg == null)
                     return false;
@@ -144,7 +144,7 @@ namespace MsmqPatterns
 
         private bool RouteMessage()
         {
-            using (Message msg = _input.RecieveWithTimeout(TimeSpan.Zero, MessageQueueTransactionType.Automatic))  //note: no waiting
+            using (Message msg = _input.TryRecieve(TimeSpan.Zero, MessageQueueTransactionType.Automatic))  //note: no waiting
             {
                 if (msg == null)
                     return false;

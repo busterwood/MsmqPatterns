@@ -37,7 +37,7 @@ namespace MsmqPatterns
         {
             var dest = GetRoute(peeked);
 
-            using (var msg = _input.RecieveWithTimeout(StopTime))
+            using (var msg = _input.TryRecieve(StopTime))
             {
                 if (msg == null) // message has been received by another process or thread
                     return;

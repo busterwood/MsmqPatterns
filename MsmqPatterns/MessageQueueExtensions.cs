@@ -15,8 +15,12 @@ namespace MsmqPatterns
         [DllImport("mqrt.dll", CharSet = CharSet.Unicode)]
         internal static extern int MQMoveMessage(IntPtr sourceQueue, SafeHandle targetQueue, long lookupId, IntPtr pTransaction);
 
+        [DllImport("mqrt.dll", CharSet = CharSet.Unicode)]
+        static extern int MQOpenQueue(string formatName, int access, int shareMode, out MsmqSafeHandle hQueue);
+
         /// <summary>Move a message from the <paramref name="queue"/> to a subqueue</summary>
         /// <exception cref="Win32Exception">Thrown when the move fails</exception>
+        /// <remarks>Fails with 0x80070006 Invalid handle when trying to move a message on a remote queue</remarks>
         public static void MoveMessage(this MessageQueue queue, string subqueueName, long lookupId, bool? transactional = null)
         {
             Contract.Requires(queue != null);
@@ -25,11 +29,102 @@ namespace MsmqPatterns
             var txn = transactional ?? queue.Transactional ? (IntPtr)MQ_SINGLE_MESSAGE : IntPtr.Zero;
             
             //TODO: add cache of subqueues as opening the queue is quite slow
-            using (var handle = Msmq.OpenQueue(queue.FormatName + ";" + subqueueName, MQ_MOVE_MESSAGE, 0))
+            using (var handle = OpenQueue(queue.FormatName + ";" + subqueueName, MQ_MOVE_MESSAGE, 0))
             {
                 int result = MQMoveMessage(queue.ReadHandle, handle, lookupId, txn);
                 if (result != 0)
                     throw new Win32Exception(result);
+            }
+        }
+
+        static SafeHandle OpenQueue(string formatName, int access, int shareMode)
+        {
+            MsmqSafeHandle handle;
+            int result = MQOpenQueue(formatName, access, shareMode, out handle);
+            if (result != 0)
+                throw new Win32Exception(result);
+            return handle;
+        }
+
+
+        /// <summary>
+        /// Send a <paramref name="message"/> and wait for acknowledgement of delivery to destination queue via the <paramref name="adminQueue"/>
+        /// </summary>
+        /// <remarks>
+        /// When sending a message to a remote queue you don't know if the message has reached the destination queue until we get an acknowledgement.
+        /// When sending without an admin queue you might observe that messages sometimes disappear.
+        /// </remarks>
+        public static async Task SendAsync(this MessageQueue queue, MessageQueue adminQueue, Message message)
+        {
+            Contract.Requires(queue != null);
+            Contract.Requires(adminQueue != null);
+            Contract.Requires(message != null);
+
+            message.AcknowledgeType |= AcknowledgeTypes.FullReachQueue;
+            message.AdministrationQueue = adminQueue;
+
+            queue.Send(message);
+
+            await adminQueue.WaitForDelivery(message.Id);
+        }        
+        
+        /// <summary>
+        /// Send a <paramref name="message"/> and wait for acknowledgement of delivery to destination queue via the <paramref name="adminQueue"/>
+        /// </summary>
+        /// <remarks>
+        /// When sending a message to a remote queue you don't know if the message has reached the destination queue until we get an acknowledgement.
+        /// When sending without an admin queue you might observe that messages sometimes disappear.
+        /// </remarks>
+        public static async Task SendAsync(this MessageQueue queue, MessageQueue adminQueue, Message message, MessageQueueTransaction txn)
+        {
+            Contract.Requires(queue != null);
+            Contract.Requires(adminQueue != null);
+            Contract.Requires(message != null);
+            Contract.Requires(txn != null);
+
+            message.AcknowledgeType |= AcknowledgeTypes.FullReachQueue;
+            message.AdministrationQueue = adminQueue;
+
+            queue.Send(message, txn);
+
+            await adminQueue.WaitForDelivery(message.Id);
+        }
+
+        /// <summary>wait for acknowledgement of message delivery to the destination queue</summary>
+        public static async Task WaitForDelivery(this MessageQueue adminQueue, string correlationId)
+        {
+            adminQueue.MessageReadPropertyFilter.Acknowledgment = true;
+            using (Message ack = await adminQueue.ReceiveByCorrelationIdAsync(correlationId))
+            {
+                switch (ack.Acknowledgment)
+                {
+                    case Acknowledgment.ReachQueueTimeout:
+                        throw new TimeoutException();
+                    case Acknowledgment.ReachQueue:
+                    case Acknowledgment.Receive:
+                        break;
+                    default:
+                        throw new AcknowledgmentException(ack.Acknowledgment);
+                }
+            }
+        }
+
+        /// <summary>wait for acknowledgement of message delivery to the destination queue</summary>
+        public static async Task WaitForDelivery(this MessageQueue adminQueue, string correlationId, MessageQueueTransaction txn)
+        {
+            adminQueue.MessageReadPropertyFilter.Acknowledgment = true;
+            using (Message ack = await adminQueue.ReceiveByCorrelationIdAsync(correlationId))
+            {
+                switch (ack.Acknowledgment)
+                {
+                    case Acknowledgment.ReachQueueTimeout:
+                        throw new TimeoutException();
+                    case Acknowledgment.ReachQueue:
+                    case Acknowledgment.Receive:
+                        break;
+                    default:
+                        throw new AcknowledgmentException(ack.Acknowledgment);
+                }
             }
         }
 
@@ -40,7 +135,9 @@ namespace MsmqPatterns
             Contract.Requires(correlationId != null);
 
             var currentFilter = queue.MessageReadPropertyFilter;
-            queue.MessageReadPropertyFilter = new MessagePropertyFilter{CorrelationId = true};
+            queue.MessageReadPropertyFilter = (MessagePropertyFilter)currentFilter.Clone();
+            queue.MessageReadPropertyFilter.CorrelationId = true;
+
             using (var cursor = queue.CreateCursor())
             {
                 var action = PeekAction.Current;
@@ -60,7 +157,7 @@ namespace MsmqPatterns
         }
 
         /// <summary>Returns a message from a cursor, or NULL if the <paramref name="timeout"/> is reached</summary>
-        public static async Task<Message> PeekAsync(this MessageQueue queue, TimeSpan timeout)
+        public static async Task<Message> TryPeekAsync(this MessageQueue queue, TimeSpan timeout)
         {
             Contract.Requires(queue != null);
             try
@@ -74,7 +171,7 @@ namespace MsmqPatterns
         }
         
         /// <summary>Returns a message from a cursor, or NULL if the <paramref name="timeout"/> is reached</summary>
-        public static async Task<Message> PeekAsync(this MessageQueue queue, TimeSpan timeout, Cursor cursor, PeekAction action)
+        public static async Task<Message> TryPeekAsync(this MessageQueue queue, TimeSpan timeout, Cursor cursor, PeekAction action)
         {
             Contract.Requires(queue != null);
             Contract.Requires(cursor != null);
@@ -89,7 +186,7 @@ namespace MsmqPatterns
         }
 
         /// <summary>Returns the next message from the <paramref name="queue"/>, or NULL if the <paramref name="timeout"/> is reached</summary>
-        public static Message RecieveWithTimeout(this MessageQueue queue, TimeSpan timeout)
+        public static Message TryRecieve(this MessageQueue queue, TimeSpan timeout)
         {
             Contract.Requires(queue != null);
             try
@@ -103,7 +200,7 @@ namespace MsmqPatterns
         }
 
         /// <summary>Returns the next message from the <paramref name="queue"/>, or NULL if the <paramref name="timeout"/> is reached</summary>
-        public static async Task<Message> RecieveWithTimeoutAsync(this MessageQueue queue, TimeSpan timeout)
+        public static async Task<Message> TryRecieveAsync(this MessageQueue queue, TimeSpan timeout)
         {
             Contract.Requires(queue != null);
             try
@@ -117,7 +214,7 @@ namespace MsmqPatterns
         }
 
         /// <summary>Returns the next message from the <paramref name="queue"/>, or NULL if the <paramref name="timeout"/> is reached</summary>
-        public static Message RecieveWithTimeout(this MessageQueue queue, TimeSpan timeout, MessageQueueTransaction txn)
+        public static Message TryRecieve(this MessageQueue queue, TimeSpan timeout, MessageQueueTransaction txn)
         {
             Contract.Requires(queue != null);
             Contract.Requires(txn != null);
@@ -132,7 +229,7 @@ namespace MsmqPatterns
         }
 
         /// <summary>Returns the next message from the <paramref name="queue"/>, or NULL if the <paramref name="timeout"/> is reached</summary>
-        public static Message RecieveWithTimeout(this MessageQueue queue, TimeSpan timeout, MessageQueueTransactionType txnType)
+        public static Message TryRecieve(this MessageQueue queue, TimeSpan timeout, MessageQueueTransactionType txnType)
         {
             Contract.Requires(queue != null);
             try
