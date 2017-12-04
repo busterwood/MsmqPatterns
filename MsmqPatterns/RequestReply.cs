@@ -44,32 +44,41 @@ namespace MsmqPatterns
             Contract.Requires(request != null);
             Contract.Ensures(Contract.Result<Message>() != null);
 
+            SetupRequest(request);
+            _requestQueue.Send(request);
+            WaitForAcknowledgement(request);
+            return _responseQueue.ReceiveByCorrelationId(request.Id, MessageQueue.InfiniteTimeout);
+        }
+
+        private void SetupRequest(Message request)
+        {
             request.Recoverable = false; // express mode
             request.ResponseQueue = _responseQueue;
 
             // setup timeout with negative acknowledgement
             request.TimeToBeReceived = TimeToBeReceived;
-            request.AcknowledgeType = AcknowledgeTypes.NegativeReceive | AcknowledgeTypes.FullReceive | AcknowledgeTypes.NotAcknowledgeReceive | AcknowledgeTypes.NotAcknowledgeReachQueue;
+            request.AcknowledgeType =  AcknowledgeTypes.FullReceive | AcknowledgeTypes.NotAcknowledgeReachQueue;
             request.AdministrationQueue = _adminQueue;
+        }
 
-            _requestQueue.Send(request);
-
-            // wait for acknowledgement of receive on the admin queue
-            using (Message ack = _adminQueue.ReceiveByCorrelationId(request.Id, MessageQueue.InfiniteTimeout))
+        private void WaitForAcknowledgement(Message request)
+        {
+            for (;;)
             {
-                switch (ack.Acknowledgment)
+                var ack = _adminQueue.ReceiveAcknowledgement(request.Id);
+                switch (ack)
                 {
+                    case Acknowledgment.Receive:
+                        return;
+                    case Acknowledgment.ReachQueueTimeout:
                     case Acknowledgment.ReceiveTimeout:
                         throw new TimeoutException();
-                    case Acknowledgment.Receive:
+                    case Acknowledgment.ReachQueue:
                         break;
                     default:
-                        throw new AcknowledgmentException(ack.Acknowledgment);
+                        throw new AcknowledgmentException(ack);
                 }
             }
-
-            //TODO: maybe timeout the processing?
-            return _responseQueue.ReceiveByCorrelationId(request.Id, MessageQueue.InfiniteTimeout);
         }
 
         /// <summary>Sends a request message and waits for a reply.</summary>
@@ -81,32 +90,30 @@ namespace MsmqPatterns
         {
             Contract.Requires(request != null);
 
-            request.Recoverable = false; // express mode
-            request.ResponseQueue = _responseQueue;
-
-            // setup timeout with negative acknowledgement
-            request.TimeToBeReceived = TimeToBeReceived;
-            request.AcknowledgeType = AcknowledgeTypes.NegativeReceive | AcknowledgeTypes.FullReceive | AcknowledgeTypes.NotAcknowledgeReceive | AcknowledgeTypes.NotAcknowledgeReachQueue;
-            request.AdministrationQueue = _adminQueue;
-
+            SetupRequest(request);
             _requestQueue.Send(request);
+            await WaitForAcknowledgementAsync(request);
+            return await _responseQueue.ReceiveByCorrelationIdAsync(request.Id);
+        }
 
-            // wait for acknowledgement of receive on the admin queue
-            using (Message ack = await _adminQueue.ReceiveByCorrelationIdAsync(request.Id))
+        private async Task WaitForAcknowledgementAsync(Message request)
+        {
+            for (;;)
             {
-                switch (ack.Acknowledgment)
+                var ack = await _adminQueue.ReceiveAcknowledgementAsync(request.Id);
+                switch (ack)
                 {
+                    case Acknowledgment.Receive:
+                        return;
+                    case Acknowledgment.ReachQueueTimeout:
                     case Acknowledgment.ReceiveTimeout:
                         throw new TimeoutException();
-                    case Acknowledgment.Receive:
+                    case Acknowledgment.ReachQueue:
                         break;
                     default:
-                        throw new AcknowledgmentException(ack.Acknowledgment);
+                        throw new AcknowledgmentException(ack);
                 }
             }
-
-            //TODO: maybe timeout the processing?
-            return await _responseQueue.ReceiveByCorrelationIdAsync(request.Id);            
         }
 
         public void Dispose()

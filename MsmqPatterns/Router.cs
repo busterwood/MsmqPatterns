@@ -29,9 +29,9 @@ namespace MsmqPatterns
             LookupId = true,
         };
 
-        public string PoisonSubQueue { get; set; } = "Poison";
+        /// <summary>Handle messages that cannot be routed.  Defaults to moving messages to a "Poison" subqueue of the input queue</summary>
+        public Action<long, bool?> BadMessageHandler { get; set; }
 
-        
         /// <summary>
         /// Static factory method for creating the appropriate <see cref="Router"/> 
         /// based on the <see cref="MessageQueue.Transactional"/> property
@@ -60,6 +60,7 @@ namespace MsmqPatterns
 
             _input = input;
             _route = route;
+            BadMessageHandler = MoveToPoisonSubqueue;
         }
 
         /// <summary>Starts the asynchronous routing process</summary>
@@ -97,7 +98,6 @@ namespace MsmqPatterns
             }
         }
 
-        //TODO: handle exception and vary batch size on exception: half it until it is 1, so we can discard the bad message, then double up after exception (up to MaxBatchSize
         protected abstract void OnNewMessage(Message peeked);
 
         protected MessageQueue GetRoute(Message msg)
@@ -128,19 +128,21 @@ namespace MsmqPatterns
             _input?.Dispose();
         }
 
-        protected void MoveToPoisonSubqueue(long lookupId, bool? transactional = null)
+        private void MoveToPoisonSubqueue(long lookupId, bool? transactional = null)
         {
+            const string poisonSubqueue = "Poison";
             try
             {
-                _input.MoveMessage(PoisonSubQueue, lookupId, transactional);
+                _input.MoveMessage(poisonSubqueue, lookupId, transactional);
                 return;
             }
             catch (Win32Exception e)
             {
-                Console.Error.WriteLine($"WARN Failed to move message {{lookupId={lookupId}}} {{subqueue={PoisonSubQueue}}} {{error={e.Message}}}");
+                Console.Error.WriteLine($"WARN Failed to move message {{lookupId={lookupId}}} {{subqueue={poisonSubqueue}}} {{error={e.Message}}}");
             }            
         }
 
     }
+
 
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Diagnostics.Contracts;
 using System.Messaging;
 using System.Threading.Tasks;
@@ -27,7 +28,10 @@ namespace MsmqPatterns
         };
 
         /// <summary>Timeout used so <see cref="StopAsync"/> can stop this processor</summary>
-        public TimeSpan ReceiveTimeout { get; set; } = TimeSpan.FromMilliseconds(100);
+        public TimeSpan StopTime { get; set; } = TimeSpan.FromMilliseconds(100);
+
+        /// <summary>Handle messages that cannot be routed.  Defaults to moving messages to a "Poison" subqueue of the input queue</summary>
+        public Action<long, bool?> BadMessageHandler { get; set; }
 
         public SubQueueFilterRouter(string inputQueue, Func<Message, string> getSubQueueName) 
             : this(new MessageQueue(inputQueue, QueueAccessMode.Receive), getSubQueueName)
@@ -42,6 +46,7 @@ namespace MsmqPatterns
             Contract.Requires(getSubQueueName != null);
             _input = input;
             _getSubQueueName = getSubQueueName;
+            BadMessageHandler = MoveToPoisonSubqueue;
         }
 
         public Task<Task> StartAsync()
@@ -54,22 +59,47 @@ namespace MsmqPatterns
         async Task RunAsync()
         {
             _input.MessageReadPropertyFilter = PeekFilter;
-
-            var action = PeekAction.Current;
-            using (var cur = _input.CreateCursor())
+            try
             {
                 while (!_stop)
                 {
-                    using (Message peeked = await _input.TryPeekAsync(ReceiveTimeout, cur, action))
+                    using (Message peeked = await _input.TryPeekAsync(StopTime))
                     {
                         if (peeked == null)
                             continue;
-                        var sqn = _getSubQueueName(peeked);
-                        if (sqn != null)
-                            _input.MoveMessage(sqn, peeked.LookupId);
-                        action = PeekAction.Next;
+
+                        try
+                        {
+                            var subQueueName = GetRoute(peeked);
+                            _input.MoveMessage(subQueueName, peeked.LookupId);
+                        }
+                        catch (RouteException ex)
+                        {
+                            MoveToPoisonSubqueue(peeked.LookupId);
+                        }
                     }
                 }
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+        }
+
+        protected string GetRoute(Message msg)
+        {
+            string subQueueName = null;
+            try
+            {
+                subQueueName = _getSubQueueName(msg);
+                if (subQueueName == null)
+                    throw new NullReferenceException("route");
+                return subQueueName;
+            }
+            catch (Exception ex)
+            {
+                throw new RouteException("Failed to get route", ex, msg.LookupId);
             }
         }
 
@@ -84,5 +114,20 @@ namespace MsmqPatterns
             StopAsync()?.Wait();
             _input.Dispose();
         }
+
+        private void MoveToPoisonSubqueue(long lookupId, bool? transactional = null)
+        {
+            const string poisonSubqueue = "Poison";
+            try
+            {
+                _input.MoveMessage(poisonSubqueue, lookupId, transactional);
+                return;
+            }
+            catch (Win32Exception e)
+            {
+                Console.Error.WriteLine($"WARN Failed to move message {{lookupId={lookupId}}} {{subqueue={poisonSubqueue}}} {{error={e.Message}}}");
+            }
+        }
+
     }
 }

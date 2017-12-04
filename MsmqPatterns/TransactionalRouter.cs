@@ -58,7 +58,7 @@ namespace MsmqPatterns
                     txn.Abort();
                     //TODO: log what happened and why
                     Console.Error.WriteLine($"WARN {ex.Message}S {{Destination={ex.Destination?.FormatName}}}");
-                    MoveToPoisonSubqueue(ex.LookupId, true);
+                    BadMessageHandler(ex.LookupId, true);
                 }
             }
         }
@@ -125,7 +125,7 @@ namespace MsmqPatterns
             {
                 //TODO: log what happened and why
                 Console.Error.WriteLine($"WARN {ex.Message} {{Destination={ex.Destination?.FormatName}}}");
-                MoveToPoisonSubqueue(ex.LookupId, true);
+                BadMessageHandler(ex.LookupId, true);
             }
         }
 

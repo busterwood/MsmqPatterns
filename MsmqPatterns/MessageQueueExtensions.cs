@@ -4,6 +4,8 @@ using System.Messaging;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Diagnostics.Contracts;
+using System.Collections.Generic;
+using System.Threading;
 
 namespace MsmqPatterns
 {
@@ -18,6 +20,9 @@ namespace MsmqPatterns
         [DllImport("mqrt.dll", CharSet = CharSet.Unicode)]
         static extern int MQOpenQueue(string formatName, int access, int shareMode, out MsmqSafeHandle hQueue);
 
+        [ThreadStatic] //TODO: move to AsyncLocal
+        static Dictionary<string, SafeHandle> _cachedMoveHandles; //TODO: handle cache eviction
+
         /// <summary>Move a message from the <paramref name="queue"/> to a subqueue</summary>
         /// <exception cref="Win32Exception">Thrown when the move fails</exception>
         /// <remarks>Fails with 0x80070006 Invalid handle when trying to move a message on a remote queue</remarks>
@@ -27,14 +32,24 @@ namespace MsmqPatterns
             Contract.Requires(subqueueName != null);
 
             var txn = transactional ?? queue.Transactional ? (IntPtr)MQ_SINGLE_MESSAGE : IntPtr.Zero;
-            
-            //TODO: add cache of subqueues as opening the queue is quite slow
-            using (var handle = OpenQueue(queue.FormatName + ";" + subqueueName, MQ_MOVE_MESSAGE, 0))
+
+            var sq = queue.FormatName + ";" + subqueueName;
+            SafeHandle handle;
+            if (_cachedMoveHandles == null)
             {
-                int result = MQMoveMessage(queue.ReadHandle, handle, lookupId, txn);
-                if (result != 0)
-                    throw new Win32Exception(result);
+                _cachedMoveHandles = new Dictionary<string, SafeHandle>(StringComparer.OrdinalIgnoreCase);
             }
+            if (!_cachedMoveHandles.TryGetValue(sq, out handle))
+            {
+                handle = OpenQueue(sq, MQ_MOVE_MESSAGE, 0);
+                _cachedMoveHandles.Add(sq, handle);
+            }
+
+            //TODO: add cache of subqueues as opening the queue is quite slow
+
+            int result = MQMoveMessage(queue.ReadHandle, handle, lookupId, txn);
+            if (result != 0)
+                throw new Win32Exception(result);
         }
 
         static SafeHandle OpenQueue(string formatName, int access, int shareMode)
@@ -88,6 +103,26 @@ namespace MsmqPatterns
             queue.Send(message, txn);
 
             await adminQueue.WaitForDelivery(message.Id);
+        }
+
+        /// <summary>wait for acknowledgement of message delivery to the destination queue</summary>
+        public static Acknowledgment ReceiveAcknowledgement(this MessageQueue adminQueue, string correlationId)
+        {
+            adminQueue.MessageReadPropertyFilter.Acknowledgment = true;
+            using (Message ack = adminQueue.ReceiveByCorrelationId(correlationId, MessageQueue.InfiniteTimeout))
+            {
+                return ack.Acknowledgment;
+            }
+        }
+
+        /// <summary>wait for acknowledgement of message delivery to the destination queue</summary>
+        public static async Task<Acknowledgment> ReceiveAcknowledgementAsync(this MessageQueue adminQueue, string correlationId)
+        {
+            adminQueue.MessageReadPropertyFilter.Acknowledgment = true;
+            using (Message ack = await adminQueue.ReceiveByCorrelationIdAsync(correlationId))
+            {
+                return ack.Acknowledgment;
+            }
         }
 
         /// <summary>wait for acknowledgement of message delivery to the destination queue</summary>
