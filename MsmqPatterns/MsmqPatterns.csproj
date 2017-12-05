@@ -84,6 +84,7 @@
     <Compile Include="AcknowledgmentException.cs" />
     <Compile Include="Class1.cs" />
     <Compile Include="RouteException.cs" />
+    <Compile Include="Sender.cs" />
     <Compile Include="TransactionalRouter.cs" />
     <Compile Include="MsmqSafeHandle.cs" />
     <Compile Include="NonTransactionalRouter.cs" />

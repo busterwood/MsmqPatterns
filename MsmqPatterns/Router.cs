@@ -19,7 +19,6 @@ namespace MsmqPatterns
         /// <remarks>the higher this value the slower the <see cref="StopAsync"/> method will be</remarks>
         public TimeSpan StopTime { get; set; } = TimeSpan.FromMilliseconds(100);
 
-
         /// <summary>The filter used when peeking messages, the default does NOT include the message body</summary>
         public MessagePropertyFilter PeekFilter { get; } = new MessagePropertyFilter
         {
@@ -143,6 +142,5 @@ namespace MsmqPatterns
         }
 
     }
-
 
 }
