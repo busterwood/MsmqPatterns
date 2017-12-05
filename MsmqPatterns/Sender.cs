@@ -1,18 +1,19 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Messaging;
 using System.Threading.Tasks;
 using System.Diagnostics.Contracts;
+using BusterWood.Caching;
 
 namespace MsmqPatterns
 {
     /// <summary>
     /// Use this class to send a message and get acknowledgement that is has been sent.
-    /// The <see cref="SendAsync(Message, MessageQueue)"/> will throw <see cref="AcknowledgmentException"/> on errors, and throw a <see cref="TimeoutException"/> if the message fails to reach the destination queue in the time allowed.
+    /// The <see cref="SendAsync(Message, MessageQueue)"/> method will throw <see cref="AcknowledgmentException"/> on errors, and throw a <see cref="TimeoutException"/> if the message fails to reach the destination queue in the time allowed.
+    /// Yo must call <see cref="StartAsync"/> before calling <see cref="SendAsync(Message, MessageQueue, MessageQueueTransactionType)"/>.
     /// </summary>
     public class Sender : IProcessor
     {
-        readonly ConcurrentDictionary<string, TaskCompletionSource<Acknowledgment>> _reachQueue;
+        readonly Cache<string, TaskCompletionSource<Acknowledgment>> _reachQueue;
         readonly MessageQueue _adminQueue;
         volatile bool _stop;
         Task _run;
@@ -37,7 +38,7 @@ namespace MsmqPatterns
         {
             Contract.Requires(adminQueue != null);
             _adminQueue = adminQueue;
-            _reachQueue = new ConcurrentDictionary<string, TaskCompletionSource<Acknowledgment>>();
+            _reachQueue = new Cache<string, TaskCompletionSource<Acknowledgment>>(null, TimeSpan.FromMinutes(5));
         }
 
         /// <summary>Starts listening for acknowledgement messages</summary>

@@ -4,8 +4,7 @@ using System.Messaging;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Diagnostics.Contracts;
-using System.Collections.Generic;
-using System.Threading;
+using BusterWood.Caching;
 
 namespace MsmqPatterns
 {
@@ -20,8 +19,21 @@ namespace MsmqPatterns
         [DllImport("mqrt.dll", CharSet = CharSet.Unicode)]
         static extern int MQOpenQueue(string formatName, int access, int shareMode, out MsmqSafeHandle hQueue);
 
-        [ThreadStatic] //TODO: move to AsyncLocal
-        static Dictionary<string, SafeHandle> _cachedMoveHandles; //TODO: handle cache eviction
+        static readonly Cache<string, SafeHandle> _cachedMoveHandles;
+
+        static MessageQueueExtensions()
+        {
+            _cachedMoveHandles = new Cache<string, SafeHandle>(500, TimeSpan.FromMinutes(5));
+            _cachedMoveHandles.Evicted += cachedMoveHandles_Evicted;
+        }
+
+        private static void cachedMoveHandles_Evicted(object sender, System.Collections.Generic.IReadOnlyDictionary<string, SafeHandle> evicted)
+        {
+            foreach (var handle in evicted.Values)
+            {
+                handle.Dispose();
+            }
+        }
 
         /// <summary>Move a message from the <paramref name="queue"/> to a subqueue</summary>
         /// <exception cref="Win32Exception">Thrown when the move fails</exception>
@@ -33,23 +45,30 @@ namespace MsmqPatterns
 
             var txn = transactional ?? queue.Transactional ? (IntPtr)MQ_SINGLE_MESSAGE : IntPtr.Zero;
 
-            var sq = queue.FormatName + ";" + subqueueName;
+            var subQFormatName = queue.FormatName + ";" + subqueueName;
+            SafeHandle handle = GetSubQueueHandle(subQFormatName); // don't dispose as these are cached
+            try
+            {
+                int result = MQMoveMessage(queue.ReadHandle, handle, lookupId, txn);
+                if (result != 0)
+                    throw new Win32Exception(result);
+            }
+            finally
+            {
+                _cachedMoveHandles[subQFormatName] = handle;
+            }
+        }
+
+        private static SafeHandle GetSubQueueHandle(string formatName)
+        {
             SafeHandle handle;
-            if (_cachedMoveHandles == null)
+            lock (_cachedMoveHandles.SyncRoot)
             {
-                _cachedMoveHandles = new Dictionary<string, SafeHandle>(StringComparer.OrdinalIgnoreCase);
+                handle = _cachedMoveHandles[formatName];
+                if (handle != null)
+                    _cachedMoveHandles.Remove(formatName); // take it out of the cache
             }
-            if (!_cachedMoveHandles.TryGetValue(sq, out handle))
-            {
-                handle = OpenQueue(sq, MQ_MOVE_MESSAGE, 0);
-                _cachedMoveHandles.Add(sq, handle);
-            }
-
-            //TODO: add cache of subqueues as opening the queue is quite slow
-
-            int result = MQMoveMessage(queue.ReadHandle, handle, lookupId, txn);
-            if (result != 0)
-                throw new Win32Exception(result);
+            return handle ?? OpenQueue(formatName, MQ_MOVE_MESSAGE, 0);
         }
 
         static SafeHandle OpenQueue(string formatName, int access, int shareMode)
@@ -60,7 +79,6 @@ namespace MsmqPatterns
                 throw new Win32Exception(result);
             return handle;
         }
-
 
         /// <summary>
         /// Send a <paramref name="message"/> and wait for acknowledgement of delivery to destination queue via the <paramref name="adminQueue"/>

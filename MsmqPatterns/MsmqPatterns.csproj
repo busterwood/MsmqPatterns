@@ -74,6 +74,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="BusterWood.Caching, Version=2.1.0.0, Culture=neutral, PublicKeyToken=f1395612722d4ccc, processorArchitecture=MSIL">
+      <HintPath>..\packages\BusterWood.Caching.2.1.0\lib\net45\BusterWood.Caching.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="Microsoft.CSharp" />
