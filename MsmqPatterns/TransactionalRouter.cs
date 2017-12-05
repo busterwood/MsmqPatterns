@@ -121,7 +121,7 @@ namespace MsmqPatterns
             {
                 //TODO: log what happened and why
                 Console.Error.WriteLine($"WARN {ex.Message} {{Destination={ex.Destination?.FormatName}}}");
-                BadMessageHandler(ex.LookupId, MessageQueueTransactionType.Automatic);
+                BadMessageHandler(ex.LookupId, MessageQueueTransactionType.Automatic); //TODO: what type is good here?
             }
         }
 
