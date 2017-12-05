@@ -1,9 +1,6 @@
 ﻿using System;
-using System.ComponentModel;
 using System.Diagnostics.Contracts;
 using System.Messaging;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Transactions;
 
 namespace MsmqPatterns
@@ -14,7 +11,6 @@ namespace MsmqPatterns
     /// </summary>
     public abstract class TransactionalRouter : Router
     {
-
         protected TransactionalRouter(MessageQueue input, Func<Message, MessageQueue> route)
             : base(input, route)
         {
@@ -30,7 +26,7 @@ namespace MsmqPatterns
 
     }
 
-    /// <summary>Routes messages between local <see cref="MessageQueue"/> using a local MSMQ transaction</summary>
+    /// <summary>Routes batches of messages between local <see cref="MessageQueue"/> using a MSMQ transaction</summary>
     public class MsmqTransactionalRouter : TransactionalRouter
     {
         public MsmqTransactionalRouter(MessageQueue input, Func<Message, MessageQueue> route)
@@ -99,7 +95,7 @@ namespace MsmqPatterns
         }
     }
 
-    /// <summary>Routes messages in local or remote queues using DTC <see cref="TransactionScope"/></summary>
+    /// <summary>Routes batches of messages in local or remote queues using DTC <see cref="TransactionScope"/></summary>
     public class DtcTransactionalRouter : TransactionalRouter
     {
 
