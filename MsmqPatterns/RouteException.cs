@@ -5,7 +5,7 @@ using System.Runtime.Serialization;
 namespace MsmqPatterns
 {
     [Serializable]
-    internal class RouteException : Exception
+    public class RouteException : Exception
     {
         public MessageQueue Destination { get; }
 

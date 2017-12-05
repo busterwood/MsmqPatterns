@@ -5,7 +5,7 @@ using System.Runtime.Serialization;
 namespace MsmqPatterns
 {
     [Serializable]
-    internal class AcknowledgmentException : Exception
+    public class AcknowledgmentException : Exception
     {
         public Acknowledgment Acknowledgment { get; }
 
@@ -17,7 +17,7 @@ namespace MsmqPatterns
         {
         }
 
-        public AcknowledgmentException(Acknowledgment acknowledgment)
+        public AcknowledgmentException(string message, Acknowledgment acknowledgment) : base(message)
         {
             this.Acknowledgment = acknowledgment;
         }

@@ -124,40 +124,19 @@ namespace MsmqPatterns
         }
 
         /// <summary>wait for acknowledgement of message delivery to the destination queue</summary>
-        public static Acknowledgment ReceiveAcknowledgement(this MessageQueue adminQueue, string correlationId)
-        {
-            adminQueue.MessageReadPropertyFilter.Acknowledgment = true;
-            using (Message ack = adminQueue.ReceiveByCorrelationId(correlationId, MessageQueue.InfiniteTimeout))
-            {
-                return ack.Acknowledgment;
-            }
-        }
-
-        /// <summary>wait for acknowledgement of message delivery to the destination queue</summary>
-        public static async Task<Acknowledgment> ReceiveAcknowledgementAsync(this MessageQueue adminQueue, string correlationId)
-        {
-            adminQueue.MessageReadPropertyFilter.Acknowledgment = true;
-            using (Message ack = await adminQueue.ReceiveByCorrelationIdAsync(correlationId))
-            {
-                return ack.Acknowledgment;
-            }
-        }
-
-        /// <summary>wait for acknowledgement of message delivery to the destination queue</summary>
         public static async Task WaitForDelivery(this MessageQueue adminQueue, string correlationId)
         {
             adminQueue.MessageReadPropertyFilter.Acknowledgment = true;
+            adminQueue.MessageReadPropertyFilter.ResponseQueue = true;
             using (Message ack = await adminQueue.ReceiveByCorrelationIdAsync(correlationId))
             {
                 switch (ack.Acknowledgment)
                 {
-                    case Acknowledgment.ReachQueueTimeout:
-                        throw new TimeoutException();
                     case Acknowledgment.ReachQueue:
                     case Acknowledgment.Receive:
                         break;
                     default:
-                        throw new AcknowledgmentException(ack.Acknowledgment);
+                        throw new AcknowledgmentException(ack.ResponseQueue.FormatName, ack.Acknowledgment);
                 }
             }
         }
@@ -166,17 +145,16 @@ namespace MsmqPatterns
         public static async Task WaitForDelivery(this MessageQueue adminQueue, string correlationId, MessageQueueTransaction txn)
         {
             adminQueue.MessageReadPropertyFilter.Acknowledgment = true;
+            adminQueue.MessageReadPropertyFilter.ResponseQueue = true;
             using (Message ack = await adminQueue.ReceiveByCorrelationIdAsync(correlationId))
             {
                 switch (ack.Acknowledgment)
                 {
-                    case Acknowledgment.ReachQueueTimeout:
-                        throw new TimeoutException();
                     case Acknowledgment.ReachQueue:
                     case Acknowledgment.Receive:
                         break;
                     default:
-                        throw new AcknowledgmentException(ack.Acknowledgment);
+                        throw new AcknowledgmentException(ack.ResponseQueue.FormatName, ack.Acknowledgment);
                 }
             }
         }

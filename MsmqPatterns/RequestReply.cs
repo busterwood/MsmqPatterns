@@ -63,20 +63,21 @@ namespace MsmqPatterns
 
         private void WaitForAcknowledgement(Message request)
         {
+            _adminQueue.MessageReadPropertyFilter.Acknowledgment = true;
+            _adminQueue.MessageReadPropertyFilter.ResponseQueue = true;
             for (;;)
             {
-                var ack = _adminQueue.ReceiveAcknowledgement(request.Id);
-                switch (ack)
+                using (var msg = _adminQueue.ReceiveByCorrelationId(request.Id, MessageQueue.InfiniteTimeout))
                 {
-                    case Acknowledgment.Receive:
-                        return;
-                    case Acknowledgment.ReachQueueTimeout:
-                    case Acknowledgment.ReceiveTimeout:
-                        throw new TimeoutException();
-                    case Acknowledgment.ReachQueue:
-                        break;
-                    default:
-                        throw new AcknowledgmentException(ack);
+                    switch (msg.Acknowledgment)
+                    {
+                        case Acknowledgment.Receive:
+                            return;
+                        case Acknowledgment.ReachQueue:
+                            break;
+                        default:
+                            throw new AcknowledgmentException(msg.ResponseQueue.FormatName, msg.Acknowledgment);
+                    }
                 }
             }
         }
@@ -98,20 +99,21 @@ namespace MsmqPatterns
 
         private async Task WaitForAcknowledgementAsync(Message request)
         {
+            _adminQueue.MessageReadPropertyFilter.Acknowledgment = true;
+            _adminQueue.MessageReadPropertyFilter.ResponseQueue = true;
             for (;;)
             {
-                var ack = await _adminQueue.ReceiveAcknowledgementAsync(request.Id);
-                switch (ack)
+                using (var msg = await _adminQueue.ReceiveByCorrelationIdAsync(request.Id))
                 {
-                    case Acknowledgment.Receive:
-                        return;
-                    case Acknowledgment.ReachQueueTimeout:
-                    case Acknowledgment.ReceiveTimeout:
-                        throw new TimeoutException();
-                    case Acknowledgment.ReachQueue:
-                        break;
-                    default:
-                        throw new AcknowledgmentException(ack);
+                    switch (msg.Acknowledgment)
+                    {
+                        case Acknowledgment.Receive:
+                            return;
+                        case Acknowledgment.ReachQueue:
+                            break;
+                        default:
+                            throw new AcknowledgmentException(msg.ResponseQueue.FormatName, msg.Acknowledgment);
+                    }
                 }
             }
         }
