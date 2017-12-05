@@ -18,6 +18,7 @@ namespace MsmqPatterns
     /// </remarks>
     public class Sender : IProcessor
     {
+        static readonly ReadThroughCache<string, string> _hostNameCache = new ReadThroughCache<string, string>(new DnsDataSource(), 100, TimeSpan.FromMinutes(10));
         readonly Cache<FormatNameAndMsgId, TaskCompletionSource<Acknowledgment>> _reachQueue = new Cache<FormatNameAndMsgId, TaskCompletionSource<Acknowledgment>>(null, TimeSpan.FromMinutes(5));
         readonly MessageQueue _adminQueue;
         volatile bool _stop;
@@ -161,7 +162,7 @@ namespace MsmqPatterns
                 return formatName;
             try
             {
-                var fullHost = (await Dns.GetHostEntryAsync(bits[1])).HostName; //TODO: do we need to do this every time? the name cached?
+                var fullHost = await _hostNameCache.GetAsync(bits[1]);
                 return formatName.Replace(bits[1], fullHost); // TODO: only replace first
             }
             catch
@@ -171,7 +172,7 @@ namespace MsmqPatterns
         }
 
         /// <summary>Send a message to many queues at the same time and wait for all acknowledgements</summary>
-        public Task SendToManyAsync(Message message, MessageQueueTransactionType transactionType, params MessageQueue[] queues)
+        public async Task SendToManyAsync(Message message, MessageQueueTransactionType transactionType, params MessageQueue[] queues)
         {
             Contract.Requires(message != null);
             Contract.Requires(queues != null);
@@ -181,7 +182,7 @@ namespace MsmqPatterns
             message.AcknowledgeType |= AcknowledgeTypes.FullReachQueue;
             message.TimeToReachQueue = ReachQueueTimeout;
             message.AdministrationQueue = _adminQueue;
-            var multiElementFormatName = string.Join(",", queues.Select(q => q.FormatName)); //TODO: expand host name
+            var multiElementFormatName = string.Join(",", queues.Select(q => q.FormatName)); 
 
             var tasks = new Task[queues.Length];
             using (var q = new MessageQueue(multiElementFormatName, QueueAccessMode.Send))
@@ -189,8 +190,13 @@ namespace MsmqPatterns
                 q.Send(message, transactionType);
             }
 
-            return Task.WhenAll(queues
-                .Select(q => new FormatNameAndMsgId(q.FormatName, message.Id)) //TODO: expand host name
+            // expand host name
+            var hostNamesTask = queues.Select(q => ExpandHostName(q.FormatName)).ToArray();
+            await Task.WhenAll(hostNamesTask);
+            var hostNames = hostNamesTask.Select(t => t.Result).ToArray();
+
+            await Task.WhenAll(hostNames
+                .Select(host => new FormatNameAndMsgId(host, message.Id)) 
                 .Select(ReachQueueCompletionSource)
                 .Select(tcs => tcs.Task)
             );
@@ -223,6 +229,17 @@ namespace MsmqPatterns
             public override bool Equals(object obj) => obj is FormatNameAndMsgId && Equals((FormatNameAndMsgId)obj);
 
             public override int GetHashCode() => StringComparer.OrdinalIgnoreCase.GetHashCode(FormatName) ^ StringComparer.OrdinalIgnoreCase.GetHashCode(MessageId);
+        }
+
+        class DnsDataSource : IDataSource<string, string>
+        {
+            public string this[string key] => Dns.GetHostEntry(key)?.HostName ?? key;
+
+            public async Task<string> GetAsync(string key)
+            {
+                var entry = await Dns.GetHostEntryAsync(key);
+                return entry?.HostName ?? key;
+            }
         }
     }
 }
