@@ -44,19 +44,24 @@ namespace MsmqPatterns
             Contract.Requires(queue != null);
             Contract.Requires(subqueueName != null);
 
-            var txn = (IntPtr)transactionType;
-
             var subQFormatName = queue.FormatName + ";" + subqueueName;
             SafeHandle handle = GetSubQueueHandle(subQFormatName); // don't dispose as these are cached
             try
             {
-                int result = MQMoveMessage(queue.ReadHandle, handle, lookupId, txn);
+                int result = MQMoveMessage(queue.ReadHandle, handle, lookupId, (IntPtr)transactionType);
                 if (result != 0)
                     throw new Win32Exception(result);
             }
             finally
             {
-                _cachedMoveHandles[subQFormatName] = handle;
+                //try to return the handle to the queue, or dispose if it
+                lock (_cachedMoveHandles.SyncRoot)
+                {
+                    if (_cachedMoveHandles[subQFormatName] == null)
+                        _cachedMoveHandles[subQFormatName] = handle; 
+                    else
+                        handle.Dispose();
+                }
             }
         }
 
