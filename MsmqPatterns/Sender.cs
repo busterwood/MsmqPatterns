@@ -37,17 +37,19 @@ namespace MsmqPatterns
         /// <summary>The time allowed for a message to reach a destination queue before a <see cref="TimeoutException"/> is thrown by <see cref="SendAsync(Message, MessageQueue)"/></summary>
         public TimeSpan ReachQueueTimeout { get; set; } = TimeSpan.FromSeconds(1);
 
+        /// <summary>
+        /// Opens (or creates) the administration queue using format name.  Note: you need to pass a queue path to create the queue
+        /// </summary>
+        /// <param name="adminQueueName"></param>
         public Sender(string adminQueueName)
         {
             Contract.Requires(!string.IsNullOrEmpty(adminQueueName));
+
             if (MessageQueue.Exists(adminQueueName))
-            {
                 _adminQueue = new MessageQueue(adminQueueName, QueueAccessMode.Receive);
-            }
             else
-            {
                 _adminQueue = MessageQueue.Create(adminQueueName);
-            }
+
             if (_adminQueue.Transactional)
                 throw new InvalidOperationException("Admin queue CANNOT be transactional");
         }
