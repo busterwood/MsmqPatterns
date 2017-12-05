@@ -29,7 +29,7 @@ namespace MsmqPatterns
         };
 
         /// <summary>Handle messages that cannot be routed.  Defaults to moving messages to a "Poison" subqueue of the input queue</summary>
-        public Action<long, bool?> BadMessageHandler { get; set; }
+        public Action<long, MessageQueueTransactionType> BadMessageHandler { get; set; }
 
         /// <summary>
         /// Static factory method for creating the appropriate <see cref="Router"/> 
@@ -127,12 +127,12 @@ namespace MsmqPatterns
             _input?.Dispose();
         }
 
-        private void MoveToPoisonSubqueue(long lookupId, bool? transactional = null)
+        private void MoveToPoisonSubqueue(long lookupId, MessageQueueTransactionType transactionType)
         {
             const string poisonSubqueue = "Poison";
             try
             {
-                _input.MoveMessage(poisonSubqueue, lookupId, transactional);
+                _input.MoveMessage(poisonSubqueue, lookupId, transactionType);
                 return;
             }
             catch (Win32Exception e)

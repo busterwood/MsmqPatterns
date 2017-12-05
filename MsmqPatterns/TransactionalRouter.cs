@@ -54,7 +54,7 @@ namespace MsmqPatterns
                     txn.Abort();
                     //TODO: log what happened and why
                     Console.Error.WriteLine($"WARN {ex.Message}S {{Destination={ex.Destination?.FormatName}}}");
-                    BadMessageHandler(ex.LookupId, true);
+                    BadMessageHandler(ex.LookupId, MessageQueueTransactionType.Single);
                 }
             }
         }
@@ -121,7 +121,7 @@ namespace MsmqPatterns
             {
                 //TODO: log what happened and why
                 Console.Error.WriteLine($"WARN {ex.Message} {{Destination={ex.Destination?.FormatName}}}");
-                BadMessageHandler(ex.LookupId, true);
+                BadMessageHandler(ex.LookupId, MessageQueueTransactionType.Automatic);
             }
         }
 

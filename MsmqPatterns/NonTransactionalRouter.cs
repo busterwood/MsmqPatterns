@@ -29,7 +29,7 @@ namespace MsmqPatterns
             {
                 //TODO: logging
                 Console.Error.WriteLine($"WARN {ex.Message} {{{ex.Destination?.FormatName}}}");
-                BadMessageHandler(ex.LookupId, false);
+                BadMessageHandler(ex.LookupId, MessageQueueTransactionType.None);
             }            
         }
 

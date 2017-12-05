@@ -15,6 +15,7 @@ namespace MsmqPatterns
     {
         readonly MessageQueue _input;
         readonly Func<Message, string> _getSubQueueName;
+        readonly MessageQueueTransactionType _transactionType;
         volatile bool _stop;
         Task _run;
 
@@ -31,7 +32,7 @@ namespace MsmqPatterns
         public TimeSpan StopTime { get; set; } = TimeSpan.FromMilliseconds(100);
 
         /// <summary>Handle messages that cannot be routed.  Defaults to moving messages to a "Poison" subqueue of the input queue</summary>
-        public Action<long, bool?> BadMessageHandler { get; set; }
+        public Action<long, MessageQueueTransactionType> BadMessageHandler { get; set; }
 
         public SubQueueFilterRouter(string inputQueue, Func<Message, string> getSubQueueName) 
             : this(new MessageQueue(inputQueue, QueueAccessMode.Receive), getSubQueueName)
@@ -47,6 +48,7 @@ namespace MsmqPatterns
             _input = input;
             _getSubQueueName = getSubQueueName;
             BadMessageHandler = MoveToPoisonSubqueue;
+            _transactionType = input.Transactional ? MessageQueueTransactionType.Single : MessageQueueTransactionType.None;
         }
 
         public Task<Task> StartAsync()
@@ -71,11 +73,11 @@ namespace MsmqPatterns
                         try
                         {
                             var subQueueName = GetRoute(peeked);
-                            _input.MoveMessage(subQueueName, peeked.LookupId);
+                            _input.MoveMessage(subQueueName, peeked.LookupId, _transactionType);
                         }
                         catch (RouteException ex)
                         {
-                            MoveToPoisonSubqueue(peeked.LookupId);
+                            MoveToPoisonSubqueue(peeked.LookupId, _transactionType);
                         }
                     }
                 }
@@ -115,12 +117,12 @@ namespace MsmqPatterns
             _input.Dispose();
         }
 
-        private void MoveToPoisonSubqueue(long lookupId, bool? transactional = null)
+        private void MoveToPoisonSubqueue(long lookupId, MessageQueueTransactionType transactionType)
         {
             const string poisonSubqueue = "Poison";
             try
             {
-                _input.MoveMessage(poisonSubqueue, lookupId, transactional);
+                _input.MoveMessage(poisonSubqueue, lookupId, transactionType);
                 return;
             }
             catch (Win32Exception e)

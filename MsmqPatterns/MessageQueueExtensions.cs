@@ -10,7 +10,8 @@ namespace MsmqPatterns
 {
     public static class MessageQueueExtensions
     {
-        const int MQ_SINGLE_MESSAGE = 3;
+        const int MQ_MTS_TRANSACTION = 1;   // DTC transaction 
+        const int MQ_SINGLE_MESSAGE = 3;    // single message MSMQ transaction
         const int MQ_MOVE_MESSAGE = 4; // System.Messaging does not support moving, we have to open the queue ourselves
 
         [DllImport("mqrt.dll", CharSet = CharSet.Unicode)]
@@ -38,12 +39,12 @@ namespace MsmqPatterns
         /// <summary>Move a message from the <paramref name="queue"/> to a subqueue</summary>
         /// <exception cref="Win32Exception">Thrown when the move fails</exception>
         /// <remarks>Fails with 0x80070006 Invalid handle when trying to move a message on a remote queue</remarks>
-        public static void MoveMessage(this MessageQueue queue, string subqueueName, long lookupId, bool? transactional = null)
+        public static void MoveMessage(this MessageQueue queue, string subqueueName, long lookupId, MessageQueueTransactionType transactionType)
         {
             Contract.Requires(queue != null);
             Contract.Requires(subqueueName != null);
 
-            var txn = transactional ?? queue.Transactional ? (IntPtr)MQ_SINGLE_MESSAGE : IntPtr.Zero;
+            var txn = (IntPtr)transactionType;
 
             var subQFormatName = queue.FormatName + ";" + subqueueName;
             SafeHandle handle = GetSubQueueHandle(subQFormatName); // don't dispose as these are cached
