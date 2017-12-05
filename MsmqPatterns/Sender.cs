@@ -9,8 +9,11 @@ namespace MsmqPatterns
     /// <summary>
     /// Use this class to send a message and get acknowledgement that is has been sent.
     /// The <see cref="SendAsync(Message, MessageQueue)"/> method will throw <see cref="AcknowledgmentException"/> on errors, and throw a <see cref="TimeoutException"/> if the message fails to reach the destination queue in the time allowed.
-    /// Yo must call <see cref="StartAsync"/> before calling <see cref="SendAsync(Message, MessageQueue, MessageQueueTransactionType)"/>.
+    /// You must call <see cref="StartAsync"/> before calling <see cref="SendAsync(Message, MessageQueue, MessageQueueTransactionType)"/>.
     /// </summary>
+    /// <remarks>
+    /// You can use one instance per process (singleton), share the instance between multiple queues, or even one instance per output queue.
+    /// </remarks>
     public class Sender : IProcessor
     {
         readonly Cache<string, TaskCompletionSource<Acknowledgment>> _reachQueue;
@@ -113,24 +116,26 @@ namespace MsmqPatterns
             _adminQueue.Dispose();
         }
 
-        /// <summary>Send a <paramref name="message"/> to the <paramref name="dest"/> queue and wait for it to be delivered</summary>
+        /// <summary>Sends a <paramref name="message"/> to the <paramref name="queue"/> and waits for it to be delivered</summary>
         /// <returns>Task that completes when the message has been delivered</returns>
         /// <exception cref="TimeoutException">Thrown if the message does not reach the queue before the <see cref="ReachQueueTimeout"/> has been reached</exception>
         /// <exception cref="AcknowledgmentException">Thrown if something bad happens, e.g. message could not be sent, access denied, the queue was purged, etc</exception>
-        public Task SendAsync(Message message, MessageQueue dest, MessageQueueTransactionType transactionType)
+        public Task SendAsync(Message message, MessageQueue queue, MessageQueueTransactionType transactionType)
         {
             Contract.Requires(message != null);
-            Contract.Requires(dest != null);
+            Contract.Requires(queue != null);
             Contract.Assert(_run != null);
 
             message.AcknowledgeType |= AcknowledgeTypes.FullReachQueue;
             message.TimeToReachQueue = ReachQueueTimeout;
             message.AdministrationQueue = _adminQueue;
-            dest.Send(message, transactionType);
+            queue.Send(message, transactionType);
             var tcs = ReachQueueCompletionSource(message.Id);
             return tcs.Task;
-        }
+        }        
 
+        //NOTE: no overload that takes a MessageQueueTransaction as we would not get the acknowledgement until after the transaction has committed.
+        
         TaskCompletionSource<Acknowledgment> ReachQueueCompletionSource(string msgId) => _reachQueue.GetOrAdd(msgId, id => new TaskCompletionSource<Acknowledgment>());
 
     }
