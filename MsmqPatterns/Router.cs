@@ -71,7 +71,7 @@ namespace MsmqPatterns
             return Task.FromResult(_run);
         }
 
-        async Task RunAsync()
+        protected virtual async Task RunAsync()
         {
             while (!_stop)
             {

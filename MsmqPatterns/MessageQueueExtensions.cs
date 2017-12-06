@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Diagnostics.Contracts;
 using BusterWood.Caching;
+using System.Reflection;
 
 namespace MsmqPatterns
 {
@@ -16,6 +17,9 @@ namespace MsmqPatterns
 
         [DllImport("mqrt.dll", CharSet = CharSet.Unicode)]
         internal static extern int MQMoveMessage(IntPtr sourceQueue, SafeHandle targetQueue, long lookupId, IntPtr pTransaction);
+
+        [DllImport("mqrt.dll", CharSet = CharSet.Unicode)]
+        internal static extern int MQMoveMessage(IntPtr sourceQueue, SafeHandle targetQueue, long lookupId, object pTransaction);
 
         [DllImport("mqrt.dll", CharSet = CharSet.Unicode)]
         static extern int MQOpenQueue(string formatName, int access, int shareMode, out MsmqSafeHandle hQueue);
@@ -49,6 +53,41 @@ namespace MsmqPatterns
             try
             {
                 int result = MQMoveMessage(queue.ReadHandle, handle, lookupId, (IntPtr)transactionType);
+                if (result != 0)
+                    throw new Win32Exception(result);
+            }
+            finally
+            {
+                //try to return the handle to the queue, or dispose if it
+                lock (_cachedMoveHandles.SyncRoot)
+                {
+                    if (_cachedMoveHandles[subQFormatName] == null)
+                        _cachedMoveHandles[subQFormatName] = handle; 
+                    else
+                        handle.Dispose();
+                }
+            }
+        }
+
+        
+        /// <summary>Move a message from the <paramref name="queue"/> to a subqueue</summary>
+        /// <exception cref="Win32Exception">Thrown when the move fails</exception>
+        /// <remarks>Fails with 0x80070006 Invalid handle when trying to move a message on a remote queue</remarks>
+        public static void MoveMessage(this MessageQueue queue, string subqueueName, long lookupId, MessageQueueTransaction transaction)
+        {
+            Contract.Requires(queue != null);
+            Contract.Requires(subqueueName != null);
+
+            var subQFormatName = queue.FormatName + ";" + subqueueName;
+            SafeHandle handle = GetSubQueueHandle(subQFormatName); // don't dispose as these are cached
+            try
+            {
+                // use reflection to get the inner transaction
+                //TODO: move to outer scope ?
+                PropertyInfo innerTxnProp = typeof(MessageQueueTransaction).GetProperty("InnerTransaction", BindingFlags.GetProperty | BindingFlags.Instance | BindingFlags.NonPublic);
+                object innerTxn = innerTxnProp.GetValue(transaction);
+
+                int result = MQMoveMessage(queue.ReadHandle, handle, lookupId, innerTxn);
                 if (result != 0)
                     throw new Win32Exception(result);
             }
@@ -190,6 +229,20 @@ namespace MsmqPatterns
                     }
                     action = PeekAction.Next;
                 }
+            }
+        }
+
+        /// <summary>Returns a message from a cursor, or NULL if the <paramref name="timeout"/> is reached</summary>
+        public static Message TryPeek(this MessageQueue queue, TimeSpan timeout)
+        {
+            Contract.Requires(queue != null);
+            try
+            {
+                return queue.Peek(timeout);
+            }
+            catch (MessageQueueException ex) when (ex.MessageQueueErrorCode == MessageQueueErrorCode.IOTimeout)
+            {
+                return null;
             }
         }
 
