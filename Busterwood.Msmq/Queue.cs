@@ -1,5 +1,4 @@
 ﻿using System;
-using System.ComponentModel;
 using System.Diagnostics.Contracts;
 using System.Text;
 
@@ -11,8 +10,6 @@ namespace Busterwood.Msmq
         readonly QueueHandle _handle;
         string _formatName;
         bool _closed;
-
-        //TODO: different classes for Send and recieve?
 
         /// <summary>Opens a queue using a format name</summary>
         public static Queue Open(string formatName, QueueAccessMode mode, QueueShareMode share = QueueShareMode.Shared)
@@ -52,7 +49,6 @@ namespace Busterwood.Msmq
             _handle.Dispose();
             _closed = true;
         }
-
 
         /// <summary>Gets the full format name of this queue</summary>
         public string FormatName => _formatName ?? (_formatName = FormatNameFromHandle());

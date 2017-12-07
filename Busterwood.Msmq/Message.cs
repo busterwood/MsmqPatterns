@@ -5,6 +5,7 @@ using System.Text;
 
 namespace Busterwood.Msmq
 {
+    /// <summary>A message that can be send to a <see cref="Queue"/> or received from a <see cref="Queue"/></summary>
     public class Message
     {
         internal readonly MessageProperties Props;
@@ -24,6 +25,7 @@ namespace Busterwood.Msmq
             Props = properties;
         }     
 
+        /// <summary>The identifier of this message.  Only set after the message has been sent.</summary>
         public string Id
         {
             get
@@ -132,6 +134,8 @@ namespace Busterwood.Msmq
                 if (len == 0)
                     return null;
                 var data = Props.GetByteArray(Native.MESSAGE_PROPID_BODY);
+                if (data.Length == len)
+                    return data;
                 var retVal = new byte[len];
                 Array.Copy(data, retVal, len);
                 return retVal;
@@ -245,6 +249,8 @@ namespace Busterwood.Msmq
                 if (len == 0)
                     return null;
                 var data = Props.GetByteArray(Native.MESSAGE_PROPID_EXTENSION);
+                if (data.Length == len)
+                    return data;
                 var retVal = new byte[len];
                 Array.Copy(data, retVal, len);
                 return retVal;
@@ -318,7 +324,7 @@ namespace Busterwood.Msmq
         {
             //trim the last null char
             if (len != 0 && bytes[len * 2 - 1] == 0 && bytes[len * 2 - 2] == 0)
-                --len;
+                len--;
 
             char[] charBuffer = new char[len];
             Encoding.Unicode.GetChars(bytes, 0, len * 2, charBuffer, 0);
