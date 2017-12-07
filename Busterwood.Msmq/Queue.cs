@@ -23,7 +23,7 @@ namespace Busterwood.Msmq
             QueueHandle handle;
             int res = Native.OpenQueue(formatName, mode, share, out handle);
             if (res != 0)
-                throw new Win32Exception(res);
+                throw new QueueException(res);
             return new Queue(handle);
         }
 
@@ -34,7 +34,7 @@ namespace Busterwood.Msmq
             var sb = new StringBuilder(size);
             int res = Native.PathNameToFormatName(path, sb, ref size);
             if (res != 0)
-                throw new Win32Exception(res);
+                throw new QueueException(res);
             sb.Length = size - 1;
             return sb.ToString();
         }
@@ -66,7 +66,7 @@ namespace Busterwood.Msmq
 
             int res = Native.HandleToFormatName(_handle, sb, ref size);
             if (res != 0)
-                throw new Win32Exception(res);
+                throw new QueueException(res);
 
             sb.Length = size - 1; // remove null terminator
             return sb.ToString();
@@ -92,7 +92,7 @@ namespace Busterwood.Msmq
                     res = Native.SendMessage(_handle, props, transaction.InternalTransaction);
 
                 if (IsError(res))
-                    throw new Win32Exception(res);
+                    throw new QueueException(res);
             }
             finally
             {
@@ -142,7 +142,7 @@ namespace Busterwood.Msmq
                 }
 
                 if (IsError(res))
-                    throw new Win32Exception(res);
+                    throw new QueueException(res);
 
                 return msg;
             }
@@ -176,7 +176,7 @@ namespace Busterwood.Msmq
                 res = Native.MoveMessage(_handle, destinationSubQueue._handle, lookupId, transaction.InternalTransaction);
 
             if (IsError(res))
-                throw new Win32Exception(res);
+                throw new QueueException(res);
         }
 
         //TODO: ReceiveAsync
