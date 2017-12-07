@@ -9,9 +9,8 @@ namespace Busterwood.Msmq
     {
         public static TimeSpan Infinite = TimeSpan.FromMilliseconds(uint.MaxValue);
         readonly QueueHandle _handle;
+        string _formatName;
         bool _closed;
-
-        public string Name { get; } //TODO: do we need this?  just use the FormatName property?
 
         //TODO: different classes for Send and recieve?
 
@@ -25,7 +24,7 @@ namespace Busterwood.Msmq
             int res = Native.OpenQueue(formatName, mode, share, out handle);
             if (res != 0)
                 throw new Win32Exception(res);
-            return new Queue(formatName, handle);
+            return new Queue(handle);
         }
 
         /// <summary>converts a queue path to a format name</summary>
@@ -40,11 +39,9 @@ namespace Busterwood.Msmq
             return sb.ToString();
         }
 
-        private Queue(string name, QueueHandle handle)
+        private Queue(QueueHandle handle)
         {
-            Contract.Requires(name != null);
             Contract.Requires(handle != null);
-            Name = name;
             _handle = handle;
         }
 
@@ -56,10 +53,13 @@ namespace Busterwood.Msmq
             _closed = true;
         }
 
+
         /// <summary>Gets the full format name of this queue</summary>
-        public string FormatName()
+        public string FormatName => _formatName ?? (_formatName = FormatNameFromHandle());
+
+        string FormatNameFromHandle()
         {
-            if (_closed) throw new ObjectDisposedException(Name);
+            if (_closed) throw new ObjectDisposedException(nameof(Queue));
 
             int size = 255;
             var sb = new StringBuilder(size);
@@ -161,6 +161,25 @@ namespace Busterwood.Msmq
                  value == (int)ErrorCode.UserBufferTooSmall ||
                  value == (int)ErrorCode.FormatNameBufferTooSmall);
         }
+
+        /// <summary>
+        /// Move the message specified by <paramref name="lookupId"/> to the <paramref name="destinationSubQueue"/>
+        /// </summary>
+        public void Move(long lookupId, Queue destinationSubQueue, Transaction transaction = null)
+        {
+            Contract.Requires(destinationSubQueue != null);
+            int res;
+            IntPtr txnHandle;
+            if (transaction.TryGetHandle(out txnHandle))
+                res = Native.MoveMessage(_handle, destinationSubQueue._handle, lookupId, txnHandle);
+            else
+                res = Native.MoveMessage(_handle, destinationSubQueue._handle, lookupId, transaction.InternalTransaction);
+
+            if (IsError(res))
+                throw new Win32Exception(res);
+        }
+
+        //TODO: ReceiveAsync
 
         public void Dispose()
         {
