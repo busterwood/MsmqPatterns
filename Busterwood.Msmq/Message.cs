@@ -121,7 +121,7 @@ namespace Busterwood.Msmq
                 return time;
             }
         }
-
+        
         public byte[] Body
         {
             get
@@ -129,7 +129,12 @@ namespace Busterwood.Msmq
                 if (Props.IsUndefined(Native.MESSAGE_PROPID_BODY))
                     return null;
                 var len = Props.GetUInt(Native.MESSAGE_PROPID_BODY_SIZE);
-                return len == 0 ? null : Props.GetString(Native.MESSAGE_PROPID_BODY);
+                if (len == 0)
+                    return null;
+                var data = Props.GetByteArray(Native.MESSAGE_PROPID_BODY);
+                var retVal = new byte[len];
+                Array.Copy(data, retVal, len);
+                return retVal;
             }
             set
             {
@@ -230,6 +235,37 @@ namespace Busterwood.Msmq
             }
         }
 
+        public byte[] Extension
+        {
+            get
+            {
+                if (Props.IsUndefined(Native.MESSAGE_PROPID_EXTENSION))
+                    return null;
+                var len = Props.GetUInt(Native.MESSAGE_PROPID_EXTENSION_LEN);
+                if (len == 0)
+                    return null;
+                var data = Props.GetByteArray(Native.MESSAGE_PROPID_EXTENSION);
+                var retVal = new byte[len];
+                Array.Copy(data, retVal, len);
+                return retVal;
+            }
+            set
+            {
+                if (value == null)
+                    throw new ArgumentNullException(nameof(value));
+
+                if (value.Length == 0)
+                {
+                    Props.Remove(Native.MESSAGE_PROPID_EXTENSION);
+                    Props.Remove(Native.MESSAGE_PROPID_EXTENSION_LEN);
+                }
+                else
+                {
+                    Props.SetByteArray(Native.MESSAGE_PROPID_EXTENSION, value);
+                    Props.SetUInt(Native.MESSAGE_PROPID_EXTENSION_LEN, value.Length);
+                }
+            }
+        }
         /// <summary>
         /// <see cref="Msmq.Journal.Journal"/> the message and/or use the <see cref="Msmq.Journal.DeadLetter"/> queue?
         /// </summary>
