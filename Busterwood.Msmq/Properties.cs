@@ -1,6 +1,9 @@
 ﻿using System;
 namespace Busterwood.Msmq
 {
+    /// <summary>
+    /// The properties to read when receiving a message
+    /// </summary>
     [Flags]
     public enum Properties
     {

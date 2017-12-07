@@ -1,7 +1,7 @@
 ﻿using System;
 namespace Busterwood.Msmq
 {
-    [Flags]
+    //[Flags]
     public enum QueueAccessMode
     {
         Receive = 1,
