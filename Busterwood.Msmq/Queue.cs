@@ -10,6 +10,7 @@ namespace BusterWood.Msmq
     /// <summary>An MSMQ message queue.  Call <see cref="Open(string, QueueAccessMode, QueueShareMode)"/> to open a message queue.</summary>
     public class Queue : IDisposable
     {
+        /// <summary>The maximum amount of time for queue operations</summary>
         public static TimeSpan Infinite = TimeSpan.FromMilliseconds(uint.MaxValue);
 
         readonly HashSet<QueueAsyncRequest> _outstanding = new HashSet<QueueAsyncRequest>();
@@ -17,31 +18,6 @@ namespace BusterWood.Msmq
         readonly QueueHandle _handle;
         string _formatName;
         bool _closed;
-
-        /// <summary>Opens a queue using a format name</summary>
-        public static Queue Open(string formatName, QueueAccessMode mode, QueueShareMode share = QueueShareMode.Shared)
-        {
-            Contract.Requires(formatName != null);
-            Contract.Ensures(Contract.Result<Queue>() != null);
-
-            QueueHandle handle;
-            int res = Native.OpenQueue(formatName, mode, share, out handle);
-            if (res != 0)
-                throw new QueueException(res);
-            return new Queue(handle);
-        }
-
-        /// <summary>converts a queue path to a format name</summary>
-        public static string PathToFormatName(string path)
-        {
-            int size = 255;
-            var sb = new StringBuilder(size);
-            int res = Native.PathNameToFormatName(path, sb, ref size);
-            if (res != 0)
-                throw new QueueException(res);
-            sb.Length = size - 1;
-            return sb.ToString();
-        }
 
         private Queue(QueueHandle handle)
         {
@@ -293,5 +269,46 @@ namespace BusterWood.Msmq
 
             return true;
         }
+
+        /// <summary>Opens a queue using a <paramref name="formatName"/>.  Use <see cref="PathToFormatName(string)"/> to get the <paramref name="formatName"/> for a queue path.</summary>
+        public static Queue Open(string formatName, QueueAccessMode mode, QueueShareMode share = QueueShareMode.Shared)
+        {
+            Contract.Requires(formatName != null);
+            Contract.Ensures(Contract.Result<Queue>() != null);
+
+            QueueHandle handle;
+            int res = Native.OpenQueue(formatName, mode, share, out handle);
+            if (res != 0)
+                throw new QueueException(res);
+            return new Queue(handle);
+        }
+
+        /// <summary>converts a queue path to a format name</summary>
+        public static string PathToFormatName(string path)
+        {
+            int size = 255;
+            var sb = new StringBuilder(size);
+            int res = Native.PathNameToFormatName(path, sb, ref size);
+            if (res != 0)
+                throw new QueueException(res);
+            sb.Length = size - 1;
+            return sb.ToString();
+        }
+
+        /// <summary>Tests if a queue existing. Does NOT accept format names</summary>
+        public static bool Exists(string path)
+        {
+            int size = 255;
+            var sb = new StringBuilder(size);
+            int res = Native.PathNameToFormatName(path, sb, ref size);
+            if ((ErrorCode)res == ErrorCode.QueueNotFound)
+                return false;
+
+            if (res != 0)
+                throw new QueueException(res);
+
+            return true;
+        }
+
     }
 }

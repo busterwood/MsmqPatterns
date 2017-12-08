@@ -10,6 +10,8 @@ namespace ConsoleApplication1
 
         static void Main(string[] args)
         {
+            bool exists = Queue.Exists(path);
+
             var fn = Queue.TryCreate(path, QueueTransactional.None);
 
             var postQ = Queue.Open(fn, QueueAccessMode.Send);
