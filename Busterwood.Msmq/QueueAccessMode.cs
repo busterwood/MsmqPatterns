@@ -6,7 +6,7 @@ namespace BusterWood.Msmq
     public enum QueueAccessMode
     {
         /// <summary>Messages can be retrieved from the queue, peeked at, or purged. Can be combined with <see cref="Admin"/></summary>
-        ReceiveAndPeek = 1,
+        Receive = 1,
 
         /// <summary>Messages can be sent to the queue. Can be combined with <see cref="Admin"/></summary>
         Send = 2,
@@ -17,7 +17,7 @@ namespace BusterWood.Msmq
         /// <summary>Messages can be looked at but cannot be removed from the queue. Can be combined with <see cref="Admin"/></summary>
         Peek = 32,
 
-        /// <summary>Allows access to local outgoing queues.  Can be combined with <see cref="ReceiveAndPeek"/> or <see cref="Send"/></summary>
+        /// <summary>Allows access to local outgoing queues.  Can be combined with <see cref="Receive"/> or <see cref="Send"/></summary>
         Admin = 128,
     }
 }

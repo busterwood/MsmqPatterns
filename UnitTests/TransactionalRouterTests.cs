@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace UnitTests
 {
-    [TestFixture]
+    [TestFixture, Ignore]
     public class TransactionalRouterTests
     {
         static string inputQueueName = $".\\private$\\{nameof(TransactionalRouterTests)}.Input";

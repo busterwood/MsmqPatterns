@@ -21,7 +21,7 @@ namespace ConsoleApplication1
             postMsg.ExtensionUTF8("context-type: text/utf-8");
             postQ.Post(postMsg, Transaction.Single);
 
-            var readQ = Queue.Open(fn, QueueAccessMode.ReceiveAndPeek);
+            var readQ = Queue.Open(fn, QueueAccessMode.Receive);
             try
             {
                 var peeked = readQ.Peek(Properties.AppSpecific | Properties.Label | Properties.LookupId, transaction: Transaction.Single);
@@ -29,7 +29,7 @@ namespace ConsoleApplication1
                 var moveQ = Queue.Open(fn + ";test", QueueAccessMode.Move);
                 readQ.Move(peeked.LookupId, moveQ, Transaction.Single);
 
-                var subQ = Queue.Open(fn + ";test", QueueAccessMode.ReceiveAndPeek);
+                var subQ = Queue.Open(fn + ";test", QueueAccessMode.Receive);
                 var msg = subQ.Receive(Properties.All, peeked.LookupId, transaction: Transaction.Single);
 
                 var body = msg.BodyUTF8();

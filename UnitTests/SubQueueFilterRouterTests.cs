@@ -2,8 +2,8 @@
 using NUnit.Framework;
 using System;
 using System.Diagnostics;
-using System.Messaging;
 using System.Threading.Tasks;
+using BusterWood.Msmq;
 
 namespace UnitTests
 {
@@ -11,49 +11,48 @@ namespace UnitTests
     public class SubQueueFilterRouterTests
     {
         string testQueue = $".\\private$\\{nameof(SubQueueFilterRouterTests)}";
+        string testQueueFormatName;
 
         [TestFixtureSetUp]
         public void FixtureSetup()
         {
-            if (!MessageQueue.Exists(testQueue))
-                MessageQueue.Create(testQueue);
+            Queue.TryCreate(testQueue, QueueTransactional.None);
         }
 
         [SetUp]
         public void Setup()
         {
-            if (MessageQueue.Exists(testQueue))
-            {
+            if (Queue.Exists(testQueue))
                 TestSupport.ReadAllMessages(testQueue);
-            }
 
-            if (MessageQueue.Exists(testQueue + ";sq"))
+            if (Queue.Exists(testQueue + ";sq"))
                 TestSupport.ReadAllMessages(testQueue + ";sq");
-            if (MessageQueue.Exists(testQueue + ";one"))
+            if (Queue.Exists(testQueue + ";one"))
                 TestSupport.ReadAllMessages(testQueue + ";one");
-            if (MessageQueue.Exists(testQueue + ";two"))
+            if (Queue.Exists(testQueue + ";two"))
                 TestSupport.ReadAllMessages(testQueue + ";two");
+
+            testQueueFormatName = Queue.PathToFormatName(testQueue);            
         }
 
         [Test]
         public async Task can_route_one_message()
         {
             var key = Environment.TickCount;
-            var q = new MessageQueue(testQueue, QueueAccessMode.SendAndReceive);
-            using (var router = new SubQueueFilterRouter(q, GetSubQueueName))
+            using (var router = new SubQueueFilterRouter(testQueueFormatName, GetSubQueue))
             {
                 router.StopTime = TimeSpan.FromMilliseconds(20);
                 await router.StartAsync();
                 try
                 {
-                    using (var msg = new Message { Label = "my.sq", AppSpecific = key })
+                    using (var q = Queue.Open(testQueueFormatName, QueueAccessMode.Send))
                     {
-                        q.Send(msg);
+                        var msg = new Message { Label = "my.sq", AppSpecific = key };
+                        q.Post(msg);
                     }
-                    using (var sq = new MessageQueue(testQueue + ";sq", QueueAccessMode.Receive))
+                    using (var sq = Queue.Open(testQueueFormatName + ";sq", QueueAccessMode.Receive))
                     {
-                        sq.MessageReadPropertyFilter.AppSpecific = true;
-                        using (var got = sq.Receive(TimeSpan.FromMilliseconds(500)))
+                        var got = sq.Receive(Properties.AppSpecific, timeout: TimeSpan.FromMilliseconds(500));
                         {
                             Assert.AreEqual(key, got.AppSpecific);
                         }
@@ -70,33 +69,25 @@ namespace UnitTests
         public async Task can_route_multiple_message()
         {
             var key = Environment.TickCount;
-            var q = new MessageQueue(testQueue, QueueAccessMode.SendAndReceive);
-            using (var router = new SubQueueFilterRouter(q, GetSubQueueName))
+            using (var router = new SubQueueFilterRouter(testQueueFormatName, GetSubQueue))
             {
                 router.StopTime = TimeSpan.FromMilliseconds(20);
                 await router.StartAsync();
                 try
                 {
-                    using (var msg = new Message { Label = "my.sq", AppSpecific = key })
+                    using (var q = Queue.Open(testQueueFormatName, QueueAccessMode.Send))
                     {
-                        q.Send(msg);
-                    }
-                    using (var msg = new Message { Label = "my.sq", AppSpecific = key + 1 })
-                    {
-                        q.Send(msg);
+                        q.Post(new Message { Label = "my.sq", AppSpecific = key });
+                        q.Post(new Message { Label = "my.sq", AppSpecific = key + 1 });
                     }
 
-                    using (var sq = new MessageQueue(testQueue + ";sq", QueueAccessMode.Receive))
+                    using (var sq = Queue.Open(testQueueFormatName + ";sq", QueueAccessMode.Receive))
                     {
-                        sq.MessageReadPropertyFilter.AppSpecific = true;
-                        using (var got = sq.Receive(TimeSpan.FromMilliseconds(500)))
-                        {
-                            Assert.AreEqual(key, got.AppSpecific);
-                        }
-                        using (var got = sq.Receive(TimeSpan.FromMilliseconds(500)))
-                        {
-                            Assert.AreEqual(key + 1, got.AppSpecific);
-                        }
+                        var got = sq.Receive(Properties.AppSpecific, timeout: TimeSpan.FromMilliseconds(500));
+                        Assert.AreEqual(key, got.AppSpecific);
+
+                        got = sq.Receive(Properties.AppSpecific, timeout: TimeSpan.FromMilliseconds(500));
+                        Assert.AreEqual(key + 1, got.AppSpecific);                        
                     }
                 }
                 finally
@@ -110,28 +101,22 @@ namespace UnitTests
         public async Task can_skip_one_then_route_one_message()
         {
             var key = Environment.TickCount;
-            using (var q = new MessageQueue(testQueue, QueueAccessMode.SendAndReceive))
+            using (var router = new SubQueueFilterRouter(testQueueFormatName, GetSubQueue))
             {
-                var router = new SubQueueFilterRouter(q, GetSubQueueName);
                 router.StopTime = TimeSpan.FromMilliseconds(20);
                 await router.StartAsync();
                 try
                 {
-                    using (var msg = new Message { Label = "skipped", AppSpecific = key - 1 })
+                    using (var q = Queue.Open(testQueueFormatName, QueueAccessMode.Send))
                     {
-                        q.Send(msg);
+                        q.Post(new Message { Label = "skipped", AppSpecific = key - 1 });
+                        q.Post(new Message { Label = "my.sq", AppSpecific = key });
                     }
-                    using (var msg = new Message { Label = "my.sq", AppSpecific = key })
+
+                    using (var sq = Queue.Open(testQueueFormatName + ";sq", QueueAccessMode.Receive))
                     {
-                        q.Send(msg);
-                    }
-                    using (var sq = new MessageQueue(testQueue + ";sq", QueueAccessMode.Receive))
-                    {
-                        sq.MessageReadPropertyFilter.AppSpecific = true;
-                        using (var got = sq.Receive(TimeSpan.FromMilliseconds(500)))
-                        {
-                            Assert.AreEqual(key, got.AppSpecific);
-                        }
+                        var got = sq.Receive(Properties.AppSpecific, timeout: TimeSpan.FromMilliseconds(500));
+                        Assert.AreEqual(key, got.AppSpecific);
                     }
                 }
                 finally
@@ -144,15 +129,15 @@ namespace UnitTests
         [Test]
         public async Task can_route_many()
         {
-            using (var input = new MessageQueue(testQueue, QueueAccessMode.SendAndReceive))
-            using (var out1 = new MessageQueue(testQueue+";one", QueueAccessMode.Receive))
-            using (var out2 = new MessageQueue(testQueue+";two", QueueAccessMode.Receive))
-            using (var router = new SubQueueFilterRouter(input, GetSubQueueName))
+            using (var input = Queue.Open(testQueueFormatName, QueueAccessMode.Send))
+            using (var out1 = Queue.Open(testQueueFormatName+";one", QueueAccessMode.Receive))
+            using (var out2 = Queue.Open(testQueueFormatName+";two", QueueAccessMode.Receive))
+            using (var router = new SubQueueFilterRouter(Queue.Open(testQueueFormatName, QueueAccessMode.Receive), GetSubQueue))
             {
                 for (int i = 0; i < 1000; i++)
                 {
-                    input.Send(new Message { Label = "1", AppSpecific = i });
-                    input.Send(new Message { Label = "2", AppSpecific = i });
+                    input.Post(new Message { Label = "1", AppSpecific = i });
+                    input.Post(new Message { Label = "2", AppSpecific = i });
                 }
                 router.StopTime = TimeSpan.FromMilliseconds(20);
                 var sw = new Stopwatch();
@@ -161,15 +146,12 @@ namespace UnitTests
                 var rtask = router.StartAsync();
                 try
                 {
-                    out1.MessageReadPropertyFilter.AppSpecific = true;
-                    out2.MessageReadPropertyFilter.AppSpecific = true;
-
                     for (int i = 0; i < 1000; i++)
                     {
-                        var got = out1.Receive();
+                        var got = out1.Receive(Properties.Label | Properties.AppSpecific);
                         Assert.AreEqual("1", got.Label, "Label");
                         Assert.AreEqual(i, got.AppSpecific, "AppSpecific");
-                        got = out2.Receive();
+                        got = out2.Receive(Properties.Label | Properties.AppSpecific);
                         Assert.AreEqual("2", got.Label, "Label");
                         Assert.AreEqual(i, got.AppSpecific, "AppSpecific");
                     }
@@ -184,14 +166,14 @@ namespace UnitTests
             }
         }
 
-        static string GetSubQueueName(Message peeked)
+        Queue GetSubQueue(Message peeked)
         {
             if (peeked.Label.EndsWith("sq", StringComparison.OrdinalIgnoreCase))
-                return "sq";
+                return Queue.Open(testQueueFormatName + ";sq", QueueAccessMode.Move);
             if (peeked.Label.EndsWith("1", StringComparison.OrdinalIgnoreCase))
-                return "one";
+                return Queue.Open(testQueueFormatName + ";one", QueueAccessMode.Move);
             if (peeked.Label.EndsWith("2", StringComparison.OrdinalIgnoreCase))
-                return "two";
+                return Queue.Open(testQueueFormatName + ";two", QueueAccessMode.Move);
             return null;
         }
     }

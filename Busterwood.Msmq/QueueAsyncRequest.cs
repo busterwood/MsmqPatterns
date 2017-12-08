@@ -84,6 +84,12 @@ namespace BusterWood.Msmq
                     Tcs.TrySetResult(null);
                     break;
                 default:
+                    if ((ErrorCode)result == ErrorCode.IOTimeout)
+                    {
+                        Tcs.TrySetResult(null);
+                        break;
+                    }
+
                     // successfully completed but no enough memory                
                     if (Native.NotEnoughMemory(result))
                     {

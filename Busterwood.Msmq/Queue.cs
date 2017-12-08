@@ -315,5 +315,18 @@ namespace BusterWood.Msmq
             return true;
         }
 
+        /// <summary>Returns the transactional property of the queue</summary>
+        public static QueueTransactional IsTransactional(string formatName)
+        {
+            var props = new QueueProperties();
+            props.SetByte(Native.QUEUE_PROPID_TRANSACTION, 0);
+            int status = Native.GetQueueProperties(formatName, props.Allocate());
+            props.Free();
+            if (Native.IsError(status))
+                throw new QueueException(status);
+
+            return (QueueTransactional) props.GetByte(Native.QUEUE_PROPID_TRANSACTION);
+        }
+
     }
 }
