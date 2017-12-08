@@ -53,20 +53,14 @@ namespace BusterWood.Msmq
                     continue; // try again
                 }
 
-                if (res == MQ_INFORMATION_OPERATION_PENDING)    // running asynchronously
-                    return Tcs.Task;
-
-                Message.Props.Free();
-                Overlapped.Free(nativeOverlapped);
-
                 if (Native.IsError(res))
                 {
+                    Message.Props.Free();
+                    Overlapped.Free(nativeOverlapped);
                     Tcs.TrySetException(new QueueException(unchecked(res))); // we really want Task.FromException...
                     return Tcs.Task;
                 }
 
-                // successfully completed synchronously, callback will not be called
-                Tcs.TrySetResult(Message);
                 return Tcs.Task;
             }
         }
@@ -74,6 +68,7 @@ namespace BusterWood.Msmq
         public unsafe void EndReceive(uint code, uint bytes, NativeOverlapped* native)
         {
             Overlapped.Free(native);
+            Message.Props.Free();
 
             lock (Outstanding)
                 Outstanding.Remove(this);
