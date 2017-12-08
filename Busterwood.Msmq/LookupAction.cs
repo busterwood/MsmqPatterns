@@ -1,7 +1,7 @@
 ﻿namespace BusterWood.Msmq
 {
     /// <summary>
-    /// The action to perform when calling <see cref="Queue.ReceiveByLookupId(Properties, long, LookupAction, System.TimeSpan?, Transaction)"/>
+    /// The action to perform when calling <see cref="Queue.Receive(Properties, long, LookupAction, System.TimeSpan?, Transaction)"/>
     /// </summary>
     public enum LookupAction
     {

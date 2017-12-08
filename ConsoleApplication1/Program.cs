@@ -10,27 +10,27 @@ namespace ConsoleApplication1
 
         static void Main(string[] args)
         {
-            bool exists = Queue.Exists(path);
+            if (Queue.Exists(path))
+                Queue.TryDelete(Queue.PathToFormatName(path));
 
-            var fn = Queue.TryCreate(path, QueueTransactional.None);
+            var fn = Queue.TryCreate(path, QueueTransactional.Transactional);
 
             var postQ = Queue.Open(fn, QueueAccessMode.Send);
-            var postMsg = new Message { AppSpecific = 1, Label = "async1" };
+            var postMsg = new Message { AppSpecific = 1, Label = "async1", Journal = Journal.DeadLetter, Delivery = Delivery.Express };
             postMsg.BodyUTF8(string.Join(Environment.NewLine, Enumerable.Repeat("hello world! and hello again", 9000)));
-            postQ.Post(postMsg);
+            postQ.Post(postMsg, Transaction.Single);
 
-            var moveQ = Queue.Open(fn + ";test", QueueAccessMode.Move);
 
             var readQ = Queue.Open(fn, QueueAccessMode.ReceiveAndPeek);
             try
             {
-                var task = readQ.PeekAsync(Properties.AppSpecific | Properties.Label | Properties.LookupId);
-                var peeked = task.Result;
+                var peeked = readQ.Peek(Properties.AppSpecific | Properties.Label | Properties.LookupId);
 
-                readQ.Move(peeked.LookupId, moveQ);
+                var moveQ = Queue.Open(fn + ";test", QueueAccessMode.Move);
+                readQ.Move(peeked.LookupId, moveQ, Transaction.Single);
 
                 var subQ = Queue.Open(fn + ";test", QueueAccessMode.ReceiveAndPeek);
-                var msg = subQ.ReceiveByLookupId(Properties.All, peeked.LookupId);
+                var msg = subQ.Receive(Properties.All, peeked.LookupId, transaction: Transaction.Single);
 
                 var body = msg.BodyUTF8();
                 var l = msg.Label;

@@ -11,10 +11,10 @@ namespace BusterWood.Msmq
     public class Transaction : IDisposable
     {
         /// <summary>Use the ambient DTC transaction from System.Transactions.TransactionScope</summary>
-        public static readonly Transaction Dtc = new FakeTransaction(1);
+        public static readonly Transaction Dtc = new SpecialTransaction(1);
         
         /// <summary>An MSMQ transaction that only exists for the duration of a call</summary>
-        public static readonly Transaction Single = new FakeTransaction(3);
+        public static readonly Transaction Single = new SpecialTransaction(3);
         
         internal readonly ITransaction InternalTransaction;
         bool _complete;
@@ -58,11 +58,11 @@ namespace BusterWood.Msmq
             _complete = true;
         }
 
-        internal class FakeTransaction : Transaction
+        internal class SpecialTransaction : Transaction
         {
             public IntPtr SpecialId { get; }
 
-            public FakeTransaction(int specialId)
+            public SpecialTransaction(int specialId)
             {
                 SpecialId = (IntPtr)specialId;
             }
@@ -92,7 +92,7 @@ namespace BusterWood.Msmq
                 handle = IntPtr.Zero;
                 return true;
             }
-            var fake = transaction as Transaction.FakeTransaction;
+            var fake = transaction as Transaction.SpecialTransaction;
             if (fake != null)
             {
                 handle = fake.SpecialId;

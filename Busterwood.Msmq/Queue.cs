@@ -17,12 +17,19 @@ namespace BusterWood.Msmq
         bool _boundToThreadPool;
         readonly QueueHandle _handle;
         string _formatName;
+        string _subQueue;
         bool _closed;
 
-        private Queue(QueueHandle handle)
+        public QueueAccessMode Access { get; }
+
+        private Queue(QueueHandle handle, string formatName, QueueAccessMode access)
         {
             Contract.Requires(handle != null);
             _handle = handle;
+            Access = access;
+            int idx = formatName.IndexOf(';');
+            if (idx > 0)
+                _subQueue = formatName.Substring(idx);
         }
 
         /// <summary>Closes this queue</summary>
@@ -34,7 +41,7 @@ namespace BusterWood.Msmq
         }
 
         /// <summary>Gets the full format name of this queue</summary>
-        public string FormatName => _formatName ?? (_formatName = FormatNameFromHandle());
+        public string FormatName => (_formatName ?? (_formatName = FormatNameFromHandle())) + _subQueue;
 
         string FormatNameFromHandle()
         {
@@ -157,7 +164,7 @@ namespace BusterWood.Msmq
         /// <param name="timeout">The time allowed, defaults to infinite.  Use <see cref="TimeSpan.Zero"/> to return without waiting</param>
         /// <param name="transaction">can be NULL for no transaction, a <see cref="Transaction"/>, <see cref="Transaction.Single"/>, or <see cref="Transaction.Dtc"/>.</param>
         /// <returns>The message, or NULL if the receive times out</returns>
-        public unsafe Message ReceiveByLookupId(Properties properties, long lookupId, LookupAction action = LookupAction.ReceiveCurrent, TimeSpan? timeout = null, Transaction transaction = null)
+        public unsafe Message Receive(Properties properties, long lookupId, LookupAction action = LookupAction.ReceiveCurrent, TimeSpan? timeout = null, Transaction transaction = null)
         {
             uint timeoutMS = TimeoutInMs(timeout);
             var msg = new Message();
@@ -196,6 +203,8 @@ namespace BusterWood.Msmq
             }
         }
 
+        public override string ToString() => FormatName;
+
         private static uint TimeoutInMs(TimeSpan? timeout)
         {
             double ms = (timeout ?? Infinite).TotalMilliseconds;
@@ -203,16 +212,16 @@ namespace BusterWood.Msmq
             return timeoutMS;
         }
 
-        /// <summary>Move the message specified by <paramref name="lookupId"/> to the <paramref name="destinationSubQueue"/></summary>
-        public void Move(long lookupId, Queue destinationSubQueue, Transaction transaction = null)
+        /// <summary>Move the message specified by <paramref name="lookupId"/> to the <paramref name="subQueue"/></summary>
+        public void Move(long lookupId, Queue subQueue, Transaction transaction = null)
         {
-            Contract.Requires(destinationSubQueue != null);
+            Contract.Requires(subQueue != null);
             int res;
             IntPtr txnHandle;
             if (transaction.TryGetHandle(out txnHandle))
-                res = Native.MoveMessage(_handle, destinationSubQueue._handle, lookupId, txnHandle);
+                res = Native.MoveMessage(_handle, subQueue._handle, lookupId, txnHandle);
             else
-                res = Native.MoveMessage(_handle, destinationSubQueue._handle, lookupId, transaction.InternalTransaction);
+                res = Native.MoveMessage(_handle, subQueue._handle, lookupId, transaction.InternalTransaction);
 
             if (Native.IsError(res))
                 throw new QueueException(res);
@@ -280,7 +289,7 @@ namespace BusterWood.Msmq
             int res = Native.OpenQueue(formatName, mode, share, out handle);
             if (res != 0)
                 throw new QueueException(res);
-            return new Queue(handle);
+            return new Queue(handle, formatName, mode);
         }
 
         /// <summary>converts a queue path to a format name</summary>
