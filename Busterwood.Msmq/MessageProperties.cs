@@ -331,7 +331,7 @@ namespace BusterWood.Msmq
             if (!IsUndefined(Native.MESSAGE_PROPID_BODY))
             {
                 int size = GetUInt(Native.MESSAGE_PROPID_BODY_SIZE);
-                var existing = GetByteArray(Native.MESSAGE_PROPID_BODY_SIZE);
+                var existing = GetByteArray(Native.MESSAGE_PROPID_BODY);
                 if (size > existing.Length)
                     SetByteArray(Native.MESSAGE_PROPID_BODY, new byte[size]);
             }

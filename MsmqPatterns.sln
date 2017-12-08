@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTests", "UnitTests\Unit
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Busterwood.Msmq", "Busterwood.Msmq\Busterwood.Msmq.csproj", "{CB8A7C8C-DB78-4AA7-A0F3-578A7AB2BB2B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApplication1", "ConsoleApplication1\ConsoleApplication1.csproj", "{C52CF884-DB8A-441B-BCED-9D76590C3341}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{CB8A7C8C-DB78-4AA7-A0F3-578A7AB2BB2B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CB8A7C8C-DB78-4AA7-A0F3-578A7AB2BB2B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CB8A7C8C-DB78-4AA7-A0F3-578A7AB2BB2B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C52CF884-DB8A-441B-BCED-9D76590C3341}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C52CF884-DB8A-441B-BCED-9D76590C3341}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C52CF884-DB8A-441B-BCED-9D76590C3341}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C52CF884-DB8A-441B-BCED-9D76590C3341}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
