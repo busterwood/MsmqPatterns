@@ -21,7 +21,7 @@ namespace BusterWood.Msmq
 
         public QueueAccessMode Access { get; }
 
-        private Queue(QueueHandle handle, string formatName, QueueAccessMode access)
+        private Queue(QueueHandle handle, QueueAccessMode access)
         {
             Contract.Requires(handle != null);
             _handle = handle;
@@ -285,7 +285,7 @@ namespace BusterWood.Msmq
             int res = Native.OpenQueue(formatName, mode, share, out handle);
             if (res != 0)
                 throw new QueueException(res);
-            return new Queue(handle, formatName, mode);
+            return new Queue(handle, mode);
         }
 
         /// <summary>converts a queue path to a format name</summary>

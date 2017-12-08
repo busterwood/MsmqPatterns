@@ -51,6 +51,9 @@ namespace BusterWood.Msmq
         {
             get
             {
+                if (Props.IsUndefined(Native.MESSAGE_PROPID_ACKNOWLEDGE))
+                    return AcknowledgmentTypes.None;
+
                 return (AcknowledgmentTypes)Props.GetByte(Native.MESSAGE_PROPID_ACKNOWLEDGE);
             }
             set
@@ -75,7 +78,7 @@ namespace BusterWood.Msmq
             get
             {
                 if (Props.IsUndefined(Native.MESSAGE_PROPID_ADMIN_QUEUE))
-                    return null;
+                    return "";
 
                 var len = Props.GetUInt(Native.MESSAGE_PROPID_ADMIN_QUEUE_LEN);
                 return len == 0 ? "" : StringFromBytes(Props.GetString(Native.MESSAGE_PROPID_ADMIN_QUEUE), len);
@@ -195,6 +198,8 @@ namespace BusterWood.Msmq
         {
             get
             {
+                if (Props.IsUndefined(Native.MESSAGE_PROPID_CORRELATIONID))
+                    return "";
                 var id = Props.GetByteArray(Native.MESSAGE_PROPID_CORRELATIONID);
                 return id.Any(b => b != 0) ? IdFromByteArray(id) : "";
             }
@@ -253,6 +258,9 @@ namespace BusterWood.Msmq
         {
             get
             {
+                if (Props.IsUndefined(Native.MESSAGE_PROPID_DEST_QUEUE))
+                    return "";
+
                 var len = Props.GetUInt(Native.MESSAGE_PROPID_DEST_QUEUE_LEN);
                 return len == 0 ? "" : StringFromBytes(Props.GetString(Native.MESSAGE_PROPID_DEST_QUEUE), len);
             }
