@@ -6,7 +6,7 @@ namespace BusterWood.Msmq
     [Serializable]
     internal class QueueException : Exception
     {
-        public int ErrorCode { get; }
+        public ErrorCode ErrorCode { get; }
 
         public QueueException()
         {
@@ -18,7 +18,7 @@ namespace BusterWood.Msmq
 
         public QueueException(int errorCode)
         {
-            this.ErrorCode = errorCode;
+            ErrorCode = (ErrorCode)errorCode;
         }
 
         public QueueException(string message, Exception innerException) : base(message, innerException)

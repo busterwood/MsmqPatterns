@@ -247,5 +247,51 @@ namespace BusterWood.Msmq
             Close();
         }
 
+        /// <summary>Creates a message queue (if it does not already exist), returning the format name of the queue.</summary>
+        /// <param name="path">the path (NOT format name) of the queue</param>
+        /// <param name="transactional">create a transactional queue or not?</param>
+        public static string TryCreate(string path, QueueTransactional transactional)
+        {
+            Contract.Requires(!string.IsNullOrWhiteSpace(path));
+            const int MaxLabelLength = 124;
+
+            //Create properties.
+            var properties = new QueueProperties();
+            properties.SetString(Native.QUEUE_PROPID_PATHNAME, Message.StringToBytes(path));
+            properties.SetByte(Native.QUEUE_PROPID_TRANSACTION, (byte)transactional);
+
+            StringBuilder formatName = new StringBuilder(MaxLabelLength);
+            int len = MaxLabelLength;
+
+            //Try to create queue.
+            int res = Native.CreateQueue(IntPtr.Zero, properties.Allocate(), formatName, ref len);
+            properties.Free();
+
+            if ((ErrorCode)res == ErrorCode.QueueExists)
+                return PathToFormatName(path);
+
+            if (Native.IsError(res))
+                throw new QueueException(res);
+
+            formatName.Length = len;
+            return formatName.ToString();
+        }
+
+        /// <summary>Tries to delete an existing message queue, returns TRUE if the queue was deleted, FALSE if the queue does not exists</summary>
+        /// <param name="formatName">The format name (NOT path name) of the queue</param>
+        public static bool TryDelete(string formatName)
+        {
+            Contract.Requires(!string.IsNullOrWhiteSpace(formatName));
+
+            int res = Native.DeleteQueue(formatName);
+
+            if ((ErrorCode)res == ErrorCode.QueueNotFound)
+                return false;
+
+            if (Native.IsError(res))
+                throw new QueueException(res);
+
+            return true;
+        }
     }
 }

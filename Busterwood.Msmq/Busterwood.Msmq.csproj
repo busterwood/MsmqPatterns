@@ -106,7 +106,11 @@
     <Compile Include="QueueExtensions.cs" />
     <Compile Include="QueueHandle.cs" />
     <Compile Include="QueueShareMode.cs" />
+    <Compile Include="QueueTransactional.cs" />
     <Compile Include="Transaction.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Native.QueueProperties.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

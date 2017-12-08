@@ -6,9 +6,12 @@ namespace ConsoleApplication1
 {
     class Program
     {
+        private const string path = ".\\private$\\ping";
+
         static void Main(string[] args)
         {
-            var fn = Queue.PathToFormatName(".\\private$\\ping");
+            var fn = Queue.TryCreate(path, QueueTransactional.None);
+
             var postQ = Queue.Open(fn, QueueAccessMode.Send);
             var postMsg = new Message { AppSpecific = 1, Label = "async1" };
             postMsg.BodyUTF8(string.Join(Environment.NewLine, Enumerable.Repeat("hello world! and hello again", 1000)));

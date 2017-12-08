@@ -324,6 +324,9 @@ namespace BusterWood.Msmq
                 if (value == null)
                     throw new ArgumentNullException(nameof(value));
 
+                if (value.Length > 250)
+                    throw new ArgumentOutOfRangeException(nameof(value), "Maximum label length is 250");
+
                 if (value.Length == 0)
                 {
                     Props.Remove(Native.MESSAGE_PROPID_LABEL);
@@ -349,7 +352,7 @@ namespace BusterWood.Msmq
             return new string(buf, 0, chars);
         }
 
-        static byte[] StringToBytes(string value)
+        internal static byte[] StringToBytes(string value)
         {
             byte[] buf = new byte[(value.Length * 2 + 1)]; // one more for null
             Encoding.Unicode.GetBytes(value.ToCharArray(), 0, value.Length, buf, 0);

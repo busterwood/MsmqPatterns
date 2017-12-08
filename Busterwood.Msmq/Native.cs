@@ -23,6 +23,12 @@ namespace BusterWood.Msmq
         [DllImport("mqrt.dll", EntryPoint = "MQCloseQueue")]
         public static extern int CloseQueue(IntPtr handle);
 
+        [DllImport("mqrt.dll", EntryPoint = "MQDeleteQueue", CharSet = CharSet.Unicode)]
+        public static extern int DeleteQueue(string formatName);
+
+        [DllImport("mqrt.dll", EntryPoint = "MQCreateQueue", CharSet = CharSet.Unicode)]
+        public static extern int CreateQueue(IntPtr securityDescriptor, MQPROPS queueProperties, StringBuilder formatName, ref int formatNameLength);
+
         [DllImport("mqrt.dll", EntryPoint = "MQHandleToFormatName", CharSet = CharSet.Unicode)]
         public static extern int HandleToFormatName(QueueHandle handle, StringBuilder formatName, ref int count);
 
