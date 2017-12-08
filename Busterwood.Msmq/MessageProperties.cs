@@ -491,8 +491,10 @@ namespace BusterWood.Msmq
                 msgProps.SetUInt(Native.MESSAGE_PROPID_SENTTIME, 0);
             }
 
-            //if ((read & Properties.SOURCE_MACHINE) != 0)
-            //    MsgProps.SetGuid(Native.MESSAGE_PROPID_SRC_MACHINE_ID, new byte[GenericIdSize]);
+            if ((read & Properties.SourceMachine) != 0)
+            {
+                msgProps.SetGuid(Native.MESSAGE_PROPID_SRC_MACHINE_ID, new byte[Message.GenericIdSize]);
+            }
 
             if ((read & Properties.TimeToBeReceived) != 0)
             {
@@ -504,8 +506,16 @@ namespace BusterWood.Msmq
                 msgProps.SetUInt(Native.MESSAGE_PROPID_TIME_TO_REACH_QUEUE, 0);
             }
 
-            //if ((read & Properties.TRANSACTION_ID) != 0)
-            //    MsgProps.SetByteArray(Native.MESSAGE_PROPID_XACTID, new byte[MessageIdSize]);
+            if ((read & Properties.TransactionId) != 0)
+            {
+                msgProps.SetByteArray(Native.MESSAGE_PROPID_XACTID, new byte[Message.MessageIdSize]);
+            }
+
+            if ((read & Properties.TransactionStatusQueue) != 0)
+            {
+                msgProps.SetString(Native.MESSAGE_PROPID_XACT_STATUS_QUEUE, new byte[255 * 2]);
+                msgProps.SetUInt(Native.MESSAGE_PROPID_XACT_STATUS_QUEUE_LEN, 255);
+            }
         }
 
     }

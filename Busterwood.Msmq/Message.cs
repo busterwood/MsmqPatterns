@@ -470,6 +470,7 @@ namespace BusterWood.Msmq
             }
         }
 
+        /// <summary>Gets the Id of the transaction that this message was sent as part of</summary>
         public string TransactionId
         {
             get
@@ -477,6 +478,31 @@ namespace BusterWood.Msmq
                 if (Props.IsUndefined(Native.MESSAGE_PROPID_XACTID))
                     return "";
                 return IdFromByteArray(Props.GetByteArray(Native.MESSAGE_PROPID_XACTID));
+            }
+        }
+
+        /// <summary>Gets or sets the format name of the queue used for transaction status</summary>
+        public string TransactionStatusQueue
+        {
+            get
+            {
+                if (Props.IsUndefined(Native.MESSAGE_PROPID_XACT_STATUS_QUEUE))
+                    return "";
+                var len = Props.GetUInt(Native.MESSAGE_PROPID_XACT_STATUS_QUEUE_LEN);
+                return  len == 0 ? "" : StringFromBytes(Props.GetString(Native.MESSAGE_PROPID_XACT_STATUS_QUEUE), len);
+            }
+            set
+            {
+                if (value == null)
+                {
+                    Props.Remove(Native.MESSAGE_PROPID_XACT_STATUS_QUEUE);
+                    Props.Remove(Native.MESSAGE_PROPID_XACT_STATUS_QUEUE_LEN);
+                }
+                else
+                {
+                    Props.SetString(Native.MESSAGE_PROPID_XACT_STATUS_QUEUE, StringToBytes(value));
+                    Props.SetUInt(Native.MESSAGE_PROPID_XACT_STATUS_QUEUE_LEN, value.Length);
+                }
             }
         }
 

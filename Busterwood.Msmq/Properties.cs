@@ -1,9 +1,7 @@
 ﻿using System;
 namespace BusterWood.Msmq
 {
-    /// <summary>
-    /// The properties to read when receiving a message
-    /// </summary>
+    /// <summary>The properties to read when receiving a message</summary>
     [Flags]
     public enum Properties
     {
@@ -26,11 +24,14 @@ namespace BusterWood.Msmq
         TimeToReachQueue = 1 << 16,
         ArrivedTime = 1 << 17,
         Journal = 1 << 18,
-        //TODO: add other message properties as we add them
+        TransactionId = 1 << 19,
+        TransactionStatusQueue = 1 << 20,
+        SourceMachine = 1 << 21,
 
         /// <summary>Read all properties including the body</summary>
         All = Class| AcknowledgementTypes | AdministrationQueue | AppSpecific | Body | CorrelationId | Delivery 
             | DestinationQueue | Extension | Id | Label | LookupId | Priority | ResponseQueue | SentTime
-            | TimeToBeReceived | TimeToReachQueue | ArrivedTime | Journal,
+            | TimeToBeReceived | TimeToReachQueue | ArrivedTime | Journal | TransactionId | TransactionStatusQueue
+            | SourceMachine,
     }
 }

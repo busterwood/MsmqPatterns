@@ -5,9 +5,7 @@ using System.Threading.Tasks;
 
 namespace BusterWood.Msmq
 {
-    /// <summary>
-    /// Bundle request details into a class that is keep in the <see cref="Outstanding"/> set during the async call.
-    /// </summary>
+    /// <summary>Bundle request details into a class that is keep in the <see cref="Outstanding"/> set during the async call.</summary>
     class QueueAsyncRequest
     {
         const int MQ_INFORMATION_OPERATION_PENDING = unchecked(0x400E0006);
@@ -80,7 +78,7 @@ namespace BusterWood.Msmq
                     Tcs.TrySetResult(Message);
                     break;
                 case (int)ErrorCode.InsufficientResources:
-                    //TODO: adjust memory, try again
+                    Tcs.SetException(new OutOfMemoryException("async receive operation reported InsufficientResources"));
                     break;
                 case (int)ErrorCode.IOTimeout:
                     Tcs.TrySetResult(null);
