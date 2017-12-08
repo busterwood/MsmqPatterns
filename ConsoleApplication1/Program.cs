@@ -10,8 +10,8 @@ namespace ConsoleApplication1
 
         static void Main(string[] args)
         {
-            if (Queue.Exists(path))
-                Queue.TryDelete(Queue.PathToFormatName(path));
+            //if (Queue.Exists(path))
+            //    Queue.TryDelete(Queue.PathToFormatName(path));
 
             var fn = Queue.TryCreate(path, QueueTransactional.Transactional);
 
@@ -20,11 +20,10 @@ namespace ConsoleApplication1
             postMsg.BodyUTF8(string.Join(Environment.NewLine, Enumerable.Repeat("hello world! and hello again", 9000)));
             postQ.Post(postMsg, Transaction.Single);
 
-
             var readQ = Queue.Open(fn, QueueAccessMode.ReceiveAndPeek);
             try
             {
-                var peeked = readQ.Peek(Properties.AppSpecific | Properties.Label | Properties.LookupId);
+                var peeked = readQ.Peek(Properties.AppSpecific | Properties.Label | Properties.LookupId, transaction: Transaction.Single);
 
                 var moveQ = Queue.Open(fn + ";test", QueueAccessMode.Move);
                 readQ.Move(peeked.LookupId, moveQ, Transaction.Single);
