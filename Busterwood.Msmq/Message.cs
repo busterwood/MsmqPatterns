@@ -46,6 +46,7 @@ namespace BusterWood.Msmq
             return $"{guid}\\{id}";
         }
 
+        /// <summary>The type of acknowledgement messages that should be sent to the <see cref="AdministrationQueue"/></summary>
         public AcknowledgmentTypes AcknowledgementTypes
         {
             get
@@ -65,7 +66,10 @@ namespace BusterWood.Msmq
             }
         }
 
-        /// <summary>Gets or sets the format name of the queue that administration messages are sent too</summary>
+        /// <summary>
+        /// Gets or sets the format name of the queue that administration messages are sent too.
+        /// Administration messages will have <see cref="Class"/> of <see cref="MessageClass.Report"/> combined with other <see cref="MessageClass"/> flags.
+        /// </summary>
         public string AdministrationQueue
         {
             get
@@ -91,6 +95,7 @@ namespace BusterWood.Msmq
             }
         }
 
+        /// <summary>User defined integer data</summary>
         public int AppSpecific
         {
             get
@@ -108,6 +113,7 @@ namespace BusterWood.Msmq
             }
         }
 
+        /// <summary>When the message arrived, to the nearest second</summary>
         public DateTime? ArrivedTime
         {
             get
@@ -121,6 +127,7 @@ namespace BusterWood.Msmq
             }
         }
         
+        /// <summary>The main payload of the message. <see cref="BodyType"/> defines the data type</summary>
         public byte[] Body
         {
             get
@@ -155,6 +162,7 @@ namespace BusterWood.Msmq
             }
         }
 
+        /// <summary>The type of the <see cref="Body"/></summary>
         public BodyType BodyType
         {
             get
@@ -169,6 +177,7 @@ namespace BusterWood.Msmq
             }
         }
 
+        /// <summary>The class of this message</summary>
         public MessageClass Class
         {
             get
@@ -180,6 +189,7 @@ namespace BusterWood.Msmq
             }
         }
 
+        /// <summary>used to match requests and replies.  Processes that handle requests with <see cref="ResponseQueue"/> set should reply with a message with <see cref="CorrelationId"/> set to the <see cref="Id"/> of the request message</summary>
         public string CorrelationId
         {
             get
@@ -247,6 +257,7 @@ namespace BusterWood.Msmq
             }
         }
 
+        /// <summary>User defined header information sent with the message</summary>
         public byte[] Extension
         {
             get
@@ -356,6 +367,7 @@ namespace BusterWood.Msmq
             }
         }
 
+        /// <summary>The priority of the message</summary>
         public Priority Priority
         {
             get
@@ -398,6 +410,7 @@ namespace BusterWood.Msmq
             }
         }
 
+        /// <summary>When the message was sent, to the nearest second</summary>
         public DateTime? SentTime
         {
             get
@@ -412,6 +425,7 @@ namespace BusterWood.Msmq
             }
         }
 
+        /// <summary>The maximum amount of time a message is allowed to be queued before being received</summary>
         public TimeSpan? TimeToBeReceived
         {
             get
@@ -441,6 +455,7 @@ namespace BusterWood.Msmq
             }
         }
 
+        /// <summary>The maximum amount of time a message is allowed before reaching the destination queue</summary>
         public TimeSpan? TimeToReachQueue
         {
             get
