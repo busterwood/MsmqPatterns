@@ -39,14 +39,11 @@ namespace BusterWood.Msmq
 
         private string IdFromByteArray(byte[] bytes)
         {
-            StringBuilder result = new StringBuilder();
             byte[] guidBytes = new byte[GenericIdSize];
             Array.Copy(bytes, guidBytes, GenericIdSize);
             int id = BitConverter.ToInt32(bytes, GenericIdSize);
-            result.Append((new Guid(guidBytes)).ToString());
-            result.Append("\\");
-            result.Append(id);
-            return result.ToString();
+            var guid = new Guid(guidBytes);
+            return $"{guid}\\{id}";
         }
 
         public AcknowledgmentTypes AcknowledgementTypes
@@ -77,7 +74,7 @@ namespace BusterWood.Msmq
                     return null;
 
                 var len = Props.GetUInt(Native.MESSAGE_PROPID_ADMIN_QUEUE_LEN);
-                return len == 0 ? null : StringFromBytes(Props.GetString(Native.MESSAGE_PROPID_ADMIN_QUEUE), len);
+                return len == 0 ? "" : StringFromBytes(Props.GetString(Native.MESSAGE_PROPID_ADMIN_QUEUE), len);
             }
             set
             {
@@ -172,6 +169,17 @@ namespace BusterWood.Msmq
             }
         }
 
+        public MessageClass Class
+        {
+            get
+            {
+                if (Props.IsUndefined(Native.MESSAGE_PROPID_CLASS))
+                    return MessageClass.Normal;
+
+                return (MessageClass)Props.GetUShort(Native.MESSAGE_PROPID_CLASS);
+            }
+        }
+
         public string CorrelationId
         {
             get
@@ -211,7 +219,7 @@ namespace BusterWood.Msmq
             return bytes;
         }
 
-        /// <summary>Is this an <see cref="Busterwood.Msmq.Delivery.Express"/> or <see cref="Busterwood.Msmq.Delivery.Recoverable"/> message?</summary>
+        /// <summary>Is this an <see cref="BusterWood.Msmq.Delivery.Express"/> or <see cref="BusterWood.Msmq.Delivery.Recoverable"/> message?</summary>
         public Delivery Delivery
         {
             get
@@ -272,9 +280,7 @@ namespace BusterWood.Msmq
                 }
             }
         }
-        /// <summary>
-        /// <see cref="Msmq.Journal.Journal"/> the message and/or use the <see cref="Msmq.Journal.DeadLetter"/> queue?
-        /// </summary>
+        /// <summary><see cref="Msmq.Journal.Journal"/> the message and/or use the <see cref="Msmq.Journal.DeadLetter"/> queue?</summary>
         public Journal Journal
         {
             get
@@ -320,22 +326,23 @@ namespace BusterWood.Msmq
             }
         }
 
-        static string StringFromBytes(byte[] bytes, int len)
+        static string StringFromBytes(byte[] bytes, int chars)
         {
             //trim the last null char
-            if (len != 0 && bytes[len * 2 - 1] == 0 && bytes[len * 2 - 2] == 0)
-                len--;
+            var byteLen = chars * 2;
+            if (chars != 0 && bytes[byteLen - 1] == 0 && bytes[byteLen - 2] == 0)
+                chars--;
 
-            char[] charBuffer = new char[len];
-            Encoding.Unicode.GetChars(bytes, 0, len * 2, charBuffer, 0);
-            return new string(charBuffer, 0, len);
+            char[] buf = new char[chars];
+            Encoding.Unicode.GetChars(bytes, 0, chars * 2, buf, 0);
+            return new string(buf, 0, chars);
         }
 
         static byte[] StringToBytes(string value)
         {
-            byte[] byteBuffer = new byte[(value.Length * 2 + 1)]; // one more for null
-            Encoding.Unicode.GetBytes(value.ToCharArray(), 0, value.Length, byteBuffer, 0);
-            return byteBuffer;
+            byte[] buf = new byte[(value.Length * 2 + 1)]; // one more for null
+            Encoding.Unicode.GetBytes(value.ToCharArray(), 0, value.Length, buf, 0);
+            return buf;
         }
 
         /// <summary>The queue specific ID of this message.  This property is set once the message has been sent.</summary>
@@ -398,24 +405,32 @@ namespace BusterWood.Msmq
                 if (Props.IsUndefined(Native.MESSAGE_PROPID_SENTTIME))
                     return null;
 
+                var st = Props.GetUInt(Native.MESSAGE_PROPID_SENTTIME);
                 DateTime time = new DateTime(1970, 1, 1);
-                time = time.AddSeconds(Props.GetUInt(Native.MESSAGE_PROPID_SENTTIME)).ToLocalTime();
+                time = time.AddSeconds(st).ToLocalTime();
                 return time;
             }
         }
 
-        public TimeSpan TimeToBeReceived
+        public TimeSpan? TimeToBeReceived
         {
             get
             {
                 if (Props.IsUndefined(Native.MESSAGE_PROPID_TIME_TO_BE_RECEIVED))
                     return Queue.Infinite;
 
-                return TimeSpan.FromSeconds((uint)Props.GetUInt(Native.MESSAGE_PROPID_TIME_TO_BE_RECEIVED));
+                var secs = (uint)Props.GetUInt(Native.MESSAGE_PROPID_TIME_TO_BE_RECEIVED);
+                return secs == uint.MaxValue ? (TimeSpan?)null : TimeSpan.FromSeconds(secs);
             }
             set
             {
-                long timeoutInSeconds = (long)value.TotalSeconds;
+                if (value == null)
+                {
+                    Props.Remove(Native.MESSAGE_PROPID_TIME_TO_BE_RECEIVED);
+                    return;
+                }
+
+                long timeoutInSeconds = (long)value.Value.TotalSeconds;
                 if (timeoutInSeconds < 0)
                     throw new ArgumentException("Cannot be negative", nameof(value));
 
@@ -426,18 +441,25 @@ namespace BusterWood.Msmq
             }
         }
 
-        public TimeSpan TimeToReachQueue
+        public TimeSpan? TimeToReachQueue
         {
             get
             {
                 if (Props.IsUndefined(Native.MESSAGE_PROPID_TIME_TO_REACH_QUEUE))
                     return Queue.Infinite;
 
-                return TimeSpan.FromSeconds((uint)Props.GetUInt(Native.MESSAGE_PROPID_TIME_TO_REACH_QUEUE));
+                var secs = (uint)Props.GetUInt(Native.MESSAGE_PROPID_TIME_TO_REACH_QUEUE);
+                return secs == uint.MaxValue ? (TimeSpan?)null : TimeSpan.FromSeconds(secs);
             }
             set
             {
-                long timeoutInSeconds = (long)value.TotalSeconds;
+                if (value == null)
+                {
+                    Props.Remove(Native.MESSAGE_PROPID_TIME_TO_REACH_QUEUE);
+                    return;
+                }
+
+                long timeoutInSeconds = (long)value.Value.TotalSeconds;
                 if (timeoutInSeconds < 0)
                     throw new ArgumentException("Cannot be negative", nameof(value));
 
@@ -448,15 +470,15 @@ namespace BusterWood.Msmq
             }
         }
 
-        public MessageClass Class
+        public string TransactionId
         {
             get
             {
-                if (Props.IsUndefined(Native.MESSAGE_PROPID_CLASS))
-                    return MessageClass.Normal;
-
-                return (MessageClass)Props.GetUShort(Native.MESSAGE_PROPID_CLASS);
+                if (Props.IsUndefined(Native.MESSAGE_PROPID_XACTID))
+                    return "";
+                return IdFromByteArray(Props.GetByteArray(Native.MESSAGE_PROPID_XACTID));
             }
         }
+
     }
 }
