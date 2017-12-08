@@ -17,8 +17,11 @@ namespace ConsoleApplication1
             var readQ = Queue.Open(fn, QueueAccessMode.Receive);
             try
             {
-                var task = readQ.ReceiveAsync(Properties.All);
-                var msg = task.Result;
+                var task = readQ.PeekAsync(Properties.AppSpecific | Properties.Label | Properties.LookupId);
+                var peeked = task.Result;
+
+                var msg = readQ.ReceiveByLookupId(Properties.All, peeked.LookupId);
+
                 var body = msg.BodyUTF8();
                 var l = msg.Label;
                 var ttr = msg.TimeToBeReceived;

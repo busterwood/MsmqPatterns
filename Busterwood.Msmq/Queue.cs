@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace BusterWood.Msmq
 {
+    /// <summary>An MSMQ message queue.  Call <see cref="Open(string, QueueAccessMode, QueueShareMode)"/> to open a message queue.</summary>
     public class Queue : IDisposable
     {
         public static TimeSpan Infinite = TimeSpan.FromMilliseconds(uint.MaxValue);
@@ -78,6 +79,7 @@ namespace BusterWood.Msmq
         /// Asks MSMQ to attempt to deliver a message.
         /// To ensure the message reached the queue you need to check acknowledgement messages sent to the <see cref="Message.AdministrationQueue"/>
         /// </summary>
+        /// <param name="message">The message to try to send</param>
         /// <param name="transaction">can be NULL for no transaction, a <see cref="Transaction"/>, <see cref="Transaction.Single"/>, or <see cref="Transaction.Dtc"/>.</param>
         public void Post(Message message, Transaction transaction = null)
         {
@@ -102,7 +104,12 @@ namespace BusterWood.Msmq
             }
         }
 
-        public Task<Message> ReceiveAsync(Properties properties, QueueAction action = QueueAction.Receive, TimeSpan? timeout = null)
+        /// <summary>Tries to receive a message from the queue, which may complete synchronously or asynchronously if no message is ready</summary>
+        /// <param name="properties">The properties to read</param>
+        /// <param name="action">Receive or peek a message?</param>
+        /// <param name="timeout">The time allowed, defaults to infinite.  Use <see cref="TimeSpan.Zero"/> to return without waiting</param>
+        /// <returns>The a task that contains a message, or a task will a null Result if the receive times out</returns>
+        public Task<Message> ReceiveAsync(Properties properties, ReceiveAction action = ReceiveAction.Receive, TimeSpan? timeout = null)
         {
             uint timeoutMS = TimeoutInMs(timeout);
             var msg = new Message();
@@ -122,15 +129,13 @@ namespace BusterWood.Msmq
             return ar.ReceiveAsync();
         }
 
-        /// <summary>
-        /// Tries to receive a message from the queue.
-        /// </summary>
+        /// <summary>Tries to receive a message from the queue</summary>
         /// <param name="properties">The properties to read</param>
         /// <param name="action">Receive or peek a message?</param>
         /// <param name="timeout">The time allowed, defaults to infinite.  Use <see cref="TimeSpan.Zero"/> to return without waiting</param>
         /// <param name="transaction">can be NULL for no transaction, a <see cref="Transaction"/>, <see cref="Transaction.Single"/>, or <see cref="Transaction.Dtc"/>.</param>
-        /// <returns></returns>
-        public Message Receive(Properties properties, QueueAction action = QueueAction.Receive, TimeSpan? timeout = null, Transaction transaction = null)
+        /// <returns>The message, or NULL if the receive times out</returns>
+        public unsafe Message Receive(Properties properties, ReceiveAction action = ReceiveAction.Receive, TimeSpan? timeout = null, Transaction transaction = null)
         {
             uint timeoutMS = TimeoutInMs(timeout);
             var msg = new Message();
@@ -142,19 +147,65 @@ namespace BusterWood.Msmq
                 var props = msg.Props.Allocate();
                 try
                 {
-                    unsafe
-                    {
-                        IntPtr txnHandle;
-                        if (transaction.TryGetHandle(out txnHandle))
-                            res = Native.ReceiveMessage(_handle, timeoutMS, action, props, null, null, CursorHandle.None, txnHandle);
-                        else
-                            res = Native.ReceiveMessage(_handle, timeoutMS, action, props, null, null, CursorHandle.None, transaction.InternalTransaction);
-                    }
+                    IntPtr txnHandle;
+                    if (transaction.TryGetHandle(out txnHandle))
+                        res = Native.ReceiveMessage(_handle, timeoutMS, action, props, null, null, CursorHandle.None, txnHandle);
+                    else
+                        res = Native.ReceiveMessage(_handle, timeoutMS, action, props, null, null, CursorHandle.None, transaction.InternalTransaction);
                 }
                 finally
                 {
                     msg.Props.Free();
                 }
+
+                if ((ErrorCode)res == ErrorCode.IOTimeout)
+                    return null;
+
+                if (Native.NotEnoughMemory(res))
+                {
+                    msg.Props.AdjustMemory();
+                    continue; // try again
+                }
+
+                if (Native.IsError(res))
+                    throw new QueueException(res);
+
+                return msg;
+            }
+        }
+
+        /// <summary>Tries to peek (or receive) a message using the queue-specific <paramref name="lookupId"/></summary>
+        /// <param name="properties">The properties to read</param>
+        /// <param name="lookupId">The <see cref="Message.LookupId"/> of the message to read</param>
+        /// <param name="action">Receive or peek a message?</param>
+        /// <param name="timeout">The time allowed, defaults to infinite.  Use <see cref="TimeSpan.Zero"/> to return without waiting</param>
+        /// <param name="transaction">can be NULL for no transaction, a <see cref="Transaction"/>, <see cref="Transaction.Single"/>, or <see cref="Transaction.Dtc"/>.</param>
+        /// <returns>The message, or NULL if the receive times out</returns>
+        public unsafe Message ReceiveByLookupId(Properties properties, long lookupId, LookupAction action = LookupAction.ReceiveCurrent, TimeSpan? timeout = null, Transaction transaction = null)
+        {
+            uint timeoutMS = TimeoutInMs(timeout);
+            var msg = new Message();
+            int res;
+
+            msg.Props.SetForRead(properties);
+            for (;;) // loop because we might need to adjust memory size
+            {
+                var props = msg.Props.Allocate();
+                try
+                {
+                    IntPtr txnHandle;
+                    if (transaction.TryGetHandle(out txnHandle))
+                        res = Native.ReceiveMessageByLookupId(_handle, lookupId, action, props, null, null, txnHandle);
+                    else
+                        res = Native.ReceiveMessageByLookupId(_handle, lookupId, action, props, null, null, transaction.InternalTransaction);
+                }
+                finally
+                {
+                    msg.Props.Free();
+                }
+
+                if ((ErrorCode)res == ErrorCode.IOTimeout)
+                    return null;
 
                 if (Native.NotEnoughMemory(res))
                 {
@@ -176,9 +227,7 @@ namespace BusterWood.Msmq
             return timeoutMS;
         }
 
-        /// <summary>
-        /// Move the message specified by <paramref name="lookupId"/> to the <paramref name="destinationSubQueue"/>
-        /// </summary>
+        /// <summary>Move the message specified by <paramref name="lookupId"/> to the <paramref name="destinationSubQueue"/></summary>
         public void Move(long lookupId, Queue destinationSubQueue, Transaction transaction = null)
         {
             Contract.Requires(destinationSubQueue != null);
@@ -198,7 +247,5 @@ namespace BusterWood.Msmq
             Close();
         }
 
-
     }
-
 }

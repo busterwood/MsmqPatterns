@@ -1,5 +1,7 @@
-﻿using System.Diagnostics.Contracts;
+﻿using System;
+using System.Diagnostics.Contracts;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace BusterWood.Msmq
 {
@@ -68,7 +70,17 @@ namespace BusterWood.Msmq
             return Encoding.Unicode.GetString(buf, 0, chars);
         }
 
+        public static Message Peek(this Queue queue, Properties properties, TimeSpan? timeout = null, Transaction transaction = null)
+        {
+            Contract.Requires(queue != null);
+            return queue.Receive(properties, ReceiveAction.PeekCurrent, timeout, transaction);
+        }
 
+        public static Task<Message> PeekAsync(this Queue queue, Properties properties, TimeSpan? timeout = null)
+        {
+            Contract.Requires(queue != null);
+            return queue.ReceiveAsync(properties, ReceiveAction.PeekCurrent, timeout);
+        }
 
     }
 
