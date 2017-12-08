@@ -1,5 +1,8 @@
-﻿namespace BusterWood.Msmq
+﻿using System;
+
+namespace BusterWood.Msmq
 {
+    [Flags]
     public enum AcknowledgmentTypes
     {
         None = 0,
@@ -11,7 +14,9 @@
         NegativeArrival = 4,
         /// <summary>the message was not received within the timeout</summary>
         NegativeReceive = 8,
+
         NotAcknowledgeReceive = NegativeReceive | NegativeArrival,
+
         ReachQueue = NegativeArrival | PositiveArrival,
     }
 }
