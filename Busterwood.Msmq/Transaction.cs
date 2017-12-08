@@ -20,6 +20,7 @@ namespace BusterWood.Msmq
         bool _complete;
         bool _disposed;
 
+        /// <summary>Starts a new MSMQ internal transaction</summary>
         public Transaction()
         {
             int res = Native.BeginTransaction(out InternalTransaction);
@@ -48,6 +49,7 @@ namespace BusterWood.Msmq
             _complete = true;
         }
 
+        /// <summary>Aborts the transaction if <see cref="Commit"/> or <see cref="Rollback"/> has not already been called</summary>
         public virtual void Dispose()
         {
             if (_disposed || _complete) return;
