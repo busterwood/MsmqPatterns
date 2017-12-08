@@ -1,6 +1,6 @@
 ﻿using Microsoft.Win32.SafeHandles;
 
-namespace Busterwood.Msmq
+namespace BusterWood.Msmq
 {
     class QueueHandle : SafeHandleZeroOrMinusOneIsInvalid
     {

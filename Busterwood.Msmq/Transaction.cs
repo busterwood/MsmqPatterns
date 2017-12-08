@@ -1,7 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 
-namespace Busterwood.Msmq
+namespace BusterWood.Msmq
 {
     /// <summary>
     /// A transaction to send or receive messages. 

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Busterwood.Msmq
+namespace BusterWood.Msmq
 {
     public enum BodyType
     {

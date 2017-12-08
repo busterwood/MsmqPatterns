@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace Busterwood.Msmq
+namespace BusterWood.Msmq
 {
     // messsage properties
     partial class Native

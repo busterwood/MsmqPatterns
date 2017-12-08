@@ -3,7 +3,7 @@ using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Text;
 
-namespace Busterwood.Msmq
+namespace BusterWood.Msmq
 {
     /// <summary>A message that can be send to a <see cref="Queue"/> or received from a <see cref="Queue"/></summary>
     public class Message

@@ -1,5 +1,5 @@
 ﻿using System;
-namespace Busterwood.Msmq
+namespace BusterWood.Msmq
 {
     [Flags]
     public enum Journal

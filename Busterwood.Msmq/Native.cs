@@ -4,7 +4,7 @@ using System.Security;
 using System.Text;
 using System.Threading;
 
-namespace Busterwood.Msmq
+namespace BusterWood.Msmq
 {
     [ComVisible(false), SuppressUnmanagedCodeSecurity]
     partial class Native
@@ -25,6 +25,9 @@ namespace Busterwood.Msmq
 
         [DllImport("mqrt.dll", EntryPoint = "MQHandleToFormatName", CharSet = CharSet.Unicode)]
         public static extern int HandleToFormatName(QueueHandle handle, StringBuilder formatName, ref int count);
+
+        [DllImport("mqrt.dll", EntryPoint = "MQGetOverlappedResult", CharSet = CharSet.Unicode)]
+        public unsafe static extern int GetOverlappedResult(NativeOverlapped* overlapped);
 
         [DllImport("mqrt.dll", EntryPoint = "MQPathNameToFormatName", CharSet = CharSet.Unicode)]
         public static extern int PathNameToFormatName(string pathName, StringBuilder formatName, ref int count);
@@ -85,5 +88,27 @@ namespace Busterwood.Msmq
 
         [DllImport("mqrt.dll", EntryPoint = "MQSendMessage", CharSet = CharSet.Unicode)]
         public static extern int SendMessage(QueueHandle handle, MQPROPS properties, ITransaction transaction); //MSMQ internal transaction
+
+        internal static bool NotEnoughMemory(int hresult)
+        {
+            return (hresult == (int)ErrorCode.BufferOverflow ||
+                 hresult == (int)ErrorCode.LabelBufferTooSmall ||
+                 hresult == (int)ErrorCode.ProviderNameBufferTooSmall ||
+                 hresult == (int)ErrorCode.SenderCertificateBufferTooSmall ||
+                 hresult == (int)ErrorCode.SenderIdBufferTooSmall ||
+                 hresult == (int)ErrorCode.SecurityDescriptorBufferTooSmall ||
+                 hresult == (int)ErrorCode.SignatureBufferTooSmall ||
+                 hresult == (int)ErrorCode.SymmetricKeyBufferTooSmall ||
+                 hresult == (int)ErrorCode.UserBufferTooSmall ||
+                 hresult == (int)ErrorCode.FormatNameBufferTooSmall);
+        }
+
+        internal static bool IsError(int hresult)
+        {
+            bool isSuccessful = (hresult == 0x00000000);
+            bool isInformation = ((hresult & unchecked((int)0xC0000000)) == 0x40000000);
+            return (!isInformation && !isSuccessful);
+        }
+
     }
 }

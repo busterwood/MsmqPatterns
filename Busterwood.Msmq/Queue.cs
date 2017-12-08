@@ -1,12 +1,18 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace Busterwood.Msmq
+namespace BusterWood.Msmq
 {
     public class Queue : IDisposable
     {
         public static TimeSpan Infinite = TimeSpan.FromMilliseconds(uint.MaxValue);
+
+        readonly HashSet<QueueAsyncRequest> _outstanding = new HashSet<QueueAsyncRequest>();
+        bool _boundToThreadPool;
         readonly QueueHandle _handle;
         string _formatName;
         bool _closed;
@@ -87,13 +93,33 @@ namespace Busterwood.Msmq
                 else
                     res = Native.SendMessage(_handle, props, transaction.InternalTransaction);
 
-                if (IsError(res))
+                if (Native.IsError(res))
                     throw new QueueException(res);
             }
             finally
             {
                 message.Props.Free();
             }
+        }
+
+        public Task<Message> ReceiveAsync(Properties properties, QueueAction action = QueueAction.Receive, TimeSpan? timeout = null)
+        {
+            uint timeoutMS = TimeoutInMs(timeout);
+            var msg = new Message();
+            msg.Props.SetForRead(properties);
+            var ar = new QueueAsyncRequest(msg, _outstanding, timeoutMS, _handle, action);
+
+            lock (_outstanding)
+            {
+                _outstanding.Add(ar); // hold a reference to prevent objects being collected
+                if (!_boundToThreadPool)
+                {
+                    ThreadPool.BindHandle(_handle); // queue can now use IO completion port
+                    _boundToThreadPool = true;
+                }
+            }
+
+            return ar.ReceiveAsync();
         }
 
         /// <summary>
@@ -106,8 +132,7 @@ namespace Busterwood.Msmq
         /// <returns></returns>
         public Message Receive(Properties properties, QueueAction action = QueueAction.Receive, TimeSpan? timeout = null, Transaction transaction = null)
         {
-            double ms = (timeout ?? Infinite).TotalMilliseconds;
-            uint timeoutMS = (ms > uint.MaxValue) ? uint.MaxValue : (uint)ms;
+            uint timeoutMS = TimeoutInMs(timeout);
             var msg = new Message();
             int res;
 
@@ -131,31 +156,24 @@ namespace Busterwood.Msmq
                     msg.Props.Free();
                 }
 
-                if (NotEnoughMemory(res))
+                if (Native.NotEnoughMemory(res))
                 {
                     msg.Props.AdjustMemory();
                     continue; // try again
                 }
 
-                if (IsError(res))
+                if (Native.IsError(res))
                     throw new QueueException(res);
 
                 return msg;
             }
         }
 
-        static bool NotEnoughMemory(int value)
+        private static uint TimeoutInMs(TimeSpan? timeout)
         {
-            return (value == (int)ErrorCode.BufferOverflow ||
-                 value == (int)ErrorCode.LabelBufferTooSmall ||
-                 value == (int)ErrorCode.ProviderNameBufferTooSmall ||
-                 value == (int)ErrorCode.SenderCertificateBufferTooSmall ||
-                 value == (int)ErrorCode.SenderIdBufferTooSmall ||
-                 value == (int)ErrorCode.SecurityDescriptorBufferTooSmall ||
-                 value == (int)ErrorCode.SignatureBufferTooSmall ||
-                 value == (int)ErrorCode.SymmetricKeyBufferTooSmall ||
-                 value == (int)ErrorCode.UserBufferTooSmall ||
-                 value == (int)ErrorCode.FormatNameBufferTooSmall);
+            double ms = (timeout ?? Infinite).TotalMilliseconds;
+            uint timeoutMS = (ms > uint.MaxValue) ? uint.MaxValue : (uint)ms;
+            return timeoutMS;
         }
 
         /// <summary>
@@ -171,23 +189,16 @@ namespace Busterwood.Msmq
             else
                 res = Native.MoveMessage(_handle, destinationSubQueue._handle, lookupId, transaction.InternalTransaction);
 
-            if (IsError(res))
+            if (Native.IsError(res))
                 throw new QueueException(res);
         }
-
-        //TODO: ReceiveAsync
 
         public void Dispose()
         {
             Close();
         }
 
-        internal static bool IsError(int hresult)
-        {
-            bool isSuccessful = (hresult == 0x00000000);
-            bool isInformation = ((hresult & unchecked((int)0xC0000000)) == 0x40000000);
-            return (!isInformation && !isSuccessful);
-        }
 
     }
+
 }

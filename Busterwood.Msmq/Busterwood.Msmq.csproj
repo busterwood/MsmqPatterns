@@ -55,6 +55,7 @@
     <Compile Include="Queue.cs" />
     <Compile Include="QueueAccessMode.cs" />
     <Compile Include="QueueAction.cs" />
+    <Compile Include="QueueAsyncRequest.cs" />
     <Compile Include="QueueException.cs" />
     <Compile Include="QueueHandle.cs" />
     <Compile Include="QueueShareMode.cs" />

@@ -1,5 +1,5 @@
 ﻿using System;
-namespace Busterwood.Msmq
+namespace BusterWood.Msmq
 {
     /// <summary>
     /// The properties to read when receiving a message

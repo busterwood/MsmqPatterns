@@ -1,4 +1,4 @@
-﻿namespace Busterwood.Msmq
+﻿namespace BusterWood.Msmq
 {
     public enum MessageClass
     {

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.Serialization;
 
-namespace Busterwood.Msmq
+namespace BusterWood.Msmq
 {
     [Serializable]
     internal class QueueException : Exception
