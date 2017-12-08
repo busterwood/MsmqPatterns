@@ -82,6 +82,40 @@ namespace BusterWood.Msmq
             return queue.ReceiveAsync(properties, ReceiveAction.PeekCurrent, timeout);
         }
 
+        public static void ExtensionUTF8(this Message msg, string text)
+        {
+            Contract.Requires(msg != null);
+
+            msg.Extension = utf8NoBom.GetBytes(text);
+        }
+
+        public static string ExtensionUTF8(this Message msg)
+        {
+            Contract.Requires(msg != null);
+            var buf = msg.Extension;
+            return buf == null ? null : utf8NoBom.GetString(buf);
+        }
+
+        public static void ExtensionASCII(this Message msg, string text)
+        {
+            Contract.Requires(msg != null);
+
+            var count = Encoding.ASCII.GetByteCount(text);
+            var buf = new byte[count + 1]; // one extra for null char
+            Encoding.ASCII.GetBytes(text, 0, text.Length, buf, 0);
+            msg.Extension = buf;
+        }
+
+        public static string ExtensionASCII(this Message msg)
+        {
+            Contract.Requires(msg != null);
+
+            var buf = msg.Extension;
+            if (buf == null) return null;
+            var chars = buf.Length > 0 && buf[buf.Length - 1] == 0 ? buf.Length - 1 : buf.Length; // remove trailing null
+            return Encoding.ASCII.GetString(buf, 0, chars);
+        }
+
     }
 
 }
