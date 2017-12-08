@@ -9,6 +9,14 @@ namespace BusterWood.Msmq
     {
         static readonly Encoding utf8NoBom = new UTF8Encoding(false);
 
+        public static string SubQueue(this Queue queue)
+        {
+            Contract.Requires(queue != null);
+            var fn = queue.FormatName;
+            int idx = fn.IndexOf(';');
+            return idx < 0 ? "" : fn.Substring(idx + 1);
+        }
+
         public static void BodyUTF8(this Message msg, string text)
         {
             Contract.Requires(msg != null);

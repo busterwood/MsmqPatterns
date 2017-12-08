@@ -17,7 +17,6 @@ namespace BusterWood.Msmq
         bool _boundToThreadPool;
         readonly QueueHandle _handle;
         string _formatName;
-        string _subQueue;
         bool _closed;
 
         public QueueAccessMode Access { get; }
@@ -27,9 +26,6 @@ namespace BusterWood.Msmq
             Contract.Requires(handle != null);
             _handle = handle;
             Access = access;
-            int idx = formatName.IndexOf(';');
-            if (idx > 0)
-                _subQueue = formatName.Substring(idx);
         }
 
         /// <summary>Closes this queue</summary>
@@ -41,7 +37,7 @@ namespace BusterWood.Msmq
         }
 
         /// <summary>Gets the full format name of this queue</summary>
-        public string FormatName => (_formatName ?? (_formatName = FormatNameFromHandle())) + _subQueue;
+        public string FormatName => (_formatName ?? (_formatName = FormatNameFromHandle()));
 
         string FormatNameFromHandle()
         {
