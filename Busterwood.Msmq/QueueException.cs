@@ -16,7 +16,7 @@ namespace BusterWood.Msmq
         {
         }
 
-        public QueueException(int errorCode)
+        public QueueException(int errorCode) : base($"Queue exception: {(ErrorCode)errorCode}")
         {
             ErrorCode = (ErrorCode)errorCode;
         }

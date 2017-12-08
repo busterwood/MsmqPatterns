@@ -142,6 +142,7 @@ namespace BusterWood.Msmq
                     return data;
                 var retVal = new byte[len];
                 Array.Copy(data, retVal, len);
+                Props.SetByteArray(Native.MESSAGE_PROPID_BODY, retVal); // store it back in case the body property is read more than once
                 return retVal;
             }
             set
@@ -272,6 +273,7 @@ namespace BusterWood.Msmq
                     return data;
                 var retVal = new byte[len];
                 Array.Copy(data, retVal, len);
+                Props.SetByteArray(Native.MESSAGE_PROPID_EXTENSION, retVal); // store it back in case the property is read more than once
                 return retVal;
             }
             set
@@ -495,7 +497,8 @@ namespace BusterWood.Msmq
             {
                 if (Props.IsUndefined(Native.MESSAGE_PROPID_XACTID))
                     return "";
-                return IdFromByteArray(Props.GetByteArray(Native.MESSAGE_PROPID_XACTID));
+                var buf = Props.GetByteArray(Native.MESSAGE_PROPID_XACTID);
+                return buf.Any(b => b != 0) ? IdFromByteArray(buf) : "";
             }
         }
 
