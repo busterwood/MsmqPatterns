@@ -14,7 +14,7 @@ namespace ConsoleApplication1
             postMsg.BodyUTF8(string.Join(Environment.NewLine, Enumerable.Repeat("hello world! and hello again", 1000)));
             postQ.Post(postMsg);
 
-            var readQ = Queue.Open(fn, QueueAccessMode.Receive);
+            var readQ = Queue.Open(fn, QueueAccessMode.ReceiveAndPeek);
             try
             {
                 var task = readQ.PeekAsync(Properties.AppSpecific | Properties.Label | Properties.LookupId);
