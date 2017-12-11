@@ -46,6 +46,28 @@ namespace BusterWood.Msmq
             return $"{guid}\\{id}";
         }
 
+        /// <summary>Indicates the number of times that transactional processing has been aborted on a message since it was placed in its current queue.</summary>
+        public int AbortCount
+        {
+            get
+            {
+                if (Props.IsUndefined(Native.MESSAGE_PROPID_ABORT_COUNT))
+                    return 0;
+                return Props.GetUInt(Native.MESSAGE_PROPID_ABORT_COUNT);
+            }
+        }
+
+        /// <summary>Indicates the number of times that transactional processing has been aborted on a message during its lifetime.</summary>
+        public int TotalAbortCount
+        {
+            get
+            {
+                if (Props.IsUndefined(Native.MESSAGE_PROPID_MOVE_COUNT))
+                    return 0;
+                return Props.GetUInt(Native.MESSAGE_PROPID_MOVE_COUNT);
+            }
+        }
+
         /// <summary>The type of acknowledgement messages that should be sent to the <see cref="AdministrationQueue"/></summary>
         public AcknowledgmentTypes AcknowledgementTypes
         {
@@ -510,30 +532,26 @@ namespace BusterWood.Msmq
             }
         }
 
-        /// <summary>Gets or sets the format name of the queue used for transaction status</summary>
-        public string TransactionStatusQueue
+        /// <summary>Is the message the first message in a transaction</summary>
+        public bool FirstInTransaction
         {
             get
             {
-                if (Props.IsUndefined(Native.MESSAGE_PROPID_XACT_STATUS_QUEUE))
-                    return "";
-                var len = Props.GetUInt(Native.MESSAGE_PROPID_XACT_STATUS_QUEUE_LEN);
-                return  len == 0 ? "" : StringFromBytes(Props.GetString(Native.MESSAGE_PROPID_XACT_STATUS_QUEUE), len);
-            }
-            set
-            {
-                if (value == null)
-                {
-                    Props.Remove(Native.MESSAGE_PROPID_XACT_STATUS_QUEUE);
-                    Props.Remove(Native.MESSAGE_PROPID_XACT_STATUS_QUEUE_LEN);
-                }
-                else
-                {
-                    Props.SetString(Native.MESSAGE_PROPID_XACT_STATUS_QUEUE, StringToBytes(value));
-                    Props.SetUInt(Native.MESSAGE_PROPID_XACT_STATUS_QUEUE_LEN, value.Length);
-                }
+                if (Props.IsUndefined(Native.MESSAGE_PROPID_FIRST_IN_XACT))
+                    return false;
+                return Props.GetByte(Native.MESSAGE_PROPID_FIRST_IN_XACT) == 1;
             }
         }
 
+        /// <summary>Is the message the last message in a transaction</summary>
+        public bool LastInTransaction
+        {
+            get
+            {
+                if (Props.IsUndefined(Native.MESSAGE_PROPID_LAST_IN_XACT))
+                    return false;
+                return Props.GetByte(Native.MESSAGE_PROPID_LAST_IN_XACT) == 1;
+            }
+        }
     }
 }

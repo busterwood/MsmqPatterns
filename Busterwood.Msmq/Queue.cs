@@ -17,23 +17,25 @@ namespace BusterWood.Msmq
         bool _boundToThreadPool;
         readonly QueueHandle _handle;
         string _formatName;
-        bool _closed;
 
-        public QueueAccessMode Access { get; }
+        public bool IsClosed { get; private set; }
+        public QueueAccessMode AccessMode { get; }
+        public QueueShareMode ShareMode { get; }
 
-        private Queue(QueueHandle handle, QueueAccessMode access)
+        private Queue(QueueHandle handle, QueueAccessMode access, QueueShareMode share)
         {
             Contract.Requires(handle != null);
             _handle = handle;
-            Access = access;
+            AccessMode = access;
+            ShareMode = share;
         }
 
         /// <summary>Closes this queue</summary>
         public void Close()
         {
-            if (_closed) return;
+            if (IsClosed) return;
             _handle.Dispose();
-            _closed = true;
+            IsClosed = true;
         }
 
         /// <summary>Gets the full format name of this queue</summary>
@@ -41,7 +43,7 @@ namespace BusterWood.Msmq
 
         string FormatNameFromHandle()
         {
-            if (_closed) throw new ObjectDisposedException(nameof(Queue));
+            if (IsClosed) throw new ObjectDisposedException(nameof(Queue));
 
             int size = 255;
             var sb = new StringBuilder(size);
@@ -52,6 +54,17 @@ namespace BusterWood.Msmq
 
             sb.Length = size - 1; // remove null terminator
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// Sends a negative acknowledgement of <see cref="MessageClass.ReceiveRejected"/> to the <see cref="Message.AdministrationQueue"/> when the transaction is committed.
+        /// NOTE: Must be called in the scope of a the message MUST have been received in the scope of a transaction.
+        /// </summary>
+        public void MarkRejected(long lookupId)
+        {
+            int res = Native.MarkMessageRejected(_handle, lookupId);
+            if (Native.IsError(res))
+                throw new QueueException(res);
         }
 
         /// <summary>
@@ -128,9 +141,9 @@ namespace BusterWood.Msmq
                 {
                     IntPtr txnHandle;
                     if (transaction.TryGetHandle(out txnHandle))
-                        res = Native.ReceiveMessage(_handle, timeoutMS, action, props, null, null, CursorHandle.None, txnHandle);
+                        res = Native.ReceiveMessage(_handle, timeoutMS, (int)action, props, null, null, CursorHandle.None, txnHandle);
                     else
-                        res = Native.ReceiveMessage(_handle, timeoutMS, action, props, null, null, CursorHandle.None, transaction.InternalTransaction);
+                        res = Native.ReceiveMessage(_handle, timeoutMS, (int)action, props, null, null, CursorHandle.None, transaction.InternalTransaction);
                 }
                 finally
                 {
@@ -174,9 +187,9 @@ namespace BusterWood.Msmq
                 {
                     IntPtr txnHandle;
                     if (transaction.TryGetHandle(out txnHandle))
-                        res = Native.ReceiveMessageByLookupId(_handle, lookupId, action, props, null, null, txnHandle);
+                        res = Native.ReceiveMessageByLookupId(_handle, lookupId, (int)action, props, null, null, txnHandle);
                     else
-                        res = Native.ReceiveMessageByLookupId(_handle, lookupId, action, props, null, null, transaction.InternalTransaction);
+                        res = Native.ReceiveMessageByLookupId(_handle, lookupId, (int)action, props, null, null, transaction.InternalTransaction);
                 }
                 finally
                 {
@@ -209,6 +222,7 @@ namespace BusterWood.Msmq
         }
 
         /// <summary>Move the message specified by <paramref name="lookupId"/> to the <paramref name="subQueue"/></summary>
+        /// <remarks>Moving message is 10 to 100 times faster than sending the message to another queue.</remarks>
         public void Move(long lookupId, Queue subQueue, Transaction transaction = null)
         {
             Contract.Requires(subQueue != null);
@@ -285,7 +299,7 @@ namespace BusterWood.Msmq
             int res = Native.OpenQueue(formatName, mode, share, out handle);
             if (res != 0)
                 throw new QueueException(res);
-            return new Queue(handle, mode);
+            return new Queue(handle, mode, share);
         }
 
         /// <summary>converts a queue path to a format name</summary>

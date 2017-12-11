@@ -46,6 +46,9 @@ namespace BusterWood.Msmq
         [DllImport(MQRT, EntryPoint = "MQCreateCursor")]
         public static extern int CreateCursor(QueueHandle handle, out CursorHandle cursorHandle);
 
+        [DllImport(MQRT, EntryPoint = "MQMarkMessageRejected")]
+        public static extern int MarkMessageRejected(QueueHandle handle, long lookupId);
+
         [DllImport(MQRT, EntryPoint = "MQMoveMessage")]
         public static extern int MoveMessage(QueueHandle sourceQueue, QueueHandle targetQueue, long lookupId, IntPtr transaction);
 
@@ -56,7 +59,7 @@ namespace BusterWood.Msmq
         public unsafe static extern int ReceiveMessage(
             QueueHandle handle, 
             uint timeout, 
-            ReceiveAction action, 
+            int action, 
             MQPROPS properties, 
             NativeOverlapped* overlapped,
             ReceiveCallback receiveCallback, 
@@ -67,7 +70,7 @@ namespace BusterWood.Msmq
         public unsafe static extern int ReceiveMessage(
             QueueHandle handle, 
             uint timeout, 
-            ReceiveAction action, 
+            int action, 
             MQPROPS properties, 
             NativeOverlapped* overlapped,
             ReceiveCallback receiveCallback, 
@@ -78,7 +81,7 @@ namespace BusterWood.Msmq
         public unsafe static extern int ReceiveMessageByLookupId(
             QueueHandle handle, 
             long lookupId,
-            LookupAction action, 
+            int action, 
             MQPROPS properties, 
             NativeOverlapped* overlapped,
             ReceiveCallback receiveCallback, 
@@ -88,7 +91,7 @@ namespace BusterWood.Msmq
         public unsafe static extern int ReceiveMessageByLookupId(
             QueueHandle handle, 
             long lookupId,
-            LookupAction action, 
+            int action, 
             MQPROPS properties, 
             NativeOverlapped* overlapped,
             ReceiveCallback receiveCallback, 
@@ -102,16 +105,22 @@ namespace BusterWood.Msmq
 
         internal static bool NotEnoughMemory(int hresult)
         {
-            return (hresult == (int)ErrorCode.BufferOverflow ||
-                 hresult == (int)ErrorCode.LabelBufferTooSmall ||
-                 hresult == (int)ErrorCode.ProviderNameBufferTooSmall ||
-                 hresult == (int)ErrorCode.SenderCertificateBufferTooSmall ||
-                 hresult == (int)ErrorCode.SenderIdBufferTooSmall ||
-                 hresult == (int)ErrorCode.SecurityDescriptorBufferTooSmall ||
-                 hresult == (int)ErrorCode.SignatureBufferTooSmall ||
-                 hresult == (int)ErrorCode.SymmetricKeyBufferTooSmall ||
-                 hresult == (int)ErrorCode.UserBufferTooSmall ||
-                 hresult == (int)ErrorCode.FormatNameBufferTooSmall);
+            switch ((ErrorCode)hresult)
+            {
+                case ErrorCode.BufferOverflow:
+                case ErrorCode.LabelBufferTooSmall:
+                case ErrorCode.ProviderNameBufferTooSmall:
+                case ErrorCode.SenderCertificateBufferTooSmall:
+                case ErrorCode.SenderIdBufferTooSmall:
+                case ErrorCode.SecurityDescriptorBufferTooSmall:
+                case ErrorCode.SignatureBufferTooSmall:
+                case ErrorCode.SymmetricKeyBufferTooSmall:
+                case ErrorCode.UserBufferTooSmall:
+                case ErrorCode.FormatNameBufferTooSmall:
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         internal static bool IsError(int hresult)

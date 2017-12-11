@@ -37,28 +37,36 @@ namespace BusterWood.Msmq
             var overlapped = new Overlapped();
             var nativeOverlapped = overlapped.Pack(EndReceive, null);
 
-            for (;;)
+            try
             {
-                // receive, may complete synchronously or call the async callback on the overlapped defined above
-                int res = Native.ReceiveMessage(handle, timeoutMS, action, Props, nativeOverlapped, null, CursorHandle.None, IntPtr.Zero);
-
-                // successfully completed synchronously but no enough memory                
-                if (Native.NotEnoughMemory(res))
+                for (;;)
                 {
-                    Message.Props.Free();
-                    Message.Props.AdjustMemory();
-                    Props = Message.Props.Allocate();
-                    continue; // try again
-                }
+                    // receive, may complete synchronously or call the async callback on the overlapped defined above
+                    int res = Native.ReceiveMessage(handle, timeoutMS, (int)action, Props, nativeOverlapped, null, CursorHandle.None, IntPtr.Zero);
 
-                if (Native.IsError(res))
-                {
-                    Message.Props.Free();
-                    Overlapped.Free(nativeOverlapped);
-                    Tcs.TrySetException(new QueueException(unchecked(res))); // we really want Task.FromException...
+                    // successfully completed synchronously but no enough memory                
+                    if (Native.NotEnoughMemory(res))
+                    {
+                        Message.Props.Free();
+                        Message.Props.AdjustMemory();
+                        Props = Message.Props.Allocate();
+                        continue; // try again
+                    }
+
+                    if (Native.IsError(res))
+                    {
+                        Message.Props.Free();
+                        Overlapped.Free(nativeOverlapped);
+                        Tcs.TrySetException(new QueueException(unchecked(res))); // we really want Task.FromException...
+                        return Tcs.Task;
+                    }
+
                     return Tcs.Task;
                 }
-
+            }
+            catch (ObjectDisposedException ex)
+            {
+                Tcs.TrySetException(new QueueException(ErrorCode.OperationCanceled));
                 return Tcs.Task;
             }
         }
@@ -72,50 +80,51 @@ namespace BusterWood.Msmq
                 Outstanding.Remove(this);
 
             var result = Native.GetOverlappedResult(native);
-            switch (result)
+            try
             {
-                case 0:
-                    Tcs.TrySetResult(Message);
-                    break;
-                case (int)ErrorCode.InsufficientResources:
-                    Tcs.SetException(new OutOfMemoryException("async receive operation reported InsufficientResources"));
-                    break;
-                case (int)ErrorCode.IOTimeout:
-                    Tcs.TrySetResult(null);
-                    break;
-                default:
-                    if ((ErrorCode)result == ErrorCode.IOTimeout)
-                    {
+                switch (result)
+                {
+                    case 0:
+                        Tcs.TrySetResult(Message);
+                        break;
+                    case (int)ErrorCode.InsufficientResources:
+                        Tcs.SetException(new OutOfMemoryException("async receive operation reported InsufficientResources"));
+                        break;
+                    case (int)ErrorCode.IOTimeout:
                         Tcs.TrySetResult(null);
                         break;
-                    }
+                    default:                    
+                        // successfully completed but no enough memory                
+                        if (Native.NotEnoughMemory(result))
+                        {
+                            Message.Props.Free();
+                            Message.Props.AdjustMemory();
+                            Props = Message.Props.Allocate();
+                            var overlapped = new Overlapped();
+                            var nativeOverlapped = overlapped.Pack(EndReceive, null);
+                            int res = Native.ReceiveMessage(handle, timeoutMS, (int)action, Props, nativeOverlapped, null, CursorHandle.None, IntPtr.Zero);
 
-                    // successfully completed but no enough memory                
-                    if (Native.NotEnoughMemory(result))
-                    {
-                        Message.Props.Free();
-                        Message.Props.AdjustMemory();
-                        Props = Message.Props.Allocate();
-                        var overlapped = new Overlapped();
-                        var nativeOverlapped = overlapped.Pack(EndReceive, null);
-                        int res = Native.ReceiveMessage(handle, timeoutMS, action, Props, nativeOverlapped, null, CursorHandle.None, IntPtr.Zero);
+                            if (res == MQ_INFORMATION_OPERATION_PENDING)    // running asynchronously
+                                return;
 
-                        if (res == MQ_INFORMATION_OPERATION_PENDING)    // running asynchronously
-                            return;
+                            // call completed synchronously
+                            Message.Props.Free();
+                            Overlapped.Free(nativeOverlapped);
 
-                        // call completed synchronously
-                        Message.Props.Free();
-                        Overlapped.Free(nativeOverlapped);
+                            if (Native.IsError(res))
+                                Tcs.TrySetException(new QueueException(unchecked(res)));
+                            else
+                                Tcs.TrySetResult(Message);
+                        }
 
-                        if (Native.IsError(res))
-                            Tcs.TrySetException(new QueueException(unchecked(res)));
-                        else
-                            Tcs.TrySetResult(Message);
-                    }
-
-                    // some other error
-                    Tcs.TrySetException(new QueueException(unchecked((int)code))); // or do we use the result?
-                    break;
+                        // some other error
+                        Tcs.TrySetException(new QueueException(unchecked((int)code))); // or do we use the result?
+                        break;
+                }
+            }
+            catch (ObjectDisposedException ex)
+            {
+                Tcs.TrySetException(new QueueException(ErrorCode.OperationCanceled));
             }
         }
     }

@@ -4,7 +4,7 @@ using System.Runtime.Serialization;
 namespace BusterWood.Msmq
 {
     [Serializable]
-    internal class QueueException : Exception
+    public class QueueException : Exception
     {
         public ErrorCode ErrorCode { get; }
 
@@ -19,6 +19,11 @@ namespace BusterWood.Msmq
         public QueueException(int errorCode) : base($"Queue exception: {(ErrorCode)errorCode}")
         {
             ErrorCode = (ErrorCode)errorCode;
+        }
+
+        public QueueException(ErrorCode errorCode) : base($"Queue exception: {errorCode}")
+        {
+            ErrorCode = errorCode;
         }
 
         public QueueException(string message, Exception innerException) : base(message, innerException)

@@ -25,13 +25,16 @@ namespace BusterWood.Msmq
         ArrivedTime = 1 << 17,
         Journal = 1 << 18,
         TransactionId = 1 << 19,
-        TransactionStatusQueue = 1 << 20,
-        SourceMachine = 1 << 21,
+        SourceMachine = 1 << 20,
+        AbortCount = 1 << 21,
+        TotalAbortCount = 1 << 22,
+        FirstInTransaction = 1 << 23,
+        LastInTransaction = 1 << 24,
 
         /// <summary>Read all properties including the body</summary>
         All = Class| AcknowledgementTypes | AdministrationQueue | AppSpecific | Body | CorrelationId | Delivery 
             | DestinationQueue | Extension | Id | Label | LookupId | Priority | ResponseQueue | SentTime
-            | TimeToBeReceived | TimeToReachQueue | ArrivedTime | Journal | TransactionId | TransactionStatusQueue
-            | SourceMachine,
+            | TimeToBeReceived | TimeToReachQueue | ArrivedTime | Journal | TransactionId 
+            | SourceMachine | AbortCount | TotalAbortCount | FirstInTransaction | LastInTransaction,
     }
 }

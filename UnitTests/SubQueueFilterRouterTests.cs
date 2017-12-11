@@ -7,7 +7,7 @@ using BusterWood.Msmq;
 
 namespace UnitTests
 {
-    [TestFixture, Timeout(5000)]
+    [TestFixture, Timeout(10000)]
     public class SubQueueFilterRouterTests
     {
         string testQueue = $".\\private$\\{nameof(SubQueueFilterRouterTests)}";
@@ -41,7 +41,6 @@ namespace UnitTests
             var key = Environment.TickCount;
             using (var router = new SubQueueFilterRouter(testQueueFormatName, GetSubQueue))
             {
-                router.StopTime = TimeSpan.FromMilliseconds(20);
                 await router.StartAsync();
                 try
                 {
@@ -71,7 +70,6 @@ namespace UnitTests
             var key = Environment.TickCount;
             using (var router = new SubQueueFilterRouter(testQueueFormatName, GetSubQueue))
             {
-                router.StopTime = TimeSpan.FromMilliseconds(20);
                 await router.StartAsync();
                 try
                 {
@@ -103,7 +101,6 @@ namespace UnitTests
             var key = Environment.TickCount;
             using (var router = new SubQueueFilterRouter(testQueueFormatName, GetSubQueue))
             {
-                router.StopTime = TimeSpan.FromMilliseconds(20);
                 await router.StartAsync();
                 try
                 {
@@ -132,14 +129,13 @@ namespace UnitTests
             using (var input = Queue.Open(testQueueFormatName, QueueAccessMode.Send))
             using (var out1 = Queue.Open(testQueueFormatName+";one", QueueAccessMode.Receive))
             using (var out2 = Queue.Open(testQueueFormatName+";two", QueueAccessMode.Receive))
-            using (var router = new SubQueueFilterRouter(Queue.Open(testQueueFormatName, QueueAccessMode.Receive), GetSubQueue))
+            using (var router = new SubQueueFilterRouter(testQueueFormatName, GetSubQueue))
             {
                 for (int i = 0; i < 1000; i++)
                 {
                     input.Post(new Message { Label = "1", AppSpecific = i });
                     input.Post(new Message { Label = "2", AppSpecific = i });
                 }
-                router.StopTime = TimeSpan.FromMilliseconds(20);
                 var sw = new Stopwatch();
                 sw.Start();
 
@@ -166,14 +162,16 @@ namespace UnitTests
             }
         }
 
+        QueueCache _cache = new QueueCache();
+
         Queue GetSubQueue(Message peeked)
         {
             if (peeked.Label.EndsWith("sq", StringComparison.OrdinalIgnoreCase))
-                return Queue.Open(testQueueFormatName + ";sq", QueueAccessMode.Move);
+                return _cache.Open(testQueueFormatName + ";sq", QueueAccessMode.Move);
             if (peeked.Label.EndsWith("1", StringComparison.OrdinalIgnoreCase))
-                return Queue.Open(testQueueFormatName + ";one", QueueAccessMode.Move);
+                return _cache.Open(testQueueFormatName + ";one", QueueAccessMode.Move);
             if (peeked.Label.EndsWith("2", StringComparison.OrdinalIgnoreCase))
-                return Queue.Open(testQueueFormatName + ";two", QueueAccessMode.Move);
+                return _cache.Open(testQueueFormatName + ";two", QueueAccessMode.Move);
             return null;
         }
     }

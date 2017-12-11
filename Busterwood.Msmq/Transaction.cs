@@ -39,8 +39,8 @@ namespace BusterWood.Msmq
             _complete = true;
         }
 
-        /// <summary>Rollback (abort) the transaction</summary>
-        public virtual void Rollback()
+        /// <summary>Rollback the transaction</summary>
+        public virtual void Abort()
         {
             if (_disposed) throw new ObjectDisposedException("MSMQ Transaction");
             int res = InternalTransaction.Abort(0, 0, 0);
@@ -49,7 +49,7 @@ namespace BusterWood.Msmq
             _complete = true;
         }
 
-        /// <summary>Aborts the transaction if <see cref="Commit"/> or <see cref="Rollback"/> has not already been called</summary>
+        /// <summary>Aborts the transaction if <see cref="Commit"/> or <see cref="Abort"/> has not already been called</summary>
         public virtual void Dispose()
         {
             if (_disposed || _complete) return;
@@ -72,7 +72,7 @@ namespace BusterWood.Msmq
                 throw new NotImplementedException();
             }
 
-            public override void Rollback()
+            public override void Abort()
             {
                 throw new NotImplementedException();
             }

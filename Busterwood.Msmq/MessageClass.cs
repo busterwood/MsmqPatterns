@@ -20,5 +20,6 @@
         ReachQueueTimeout = (1 << 15) | 0x02,
         Receive = (1 << 14),
         ReceiveTimeout = (1 << 15) | (1 << 14) | 0x02,
+        ReceiveRejected = 0xC004,
     }
 }

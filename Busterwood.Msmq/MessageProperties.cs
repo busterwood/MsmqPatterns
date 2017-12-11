@@ -31,7 +31,7 @@ namespace BusterWood.Msmq
         public const short VT_UI8 = 21;
         public const short VT_VECTOR = 0x1000;
 
-        int _maxProperties = 61;
+        int _maxProperties = 70;
         int _basePropertyId = Native.MESSAGE_PROPID_BASE + 1;
 
         int _propertyCount;
@@ -352,13 +352,6 @@ namespace BusterWood.Msmq
                     SetByteArray(Native.MESSAGE_PROPID_EXTENSION, new byte[size]);
             }
 
-            //if (filter.TransactionStatusQueue)
-            //{
-            //    int size = GetUInt(Native.MESSAGE_PROPID_XACT_STATUS_QUEUE_LEN);
-            //    if (size > Message.DefaultQueueNameSize)
-            //        SetString(Native.MESSAGE_PROPID_XACT_STATUS_QUEUE, new byte[size * 2]);
-            //}
-
             if (!IsUndefined(Native.MESSAGE_PROPID_LABEL))
             {
                 int size = GetUInt(Native.MESSAGE_PROPID_LABEL_LEN);
@@ -511,10 +504,24 @@ namespace BusterWood.Msmq
                 msgProps.SetByteArray(Native.MESSAGE_PROPID_XACTID, new byte[Message.MessageIdSize]);
             }
 
-            if ((read & Properties.TransactionStatusQueue) != 0)
+            if ((read & Properties.AbortCount) != 0)
             {
-                msgProps.SetString(Native.MESSAGE_PROPID_XACT_STATUS_QUEUE, new byte[255 * 2]);
-                msgProps.SetUInt(Native.MESSAGE_PROPID_XACT_STATUS_QUEUE_LEN, 255);
+                msgProps.SetUInt(Native.MESSAGE_PROPID_ABORT_COUNT, 0);
+            }
+
+            if ((read & Properties.TotalAbortCount) != 0)
+            {
+                msgProps.SetUInt(Native.MESSAGE_PROPID_MOVE_COUNT, 0);
+            }
+
+            if ((read & Properties.FirstInTransaction) != 0)
+            {
+                msgProps.SetByte(Native.MESSAGE_PROPID_FIRST_IN_XACT, 0);
+            }
+
+            if ((read & Properties.LastInTransaction) != 0)
+            {
+                msgProps.SetByte(Native.MESSAGE_PROPID_LAST_IN_XACT, 0);
             }
         }
 

@@ -28,12 +28,12 @@ namespace BusterWood.Msmq
         public const int MESSAGE_PROPID_ENCRYPTION_ALG = (MESSAGE_PROPID_BASE + 27);        /* VT_UI4           */
         public const int MESSAGE_PROPID_EXTENSION = (MESSAGE_PROPID_BASE + 35);             /* VT_UI1|VT_VECTOR */
         public const int MESSAGE_PROPID_EXTENSION_LEN = (MESSAGE_PROPID_BASE + 36);         /* VT_UI4           */
-        public const int MESSAGE_PROPID_FIRST_IN_XACT = (MESSAGE_PROPID_BASE + 50);  /* VT_UI1           */
+        public const int MESSAGE_PROPID_FIRST_IN_XACT = (MESSAGE_PROPID_BASE + 50);         /* VT_UI1           */
         public const int MESSAGE_PROPID_HASH_ALG = (MESSAGE_PROPID_BASE + 26);              /* VT_UI4           */
         public const int MESSAGE_PROPID_JOURNAL = (MESSAGE_PROPID_BASE + 7);                /* VT_UI1           */
         public const int MESSAGE_PROPID_LABEL = (MESSAGE_PROPID_BASE + 11);                 /* VT_LPWSTR        */
         public const int MESSAGE_PROPID_LABEL_LEN = (MESSAGE_PROPID_BASE + 12);             /* VT_UI4           */
-        public const int MESSAGE_PROPID_LAST_IN_XACT = (MESSAGE_PROPID_BASE + 51);  /* VT_UI1           */
+        public const int MESSAGE_PROPID_LAST_IN_XACT = (MESSAGE_PROPID_BASE + 51);          /* VT_UI1           */
         public const int MESSAGE_PROPID_MSGID = (MESSAGE_PROPID_BASE + 2);                  /* VT_UI1|VT_VECTOR */
         public const int MESSAGE_PROPID_PRIORITY = (MESSAGE_PROPID_BASE + 4);               /* VT_UI1           */
         public const int MESSAGE_PROPID_PRIV_LEVEL = (MESSAGE_PROPID_BASE + 23);            /* VT_UI4           */
@@ -58,8 +58,23 @@ namespace BusterWood.Msmq
         public const int MESSAGE_PROPID_VERSION = (MESSAGE_PROPID_BASE + 19);               /* VT_UI4           */
         public const int MESSAGE_PROPID_XACT_STATUS_QUEUE = (MESSAGE_PROPID_BASE + 39);     /* VT_LPWSTR        */
         public const int MESSAGE_PROPID_XACT_STATUS_QUEUE_LEN = (MESSAGE_PROPID_BASE + 40); /* VT_UI4           */
-        public const int MESSAGE_PROPID_XACTID = (MESSAGE_PROPID_BASE + 52); /* VT_UI1|VT_VECTOR */
-        public const int MESSAGE_PROPID_LOOKUPID = (MESSAGE_PROPID_BASE + 60);    /* VT_UI8           */
+        public const int MESSAGE_PROPID_XACTID = (MESSAGE_PROPID_BASE + 52);                /* VT_UI1|VT_VECTOR */
+        public const int MESSAGE_PROPID_LOOKUPID = (MESSAGE_PROPID_BASE + 60);              /* VT_UI8           */
+        public const int MESSAGE_PROPID_SOAP_ENVELOPE = (MESSAGE_PROPID_BASE + 61);         /* VT_LPWSTR        */
+        public const int MESSAGE_PROPID_SOAP_ENVELOPE_LEN = (MESSAGE_PROPID_BASE + 62);     /* VT_UI4           */
+        public const int MESSAGE_PROPID_COMPOUND_MESSAGE = (MESSAGE_PROPID_BASE + 63);      /* VT_UI1|VT_VECTOR */
+        public const int MESSAGE_PROPID_COMPOUND_MESSAGE_SIZE = (MESSAGE_PROPID_BASE + 64); /* VT_UI4           */
+        public const int MESSAGE_PROPID_SOAP_HEADER = (MESSAGE_PROPID_BASE + 65);           /* VT_LPWSTR        */
+        public const int MESSAGE_PROPID_SOAP_BODY = (MESSAGE_PROPID_BASE + 66);             /* VT_LPWSTR        */
+        public const int MESSAGE_PROPID_DEADLETTER_QUEUE = (MESSAGE_PROPID_BASE + 67);      /* VT_LPWSTR        */
+        public const int MESSAGE_PROPID_DEADLETTER_QUEUE_LEN = (MESSAGE_PROPID_BASE + 68);  /* VT_UI4           */
+        public const int MESSAGE_PROPID_ABORT_COUNT = (MESSAGE_PROPID_BASE + 69);           /* VT_UI4           */
+        public const int MESSAGE_PROPID_MOVE_COUNT = (MESSAGE_PROPID_BASE + 70);            /* VT_UI4           */
+        //public const int MESSAGE_PROPID_GROUP_ID = (MESSAGE_PROPID_BASE + 71);              /* VT_LPWSTR        */
+        //public const int MESSAGE_PROPID_GROUP_ID_LEN = (MESSAGE_PROPID_BASE + 72);          /* VT_UI4           */
+        //public const int MESSAGE_PROPID_FIRST_IN_GROUP = (MESSAGE_PROPID_BASE + 73);        /* VT_UI1           */
+        //public const int MESSAGE_PROPID_LAST_IN_GROUP = (MESSAGE_PROPID_BASE + 74);         /* VT_UI1           */
+        //public const int MESSAGE_PROPID_LAST_MOVE_TIME = (MESSAGE_PROPID_BASE + 75);        /* VT_UI4           */
     }
   
 }

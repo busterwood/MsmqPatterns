@@ -13,42 +13,33 @@ namespace MsmqPatterns
     /// </summary>
     public class SubQueueFilterRouter : IProcessor
     {
-        readonly Queue _input;
+        readonly string _inputFormatName;
         readonly Func<Message, Queue> _getSubQueue;
-        readonly Transaction _transaction;
-        volatile bool _stop;
+        Queue _input;
+        Queue _posionSubQueue;
+        Transaction _transaction;
         Task _run;
 
         /// <summary>The filter used when peeking messages, the default does NOT include the message body</summary>
         public Properties PeekFilter { get; } = Properties.AppSpecific | Properties.Label | Properties.Extension | Properties.LookupId;
 
-        /// <summary>Timeout used so <see cref="StopAsync"/> can stop this processor</summary>
-        public TimeSpan StopTime { get; set; } = TimeSpan.FromMilliseconds(100);
-
         /// <summary>Handle messages that cannot be routed.  Defaults to moving messages to a "Poison" subqueue of the input queue</summary>
         public Action<long, Transaction> BadMessageHandler { get; set; }
 
-        public SubQueueFilterRouter(string inputQueue, Func<Message, Queue> getSubQueueName) 
-            : this(Queue.Open(inputQueue, QueueAccessMode.Receive), getSubQueueName)
+        public SubQueueFilterRouter(string inputFormatName, Func<Message, Queue> getSubQueueName) 
         {
-            Contract.Requires(inputQueue != null);
+            Contract.Requires(inputFormatName != null);
             Contract.Requires(getSubQueueName != null);
-        }
-
-        public SubQueueFilterRouter(Queue input, Func<Message, Queue> getSubQueueName)
-        {
-            Contract.Requires(input != null);
-            Contract.Requires(getSubQueueName != null);
-            _input = input;
+            _inputFormatName = inputFormatName;
             _getSubQueue = getSubQueueName;
             BadMessageHandler = MoveToPoisonSubqueue;
-            if (Queue.IsTransactional(input.FormatName) == QueueTransactional.Transactional)
-                _transaction = Transaction.Single;
         }
 
         public Task<Task> StartAsync()
         {
-            _stop = false;
+            _input = Queue.Open(_inputFormatName, QueueAccessMode.Receive);
+            if (Queue.IsTransactional(_input.FormatName) == QueueTransactional.Transactional)
+                _transaction = Transaction.Single;
             _run = RunAsync();
             return Task.FromResult(_run);
         }
@@ -57,12 +48,9 @@ namespace MsmqPatterns
         {
             try
             {
-                while (!_stop)
+                for(;;)
                 {
-                    Message peeked = await _input.PeekAsync(PeekFilter, StopTime);
-                    if (peeked == null)
-                        continue;
-
+                    Message peeked = await _input.PeekAsync(PeekFilter);
                     try
                     {
                         var subQueue = GetRoute(peeked);
@@ -74,6 +62,10 @@ namespace MsmqPatterns
                             MoveToPoisonSubqueue(peeked.LookupId, _transaction);
                     }
                 }
+            }
+            catch (QueueException ex) when (ex.ErrorCode == ErrorCode.OperationCanceled)
+            {
+                // queue handle was closed, i.e. stopped
             }
             catch (Exception ex)
             {
@@ -99,18 +91,16 @@ namespace MsmqPatterns
 
         public Task StopAsync()
         {
-            _stop = true;
+            _input?.Dispose(); // this will close any pending operations peek operations
+            _posionSubQueue?.Dispose();
             return _run;
         }
 
         public void Dispose()
         {
             StopAsync()?.Wait();
-            _input.Dispose();
-            _posionSubQueue?.Dispose();
         }
 
-        Queue _posionSubQueue;
         private void MoveToPoisonSubqueue(long lookupId, Transaction transaction)
         {
             try
