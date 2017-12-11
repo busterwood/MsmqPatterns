@@ -2,6 +2,9 @@
 
 namespace BusterWood.Msmq
 {
+    /// <summary>
+    /// The type of acknowledgements to be sent to the <see cref="Message.AdministrationQueue"/>
+    /// </summary>
     [Flags]
     public enum AcknowledgmentTypes
     {

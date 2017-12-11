@@ -17,6 +17,7 @@ namespace BusterWood.Msmq
         }
 
         public override bool IsInvalid => base.IsInvalid || IsClosed;
+
         // Prevent exception when MQRT.DLL is not installed
         sealed class InvalidCursorHandle : CursorHandle
         {

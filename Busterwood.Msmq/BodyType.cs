@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace BusterWood.Msmq
+﻿namespace BusterWood.Msmq
 {
+    /// <summary>
+    /// The type of the <see cref="Message.Body"/>
+    /// </summary>
     public enum BodyType
     {
         /// <summary>Default, same as <see cref="ByteArray"/></summary>
