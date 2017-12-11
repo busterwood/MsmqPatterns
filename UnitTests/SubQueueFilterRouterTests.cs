@@ -16,23 +16,20 @@ namespace UnitTests
         [TestFixtureSetUp]
         public void FixtureSetup()
         {
-            Queue.TryCreate(testQueue, QueueTransactional.None);
+            testQueueFormatName = Queue.TryCreate(testQueue, QueueTransactional.None);
         }
 
         [SetUp]
         public void Setup()
         {
-            if (Queue.Exists(testQueue))
-                TestSupport.ReadAllMessages(testQueue);
-
-            if (Queue.Exists(testQueue + ";sq"))
-                TestSupport.ReadAllMessages(testQueue + ";sq");
-            if (Queue.Exists(testQueue + ";one"))
-                TestSupport.ReadAllMessages(testQueue + ";one");
-            if (Queue.Exists(testQueue + ";two"))
-                TestSupport.ReadAllMessages(testQueue + ";two");
-
-            testQueueFormatName = Queue.PathToFormatName(testQueue);            
+            using (var input = Queue.Open(testQueueFormatName, QueueAccessMode.Receive))
+            using (var out1 = Queue.Open(testQueueFormatName + ";one", QueueAccessMode.Receive))
+            using (var out2 = Queue.Open(testQueueFormatName + ";two", QueueAccessMode.Receive))
+            {
+                input.Purge();
+                out1.Purge();
+                out2.Purge();
+            }
         }
 
         [Test]
@@ -131,6 +128,9 @@ namespace UnitTests
             using (var out2 = Queue.Open(testQueueFormatName+";two", QueueAccessMode.Receive))
             using (var router = new SubQueueFilterRouter(testQueueFormatName, GetSubQueue))
             {
+                out1.Purge();
+                out2.Purge();
+
                 for (int i = 0; i < 1000; i++)
                 {
                     input.Post(new Message { Label = "1", AppSpecific = i });
