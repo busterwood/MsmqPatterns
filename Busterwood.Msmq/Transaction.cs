@@ -10,6 +10,8 @@ namespace BusterWood.Msmq
     /// </summary>
     public class Transaction : IDisposable
     {
+        public static readonly Transaction None = null;
+
         /// <summary>Use the ambient DTC transaction from System.Transactions.TransactionScope</summary>
         public static readonly Transaction Dtc = new SpecialTransaction(1);
         

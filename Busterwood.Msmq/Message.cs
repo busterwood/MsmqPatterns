@@ -69,7 +69,7 @@ namespace BusterWood.Msmq
         }
 
         /// <summary>The type of acknowledgement messages that should be sent to the <see cref="AdministrationQueue"/></summary>
-        public AcknowledgmentTypes AcknowledgementTypes
+        public AcknowledgmentTypes AcknowledgmentTypes
         {
             get
             {

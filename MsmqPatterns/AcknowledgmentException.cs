@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BusterWood.Msmq;
+using System;
 using System.Messaging;
 using System.Runtime.Serialization;
 
@@ -8,6 +9,7 @@ namespace MsmqPatterns
     public class AcknowledgmentException : Exception
     {
         public Acknowledgment Acknowledgment { get; }
+        public MessageClass Acknowledgment2 { get; }
 
         public AcknowledgmentException()
         {
@@ -20,6 +22,11 @@ namespace MsmqPatterns
         public AcknowledgmentException(string message, Acknowledgment acknowledgment) : base(message)
         {
             this.Acknowledgment = acknowledgment;
+        }
+
+        public AcknowledgmentException(string message, MessageClass @class) : base(message)
+        {
+            this.Acknowledgment2 = @class;
         }
 
         public AcknowledgmentException(string message, Exception innerException) : base(message, innerException)
