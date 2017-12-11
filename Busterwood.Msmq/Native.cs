@@ -55,6 +55,9 @@ namespace BusterWood.Msmq
         [DllImport(MQRT, EntryPoint = "MQMoveMessage")]
         public static extern int MoveMessage(QueueHandle sourceQueue, QueueHandle targetQueue, long lookupId, ITransaction transaction); //MSMQ internal transaction
 
+        [DllImport(MQRT, EntryPoint = "MQPurgeQueue")]
+        public static extern int PurgeQueue(QueueHandle sourceQueue);
+
         [DllImport(MQRT, EntryPoint = "MQReceiveMessage", CharSet = CharSet.Unicode)]
         public unsafe static extern int ReceiveMessage(
             QueueHandle handle, 

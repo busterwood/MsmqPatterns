@@ -247,6 +247,14 @@ namespace BusterWood.Msmq
             Close();
         }
 
+        /// <summary>Deletes all the messages in the queue.  Note: the queue must be opened with <see cref="QueueAccessMode.Receive"/></summary>
+        public void Purge()
+        {
+            int res = Native.PurgeQueue(_handle);
+            if (res != 0)
+                throw new QueueException(res);
+        }
+
         /// <summary>Creates a message queue (if it does not already exist), returning the format name of the queue.</summary>
         /// <param name="path">the path (NOT format name) of the queue</param>
         /// <param name="transactional">create a transactional queue or not?</param>
