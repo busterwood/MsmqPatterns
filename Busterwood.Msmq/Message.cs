@@ -47,6 +47,7 @@ namespace BusterWood.Msmq
         }
 
         /// <summary>Indicates the number of times that transactional processing has been aborted on a message since it was placed in its current queue.</summary>
+        /// <remarks>Moving a message to/from a subqueue resets this count</remarks>
         public int AbortCount
         {
             get
@@ -58,7 +59,7 @@ namespace BusterWood.Msmq
         }
 
         /// <summary>Indicates the number of times that transactional processing has been aborted on a message during its lifetime.</summary>
-        public int TotalAbortCount
+        public int AbortCountTotal
         {
             get
             {
@@ -402,7 +403,7 @@ namespace BusterWood.Msmq
             }
         }
 
-        /// <summary>The priority of the message</summary>
+        /// <summary>The priority of the message.  Note that this property is automatically set to <see cref="Priority.Lowest"/> for transactional messages</summary>
         public Priority Priority
         {
             get
@@ -466,7 +467,7 @@ namespace BusterWood.Msmq
             get
             {
                 if (Props.IsUndefined(Native.MESSAGE_PROPID_TIME_TO_BE_RECEIVED))
-                    return Queue.Infinite;
+                    return null;
 
                 var secs = (uint)Props.GetUInt(Native.MESSAGE_PROPID_TIME_TO_BE_RECEIVED);
                 return secs == uint.MaxValue ? (TimeSpan?)null : TimeSpan.FromSeconds(secs);
@@ -490,13 +491,13 @@ namespace BusterWood.Msmq
             }
         }
 
-        /// <summary>The maximum amount of time a message is allowed before reaching the destination queue</summary>
+        /// <summary>The maximum amount of time a message is allowed before reaching the destination queue. Defaults to a system defined setting, typically 4 days</summary>
         public TimeSpan? TimeToReachQueue
         {
             get
             {
                 if (Props.IsUndefined(Native.MESSAGE_PROPID_TIME_TO_REACH_QUEUE))
-                    return Queue.Infinite;
+                    return null;
 
                 var secs = (uint)Props.GetUInt(Native.MESSAGE_PROPID_TIME_TO_REACH_QUEUE);
                 return secs == uint.MaxValue ? (TimeSpan?)null : TimeSpan.FromSeconds(secs);
