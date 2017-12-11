@@ -146,9 +146,9 @@ namespace BusterWood.Msmq
                 {
                     IntPtr txnHandle;
                     if (transaction.TryGetHandle(out txnHandle))
-                        res = Native.ReceiveMessage(_handle, timeoutMS, (int)action, props, null, null, CursorHandle.None, txnHandle);
+                        res = Native.ReceiveMessage(_handle, timeoutMS, action, props, null, null, CursorHandle.None, txnHandle);
                     else
-                        res = Native.ReceiveMessage(_handle, timeoutMS, (int)action, props, null, null, CursorHandle.None, transaction.InternalTransaction);
+                        res = Native.ReceiveMessage(_handle, timeoutMS, action, props, null, null, CursorHandle.None, transaction.InternalTransaction);
                 }
                 finally
                 {
@@ -192,9 +192,9 @@ namespace BusterWood.Msmq
                 {
                     IntPtr txnHandle;
                     if (transaction.TryGetHandle(out txnHandle))
-                        res = Native.ReceiveMessageByLookupId(_handle, lookupId, (int)action, props, null, null, txnHandle);
+                        res = Native.ReceiveMessageByLookupId(_handle, lookupId, action, props, null, null, txnHandle);
                     else
-                        res = Native.ReceiveMessageByLookupId(_handle, lookupId, (int)action, props, null, null, transaction.InternalTransaction);
+                        res = Native.ReceiveMessageByLookupId(_handle, lookupId, action, props, null, null, transaction.InternalTransaction);
                 }
                 finally
                 {

@@ -62,7 +62,7 @@ namespace BusterWood.Msmq
         public unsafe static extern int ReceiveMessage(
             QueueHandle handle, 
             uint timeout, 
-            int action, 
+            ReceiveAction action, 
             MQPROPS properties, 
             NativeOverlapped* overlapped,
             ReceiveCallback receiveCallback, 
@@ -72,8 +72,8 @@ namespace BusterWood.Msmq
         [DllImport(MQRT, EntryPoint = "MQReceiveMessage", CharSet = CharSet.Unicode)]
         public unsafe static extern int ReceiveMessage(
             QueueHandle handle, 
-            uint timeout, 
-            int action, 
+            uint timeout,
+            ReceiveAction action, 
             MQPROPS properties, 
             NativeOverlapped* overlapped,
             ReceiveCallback receiveCallback, 
@@ -84,7 +84,7 @@ namespace BusterWood.Msmq
         public unsafe static extern int ReceiveMessageByLookupId(
             QueueHandle handle, 
             long lookupId,
-            int action, 
+            LookupAction action, 
             MQPROPS properties, 
             NativeOverlapped* overlapped,
             ReceiveCallback receiveCallback, 
@@ -94,7 +94,7 @@ namespace BusterWood.Msmq
         public unsafe static extern int ReceiveMessageByLookupId(
             QueueHandle handle, 
             long lookupId,
-            int action, 
+            LookupAction action, 
             MQPROPS properties, 
             NativeOverlapped* overlapped,
             ReceiveCallback receiveCallback, 

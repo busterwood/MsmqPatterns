@@ -42,7 +42,7 @@ namespace BusterWood.Msmq
                 for (;;)
                 {
                     // receive, may complete synchronously or call the async callback on the overlapped defined above
-                    int res = Native.ReceiveMessage(handle, timeoutMS, (int)action, Props, nativeOverlapped, null, CursorHandle.None, IntPtr.Zero);
+                    int res = Native.ReceiveMessage(handle, timeoutMS, action, Props, nativeOverlapped, null, CursorHandle.None, IntPtr.Zero);
 
                     // successfully completed synchronously but no enough memory                
                     if (Native.NotEnoughMemory(res))
@@ -102,7 +102,7 @@ namespace BusterWood.Msmq
                             Props = Message.Props.Allocate();
                             var overlapped = new Overlapped();
                             var nativeOverlapped = overlapped.Pack(EndReceive, null);
-                            int res = Native.ReceiveMessage(handle, timeoutMS, (int)action, Props, nativeOverlapped, null, CursorHandle.None, IntPtr.Zero);
+                            int res = Native.ReceiveMessage(handle, timeoutMS, action, Props, nativeOverlapped, null, CursorHandle.None, IntPtr.Zero);
 
                             if (res == MQ_INFORMATION_OPERATION_PENDING)    // running asynchronously
                                 return;
