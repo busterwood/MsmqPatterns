@@ -1,65 +1,64 @@
 ﻿using MsmqPatterns;
 using NUnit.Framework;
 using System;
-using System.Messaging;
 using System.Threading.Tasks;
+using BusterWood.Msmq;
 
 namespace UnitTests
 {
     [TestFixture, Timeout(5000)]
     public class DtcRouterTests
     {
-        static string inputQueueName = $".\\private$\\{nameof(DtcRouterTests)}.Input";
-        string deadQueueName = $"{inputQueueName};Poison";
-        string outputQueueName1 = $".\\private$\\{nameof(DtcRouterTests)}.Output.1";
-        string outputQueueName2 = $".\\private$\\{nameof(DtcRouterTests)}.Output.2";
-        MessageQueue input;
-        MessageQueue dead;
-        MessageQueue out1;
-        MessageQueue out2;
-
-        [TestFixtureSetUp]
-        public void FixtureSetup()
-        {
-            if (!MessageQueue.Exists(inputQueueName))
-                MessageQueue.Create(inputQueueName, true);
-            if (!MessageQueue.Exists(deadQueueName))
-                MessageQueue.Create(deadQueueName, true);
-            if (!MessageQueue.Exists(outputQueueName1))
-                MessageQueue.Create(outputQueueName1, true);
-            if (!MessageQueue.Exists(outputQueueName2))
-                MessageQueue.Create(outputQueueName2, true);
-        }
+        static string inputQueuePath = $".\\private$\\{nameof(DtcRouterTests)}.Input";
+        string outputQueuePath1 = $".\\private$\\{nameof(DtcRouterTests)}.Output.1";
+        string outputQueuePath2 = $".\\private$\\{nameof(DtcRouterTests)}.Output.2";
+        string inputQueueFormatName;
+        string deadQueueFormatName;
+        string outputQueueFormatName1;
+        string outputQueueFormatName2;
+        Queue input;
+        Queue dead;
+        Queue outRead1;
+        Queue outRead2;
+        Queue outSend1;
+        Queue outSend2;
 
         [SetUp]
         public void Setup()
         {
-            if (MessageQueue.Exists(inputQueueName))
-                TestSupport.ReadAllMessages(inputQueueName);
-            if (MessageQueue.Exists(deadQueueName))
-                TestSupport.ReadAllMessages(deadQueueName);
-            if (MessageQueue.Exists(outputQueueName1))
-                TestSupport.ReadAllMessages(outputQueueName1);
-            if (MessageQueue.Exists(outputQueueName2))
-                TestSupport.ReadAllMessages(outputQueueName2);
+            inputQueueFormatName = Queue.TryCreate(inputQueuePath, QueueTransactional.Transactional);
+            outputQueueFormatName1 = Queue.TryCreate(outputQueuePath1, QueueTransactional.Transactional);
+            outputQueueFormatName2 = Queue.TryCreate(outputQueuePath2, QueueTransactional.Transactional);
+            deadQueueFormatName = $"{inputQueueFormatName };Poison";
 
-            input = new MessageQueue(inputQueueName, QueueAccessMode.SendAndReceive);
-            dead = new MessageQueue(deadQueueName, QueueAccessMode.SendAndReceive);
-            out1 = new MessageQueue(outputQueueName1, QueueAccessMode.SendAndReceive);
-            out2 = new MessageQueue(outputQueueName2, QueueAccessMode.SendAndReceive);
+            using (var q = Queue.Open(inputQueueFormatName, QueueAccessMode.Receive))
+                q.Purge();
+
+            outRead1 = Queue.Open(outputQueueFormatName1, QueueAccessMode.Receive);
+            outRead1.Purge();
+
+            outRead2 = Queue.Open(outputQueueFormatName2, QueueAccessMode.Receive);
+            outRead2.Purge();
+
+            input = Queue.Open(inputQueueFormatName, QueueAccessMode.Send);
+
+            dead = Queue.Open(deadQueueFormatName, QueueAccessMode.Receive);
+            dead.Purge();
+
+            outSend1 = Queue.Open(outputQueueFormatName1, QueueAccessMode.Send);
+            outSend2 = Queue.Open(outputQueueFormatName2, QueueAccessMode.Send);
         }
 
         [Test]
         public async Task can_route_transactional()
         {
-            using (var router = new DtcTransactionalRouter(input, msg => msg.Label.Contains("1") ? out1 : out2))
+            using (var router = new DtcTransactionalRouter(inputQueueFormatName, msg => msg.Label.Contains("1") ? outSend1 : outSend2))
             {
-                router.StopTime = TimeSpan.FromMilliseconds(20);
                 var rtask = router.StartAsync();
                 try
                 {
-                    input.Send(new Message { Label = "1", AppSpecific = 1 }, MessageQueueTransactionType.Single);
-                    var got = out1.Receive();
+                    input.Post(new Message { Label = "1", AppSpecific = 1 }, QueueTransaction.Single);
+                    var got = outRead1.Receive(Properties.All);
                     Assert.AreEqual("1", got.Label);
                 }
                 finally
@@ -72,14 +71,13 @@ namespace UnitTests
         [Test]
         public async Task can_route_transactional_to_other_queue()
         {
-            using (var router = new DtcTransactionalRouter(input, msg => msg.Label.Contains("1") ? out1 : out2))
+            using (var router = new DtcTransactionalRouter(inputQueueFormatName, msg => msg.Label.Contains("1") ? outSend1 : outSend2))
             {
-                router.StopTime = TimeSpan.FromMilliseconds(20);
                 var rtask = router.StartAsync();
                 try
                 {
-                    input.Send(new Message { Label = "2", AppSpecific = 1 }, MessageQueueTransactionType.Single);
-                    var got = out2.Receive();
+                    input.Post(new Message { Label = "2", AppSpecific = 1 }, QueueTransaction.Single);
+                    var got = outRead1.Receive(Properties.All);
                     Assert.AreEqual("2", got.Label);
                 }
                 finally
@@ -92,14 +90,13 @@ namespace UnitTests
         [Test]
         public async Task can_route_transactional_to_deadletter()
         {
-            using (var router = new DtcTransactionalRouter(input, msg => null))
+            using (var router = new DtcTransactionalRouter(inputQueueFormatName, msg => null))
             {
-                router.StopTime = TimeSpan.FromMilliseconds(20);
                 var rtask = router.StartAsync();
                 try
                 {
-                    input.Send(new Message { Label = "3", AppSpecific = 1 }, MessageQueueTransactionType.Single);
-                    var got = dead.Receive();
+                    input.Post(new Message { Label = "3", AppSpecific = 1 }, QueueTransaction.Single);
+                    var got = dead.Receive(Properties.All);
                     Assert.AreEqual("3", got.Label);
                 }
                 finally

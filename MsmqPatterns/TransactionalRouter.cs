@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Diagnostics.Contracts;
-using System.Messaging;
 using System.Threading.Tasks;
 using System.Transactions;
+using BusterWood.Msmq;
 
 namespace MsmqPatterns
 {
@@ -12,13 +12,14 @@ namespace MsmqPatterns
     /// </summary>
     public abstract class TransactionalRouter : Router
     {
-        protected MessageQueue _inProgress;
+        protected Queue _inProgressRead;
+        protected Queue _inProgressMove;
 
-        protected TransactionalRouter(MessageQueue input, Func<Message, MessageQueue> route)
-            : base(input, route)
+        protected TransactionalRouter(string inputQueueFormatName, Func<Message, Queue> route)
+            : base(inputQueueFormatName, route)
         {
             Contract.Requires(route != null);
-            Contract.Requires(input != null);
+            Contract.Requires(inputQueueFormatName != null);
         }
 
         /// <summary>
@@ -31,27 +32,33 @@ namespace MsmqPatterns
 
         protected override Task RunAsync()
         {
-            _inProgress = new MessageQueue(_input.FormatName + ";" + InProgressSubQueue, QueueAccessMode.Receive);
+            _inProgressRead = Queue.Open(_inputQueueFormatName + ";" + InProgressSubQueue, QueueAccessMode.Receive);
+            _inProgressMove = Queue.Open(_inputQueueFormatName + ";" + InProgressSubQueue, QueueAccessMode.Move);
             return base.RunAsync();
+        }
+
+        public override Task StopAsync()
+        {
+            _inProgressRead?.Dispose();
+            _inProgressMove?.Dispose();
+            return base.StopAsync();
         }
     }
 
-    /// <summary>Routes batches of messages between local <see cref="MessageQueue"/> using a MSMQ transaction</summary>
+    /// <summary>Routes batches of messages between local <see cref="Queue"/> using a MSMQ transaction</summary>
     public class MsmqTransactionalRouter : TransactionalRouter
     {        
-        public MsmqTransactionalRouter(MessageQueue input, Func<Message, MessageQueue> route)
-            : base(input, route)
+        public MsmqTransactionalRouter(string inputQueueFormatName, Func<Message, Queue> route)
+            : base(inputQueueFormatName, route)
         {
             Contract.Requires(route != null);
-            Contract.Requires(input != null);
-            Contract.Requires(input.Transactional);
+            Contract.Requires(inputQueueFormatName != null);
         }
 
         protected override void OnNewMessage(Message peeked)
         {
-            using (var txn = new MessageQueueTransaction())
+            using (var txn = new QueueTransaction())
             {
-                txn.Begin();
                 try
                 {
                     int count = RouteBatchOfMessages(txn);
@@ -64,24 +71,21 @@ namespace MsmqPatterns
                 {
                     txn.Abort();
                     //TODO: log what happened and why
-                    Console.Error.WriteLine($"WARN {ex.Message}S {{Destination={ex.Destination?.FormatName}}}");
-                    BadMessageHandler(ex.LookupId, MessageQueueTransactionType.Single);
+                    Console.Error.WriteLine($"WARN {ex.Message}S {{Destination={ex.Destination}}}");
+                    BadMessageHandler(ex.LookupId, QueueTransaction.Single);
                 }
             }
         }
 
-        int RouteBatchOfMessages(MessageQueueTransaction txn)
+        int RouteBatchOfMessages(QueueTransaction txn)
         {
             int toSend;
             for (toSend = 0; toSend < MaxBatchSize; toSend++)
             {
-                var messages = _input.GetMessageEnumerator2();
-                using (var peeked = _input.TryPeek(TimeSpan.Zero))
-                {
-                    if (peeked == null)
-                        break;
-                    _input.MoveMessage(InProgressSubQueue, peeked.LookupId, txn);
-                }
+                var peeked = _input.Peek(Properties.Label, TimeSpan.Zero);
+                if (peeked == null)
+                    break;
+                _input.Move(peeked.LookupId, _inProgressRead, txn);
             }
 
             int sent = 0;
@@ -95,9 +99,9 @@ namespace MsmqPatterns
             return sent;
         }
 
-        private bool RouteMessage(MessageQueueTransaction txn)
+        private bool RouteMessage(QueueTransaction txn)
         {
-            using (var msg = _inProgress.TryRecieve(TimeSpan.Zero, txn)) //note: no waiting
+            var msg = _inProgressRead.Receive(Properties.All, timeout: TimeSpan.Zero, transaction: txn);
             {
                 if (msg != null)
                     return false;
@@ -106,13 +110,13 @@ namespace MsmqPatterns
 
                 try
                 {
-                    dest.Send(msg, txn);
+                    dest.Post(msg, txn);
                     return true;
                 }
-                catch (MessageQueueException ex)
+                catch (QueueException ex)
                 {
                     // we cannot send to that queue
-                    throw new RouteException("Failed to send to destination", ex, msg.LookupId, dest);
+                    throw new RouteException("Failed to send to destination", ex, msg.LookupId, dest?.FormatName);
                 }
             }
         }
@@ -122,10 +126,10 @@ namespace MsmqPatterns
     public class DtcTransactionalRouter : TransactionalRouter
     {
 
-        public DtcTransactionalRouter(MessageQueue input, Func<Message, MessageQueue> route)
-            : base(input, route)
+        public DtcTransactionalRouter(string inputQueueFormatName, Func<Message, Queue> route)
+            : base(inputQueueFormatName, route)
         {
-            Contract.Requires(input != null);
+            Contract.Requires(inputQueueFormatName != null);
             Contract.Requires(route != null);
         }
 
@@ -143,8 +147,8 @@ namespace MsmqPatterns
             catch (RouteException ex)
             {
                 //TODO: log what happened and why
-                Console.Error.WriteLine($"WARN {ex.Message} {{Destination={ex.Destination?.FormatName}}}");
-                BadMessageHandler(ex.LookupId, MessageQueueTransactionType.Automatic); //TODO: what type is good here?
+                Console.Error.WriteLine($"WARN {ex.Message} {{Destination={ex.Destination}}}");
+                BadMessageHandler(ex.LookupId, QueueTransaction.Dtc); //TODO: what type is good here?
             }
         }
 
@@ -163,23 +167,21 @@ namespace MsmqPatterns
 
         private bool RouteMessage()
         {
-            using (Message msg = _input.TryRecieve(TimeSpan.Zero, MessageQueueTransactionType.Automatic))  //note: no waiting
-            {
+            Message msg = _input.Receive(Properties.All, timeout: TimeSpan.Zero, transaction:QueueTransaction.Dtc);  //note: no waiting
                 if (msg == null)
                     return false;
 
-                var dest = GetRoute(msg);
+            var dest = GetRoute(msg);
 
-                try
-                {
-                    dest.Send(msg, MessageQueueTransactionType.Automatic); 
-                    return true;
-                }
-                catch (MessageQueueException ex)
-                {
-                    // we cannot send to that queue
-                    throw new RouteException("Failed to send to destination", ex, msg.LookupId, dest);
-                }
+            try
+            {                
+                dest.Post(msg, QueueTransaction.Dtc); 
+                return true;
+            }
+            catch (QueueException ex)
+            {
+                // we cannot send to that queue
+                throw new RouteException("Failed to send to destination", ex, msg.LookupId, dest?.FormatName);
             }
         }
     }

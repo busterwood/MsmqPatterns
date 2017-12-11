@@ -78,7 +78,7 @@ namespace BusterWood.Msmq
             return Encoding.Unicode.GetString(buf, 0, chars);
         }
 
-        public static Message Peek(this Queue queue, Properties properties, TimeSpan? timeout = null, Transaction transaction = null)
+        public static Message Peek(this Queue queue, Properties properties, TimeSpan? timeout = null, QueueTransaction transaction = null)
         {
             Contract.Requires(queue != null);
             return queue.Receive(properties, ReceiveAction.PeekCurrent, timeout, transaction);

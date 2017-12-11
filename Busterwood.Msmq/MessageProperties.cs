@@ -99,6 +99,82 @@ namespace BusterWood.Msmq
             _values[propertyId - _basePropertyId] = value;
         }
 
+        /// <summary>Unset properties that cannot be sent</summary>
+        internal void PrepareToSend()
+        {
+            if (!IsUndefined(Native.MESSAGE_PROPID_CLASS))
+                SetUndefined(Native.MESSAGE_PROPID_CLASS);
+
+            if (!IsUndefined(Native.MESSAGE_PROPID_ARRIVEDTIME))
+                SetUndefined(Native.MESSAGE_PROPID_ARRIVEDTIME);
+
+            if (!IsUndefined(Native.MESSAGE_PROPID_AUTHENTICATED))
+                SetUndefined(Native.MESSAGE_PROPID_AUTHENTICATED);
+
+            if (!IsUndefined(Native.MESSAGE_PROPID_DEST_QUEUE))
+            {
+                SetUndefined(Native.MESSAGE_PROPID_DEST_QUEUE);
+                SetUndefined(Native.MESSAGE_PROPID_DEST_QUEUE_LEN);
+            }
+
+            if (!IsUndefined(Native.MESSAGE_PROPID_FIRST_IN_XACT))
+                SetUndefined(Native.MESSAGE_PROPID_FIRST_IN_XACT);
+
+            if (!IsUndefined(Native.MESSAGE_PROPID_LAST_IN_XACT))
+                SetUndefined(Native.MESSAGE_PROPID_LAST_IN_XACT);
+
+            if (!IsUndefined(Native.MESSAGE_PROPID_SENDERID))
+            {
+                SetUndefined(Native.MESSAGE_PROPID_SENDERID);
+                SetUndefined(Native.MESSAGE_PROPID_SENDERID_LEN);
+            }
+
+            if (!IsUndefined(Native.MESSAGE_PROPID_SENTTIME))
+                SetUndefined(Native.MESSAGE_PROPID_SENTTIME);
+
+            if (!IsUndefined(Native.MESSAGE_PROPID_SRC_MACHINE_ID))
+                SetUndefined(Native.MESSAGE_PROPID_SRC_MACHINE_ID);
+
+            if (!IsUndefined(Native.MESSAGE_PROPID_XACTID))
+                SetUndefined(Native.MESSAGE_PROPID_XACTID);
+
+            if (!IsUndefined(Native.MESSAGE_PROPID_VERSION))
+                SetUndefined(Native.MESSAGE_PROPID_VERSION);
+
+            if (!IsUndefined(Native.MESSAGE_PROPID_ADMIN_QUEUE_LEN) && GetUInt(Native.MESSAGE_PROPID_ADMIN_QUEUE_LEN) == 0)
+            {
+                SetUndefined(Native.MESSAGE_PROPID_ADMIN_QUEUE);
+                SetUndefined(Native.MESSAGE_PROPID_ADMIN_QUEUE_LEN);
+            }
+
+            if (!IsUndefined(Native.MESSAGE_PROPID_ENCRYPTION_ALG))
+                SetUndefined(Native.MESSAGE_PROPID_ENCRYPTION_ALG);
+
+            if (!IsUndefined(Native.MESSAGE_PROPID_SIGNATURE_LEN) && GetUInt(Native.MESSAGE_PROPID_SIGNATURE_LEN) == 0)
+            {
+                SetUndefined(Native.MESSAGE_PROPID_SIGNATURE);
+                SetUndefined(Native.MESSAGE_PROPID_SIGNATURE_LEN);
+            }
+
+            if (!IsUndefined(Native.MESSAGE_PROPID_DEST_SYMM_KEY_LEN) && GetUInt(Native.MESSAGE_PROPID_DEST_SYMM_KEY_LEN) == 0)
+            {
+                SetUndefined(Native.MESSAGE_PROPID_DEST_SYMM_KEY);
+                SetUndefined(Native.MESSAGE_PROPID_DEST_SYMM_KEY_LEN);
+            }
+
+            if (!IsUndefined(Native.MESSAGE_PROPID_RESP_QUEUE_LEN) && GetUInt(Native.MESSAGE_PROPID_RESP_QUEUE_LEN) == 0)
+            {
+                SetUndefined(Native.MESSAGE_PROPID_RESP_QUEUE);
+                SetUndefined(Native.MESSAGE_PROPID_RESP_QUEUE_LEN);
+            }
+
+            if (!IsUndefined(Native.MESSAGE_PROPID_XACT_STATUS_QUEUE_LEN) && GetUInt(Native.MESSAGE_PROPID_XACT_STATUS_QUEUE_LEN) == 0)
+            {
+                SetUndefined(Native.MESSAGE_PROPID_XACT_STATUS_QUEUE);
+                SetUndefined(Native.MESSAGE_PROPID_XACT_STATUS_QUEUE_LEN);
+            }
+        }
+
         public IntPtr GetStringVectorBasePointer(int propertyId) => (IntPtr)_handles[propertyId - _basePropertyId];
 
         public uint GetStringVectorLength(int propertyId) => (uint)_values[propertyId - _basePropertyId];

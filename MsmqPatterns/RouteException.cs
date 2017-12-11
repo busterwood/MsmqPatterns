@@ -7,7 +7,8 @@ namespace MsmqPatterns
     [Serializable]
     public class RouteException : Exception
     {
-        public MessageQueue Destination { get; }
+        /// <summary>The format name of the destination</summary>
+        public string Destination { get; }
 
         public long LookupId { get; }            
 
@@ -32,7 +33,7 @@ namespace MsmqPatterns
         {
         }
 
-        public RouteException(string message, Exception innerException, long lookupId, MessageQueue dest) : this(message, innerException, lookupId)
+        public RouteException(string message, Exception innerException, long lookupId, string dest) : this(message, innerException, lookupId)
         {
             this.Destination = dest;
         }

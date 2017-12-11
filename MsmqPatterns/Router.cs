@@ -1,63 +1,53 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Diagnostics.Contracts;
-using System.Messaging;
-using System.Threading;
 using System.Threading.Tasks;
+using BusterWood.Msmq;
 
 namespace MsmqPatterns
 {
     /// <summary>A router of messages between <see cref="MessageQueue"/></summary>
     public abstract class Router : IProcessor
     {
-        protected readonly MessageQueue _input;
-        protected readonly Func<Message, MessageQueue> _route;
-        protected volatile bool _stop;
+        protected readonly string _inputQueueFormatName;
+        protected readonly Func<Message, Queue> _route;
+        protected Queue _input;
+        Queue _posionQueue;
         Task _run;
 
-        /// <summary>Timeout used when peeking for messages</summary>
-        /// <remarks>the higher this value the slower the <see cref="StopAsync"/> method will be</remarks>
-        public TimeSpan StopTime { get; set; } = TimeSpan.FromMilliseconds(100);
-
         /// <summary>The filter used when peeking messages, the default does NOT include the message body</summary>
-        public MessagePropertyFilter PeekFilter { get; } = new MessagePropertyFilter
-        {
-            AppSpecific = true,
-            Label = true,
-            Extension = true,
-            LookupId = true,
-        };
+        public Properties PeekFilter { get; } = Properties.AppSpecific | Properties.Label | Properties.Extension | Properties.LookupId;
 
         /// <summary>Handle messages that cannot be routed.  Defaults to moving messages to a "Poison" subqueue of the input queue</summary>
-        public Action<long, MessageQueueTransactionType> BadMessageHandler { get; set; }
+        public Action<long, QueueTransaction> BadMessageHandler { get; set; }
 
-        /// <summary>
-        /// Static factory method for creating the appropriate <see cref="Router"/> 
-        /// based on the <see cref="MessageQueue.Transactional"/> property
-        /// </summary>
-        public static Router New(MessageQueue input, Func<Message, MessageQueue> route)
+        ///// <summary>
+        ///// Static factory method for creating the appropriate <see cref="Router"/> 
+        ///// based on the <see cref="MessageQueue.Transactional"/> property
+        ///// </summary>
+        //public static Router New(Queue input, Func<Message, Queue> route)
+        //{
+        //    Contract.Requires(route != null);
+        //    Contract.Requires(input != null);
+        //    try
+        //    {
+        //        if (input.Transactional)
+        //            return new MsmqTransactionalRouter(input, route);
+        //        else
+        //            return new NonTransactionalRouter(input, route);
+        //    }
+        //    catch (MessageQueueException ex) when (ex.MessageQueueErrorCode == MessageQueueErrorCode.UnsupportedFormatNameOperation)
+        //    {
+        //        return new DtcTransactionalRouter(input, route);
+        //    }
+        //}
+
+        protected Router(string inputQueueFormatName, Func<Message, Queue> route)
         {
-            Contract.Requires(route != null);
-            Contract.Requires(input != null);
-            try
-            {
-                if (input.Transactional)
-                    return new MsmqTransactionalRouter(input, route);
-                else
-                    return new NonTransactionalRouter(input, route);
-            }
-            catch (MessageQueueException ex) when (ex.MessageQueueErrorCode == MessageQueueErrorCode.UnsupportedFormatNameOperation)
-            {
-                return new DtcTransactionalRouter(input, route);
-            }
-        }
-
-        protected Router(MessageQueue input, Func<Message, MessageQueue> route)
-        {
-            Contract.Requires(input != null);
+            Contract.Requires(inputQueueFormatName != null);
             Contract.Requires(route != null);
 
-            _input = input;
+            _inputQueueFormatName = inputQueueFormatName;
             _route = route;
             BadMessageHandler = MoveToPoisonSubqueue;
         }
@@ -66,42 +56,36 @@ namespace MsmqPatterns
         /// <returns></returns>
         public Task<Task> StartAsync()
         {
-            _stop = false;
+            _input = Queue.Open(_inputQueueFormatName, QueueAccessMode.Receive);
             _run = RunAsync();
             return Task.FromResult(_run);
         }
 
         protected virtual async Task RunAsync()
         {
-            while (!_stop)
-            {
-                using (var msg = await TryPeekAsync())
-                {
-                    if (msg != null)
-                        OnNewMessage(msg);
-                }
-            }
-        }
-
-        protected async Task<Message> TryPeekAsync()
-        {
-            var current = _input.MessageReadPropertyFilter; // save filter so it can be restored after peek
             try
             {
-                _input.MessageReadPropertyFilter = PeekFilter;
-                return await _input.TryPeekAsync(StopTime);
+                for(;;)
+                {
+                    var msg = await _input.PeekAsync(PeekFilter);
+                    OnNewMessage(msg);
+                }
             }
-            finally
+            catch (ObjectDisposedException) 
             {
-                _input.MessageReadPropertyFilter = current; // restore filter
+                // Stop was called
+            }
+            catch (QueueException ex) when (ex.ErrorCode == ErrorCode.OperationCanceled)
+            {
+                // Stop was called
             }
         }
-
+        
         protected abstract void OnNewMessage(Message peeked);
 
-        protected MessageQueue GetRoute(Message msg)
+        protected Queue GetRoute(Message msg)
         {
-            MessageQueue r = null;
+            Queue r = null;
             try
             {
                 r = _route(msg);
@@ -115,24 +99,28 @@ namespace MsmqPatterns
             }
         }
 
-        public Task StopAsync()
+        public virtual Task StopAsync()
         {
-            _stop = true;
+            _input?.Dispose();
+            _posionQueue?.Dispose();
             return _run;
         }
 
         public void Dispose()
         {
             StopAsync()?.Wait();
-            _input?.Dispose();
         }
-
-        private void MoveToPoisonSubqueue(long lookupId, MessageQueueTransactionType transactionType)
+        
+        private void MoveToPoisonSubqueue(long lookupId, QueueTransaction transaction)
         {
             const string poisonSubqueue = "Poison";
+            if (_posionQueue == null)
+            {
+                _posionQueue = Queue.Open(_inputQueueFormatName + ";Poison", QueueAccessMode.Move);
+            }
             try
             {
-                _input.MoveMessage(poisonSubqueue, lookupId, transactionType);
+                _input.Move(lookupId, _posionQueue, transaction);
                 return;
             }
             catch (Win32Exception e)

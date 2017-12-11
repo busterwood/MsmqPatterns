@@ -11,7 +11,7 @@ namespace BusterWood.Msmq
         /// <summary>Messages can be sent to the queue. Can be combined with <see cref="Admin"/></summary>
         Send = 2,
 
-        /// <summary>Can be used only when opening a subqueue, so you can call <see cref="Queue.Move(long, Queue, Transaction)"/></summary>
+        /// <summary>Can be used only when opening a subqueue, so you can call <see cref="Queue.Move(long, Queue, QueueTransaction)"/></summary>
         Move = 4,
 
         /// <summary>Messages can be looked at but cannot be removed from the queue. Can be combined with <see cref="Admin"/></summary>

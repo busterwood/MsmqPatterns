@@ -8,22 +8,22 @@ namespace BusterWood.Msmq
     /// Use <see cref="Single"/> for a transaction that only exists for a single send or receive, 
     /// use <see cref="Dtc"/> to the use ambient DTC transaction.
     /// </summary>
-    public class Transaction : IDisposable
+    public class QueueTransaction : IDisposable
     {
-        public static readonly Transaction None = null;
+        public static readonly QueueTransaction None = null;
 
         /// <summary>Use the ambient DTC transaction from System.Transactions.TransactionScope</summary>
-        public static readonly Transaction Dtc = new SpecialTransaction(1);
+        public static readonly QueueTransaction Dtc = new SpecialTransaction(1);
         
         /// <summary>An MSMQ transaction that only exists for the duration of a call</summary>
-        public static readonly Transaction Single = new SpecialTransaction(3);
+        public static readonly QueueTransaction Single = new SpecialTransaction(3);
         
         internal readonly ITransaction InternalTransaction;
         bool _complete;
         bool _disposed;
 
         /// <summary>Starts a new MSMQ internal transaction</summary>
-        public Transaction()
+        public QueueTransaction()
         {
             int res = Native.BeginTransaction(out InternalTransaction);
             if (res != 0)
@@ -60,7 +60,7 @@ namespace BusterWood.Msmq
             _complete = true;
         }
 
-        internal class SpecialTransaction : Transaction
+        internal class SpecialTransaction : QueueTransaction
         {
             public IntPtr SpecialId { get; }
 
@@ -87,14 +87,14 @@ namespace BusterWood.Msmq
 
     static partial class Extensions
     {
-        internal static bool TryGetHandle(this Transaction transaction, out IntPtr handle)
+        internal static bool TryGetHandle(this QueueTransaction transaction, out IntPtr handle)
         {
             if (transaction == null)
             {
                 handle = IntPtr.Zero;
                 return true;
             }
-            var fake = transaction as Transaction.SpecialTransaction;
+            var fake = transaction as QueueTransaction.SpecialTransaction;
             if (fake != null)
             {
                 handle = fake.SpecialId;

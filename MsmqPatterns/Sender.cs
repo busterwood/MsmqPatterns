@@ -9,8 +9,8 @@ namespace MsmqPatterns
 {
     /// <summary>
     /// Use this class to send a message and get acknowledgement that is has been sent.
-    /// The <see cref="SendAsync(Message, Transaction, Queue)"/> method will throw <see cref="AcknowledgmentException"/> on errors, and throw a <see cref="TimeoutException"/> if the message fails to reach the destination queue in the time allowed.
-    /// You must call <see cref="StartAsync"/> before calling <see cref="SendAsync(Message, Transaction, Queue)"/>.
+    /// The <see cref="SendAsync(Message, QueueTransaction, Queue)"/> method will throw <see cref="AcknowledgmentException"/> on errors, and throw a <see cref="TimeoutException"/> if the message fails to reach the destination queue in the time allowed.
+    /// You must call <see cref="StartAsync"/> before calling <see cref="SendAsync(Message, QueueTransaction, Queue)"/>.
     /// </summary>
     /// <remarks>
     /// You can use one instance per process (singleton), share the instance between multiple queues, or even one instance per output queue.
@@ -114,7 +114,7 @@ namespace MsmqPatterns
         /// <returns>Task that completes when the message has been delivered</returns>
         /// <exception cref="TimeoutException">Thrown if the message does not reach the queue before the <see cref="ReachQueueTimeout"/> has been reached</exception>
         /// <exception cref="AcknowledgmentException">Thrown if something bad happens, e.g. message could not be sent, access denied, the queue was purged, etc</exception>
-        public async Task SendAsync(Message message, Transaction transaction, Queue queue)
+        public async Task SendAsync(Message message, QueueTransaction transaction, Queue queue)
         {
             Contract.Requires(message != null);
             Contract.Requires(queue != null);
@@ -131,7 +131,7 @@ namespace MsmqPatterns
         }
 
         /// <summary>Send a message to many queues at the same time and wait for all acknowledgements</summary>
-        public async Task SendToManyAsync(Message message, Transaction transaction, params Queue[] queues)
+        public async Task SendToManyAsync(Message message, QueueTransaction transaction, params Queue[] queues)
         {
             Contract.Requires(message != null);
             Contract.Requires(queues != null);

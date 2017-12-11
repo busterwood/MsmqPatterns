@@ -17,14 +17,14 @@ namespace MsmqPatterns
         readonly Func<Message, Queue> _getSubQueue;
         Queue _input;
         Queue _posionSubQueue;
-        Transaction _transaction;
+        QueueTransaction _transaction;
         Task _run;
 
         /// <summary>The filter used when peeking messages, the default does NOT include the message body</summary>
         public Properties PeekFilter { get; } = Properties.AppSpecific | Properties.Label | Properties.Extension | Properties.LookupId;
 
         /// <summary>Handle messages that cannot be routed.  Defaults to moving messages to a "Poison" subqueue of the input queue</summary>
-        public Action<long, Transaction> BadMessageHandler { get; set; }
+        public Action<long, QueueTransaction> BadMessageHandler { get; set; }
 
         public SubQueueFilterRouter(string inputFormatName, Func<Message, Queue> getSubQueueName) 
         {
@@ -39,7 +39,7 @@ namespace MsmqPatterns
         {
             _input = Queue.Open(_inputFormatName, QueueAccessMode.Receive);
             if (Queue.IsTransactional(_input.FormatName) == QueueTransactional.Transactional)
-                _transaction = Transaction.Single;
+                _transaction = QueueTransaction.Single;
             _run = RunAsync();
             return Task.FromResult(_run);
         }
@@ -101,7 +101,7 @@ namespace MsmqPatterns
             StopAsync()?.Wait();
         }
 
-        private void MoveToPoisonSubqueue(long lookupId, Transaction transaction)
+        private void MoveToPoisonSubqueue(long lookupId, QueueTransaction transaction)
         {
             try
             {

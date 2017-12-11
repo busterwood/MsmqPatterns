@@ -77,11 +77,13 @@ namespace BusterWood.Msmq
         /// To ensure the message reached the queue you need to check acknowledgement messages sent to the <see cref="Message.AdministrationQueue"/>
         /// </summary>
         /// <param name="message">The message to try to send</param>
-        /// <param name="transaction">can be NULL for no transaction, a <see cref="Transaction"/>, <see cref="Transaction.Single"/>, or <see cref="Transaction.Dtc"/>.</param>
-        public void Post(Message message, Transaction transaction = null)
+        /// <param name="transaction">can be NULL for no transaction, a <see cref="QueueTransaction"/>, <see cref="QueueTransaction.Single"/>, or <see cref="QueueTransaction.Dtc"/>.</param>
+        public void Post(Message message, QueueTransaction transaction = null)
         {
             Contract.Requires(message != null);
 
+            //TODO: reset message properties that cannot be sent
+            message.Props.PrepareToSend();
             var props = message.Props.Allocate();
             try
             {
@@ -130,9 +132,9 @@ namespace BusterWood.Msmq
         /// <param name="properties">The properties to read</param>
         /// <param name="action">Receive or peek a message?</param>
         /// <param name="timeout">The time allowed, defaults to infinite.  Use <see cref="TimeSpan.Zero"/> to return without waiting</param>
-        /// <param name="transaction">can be NULL for no transaction, a <see cref="Transaction"/>, <see cref="Transaction.Single"/>, or <see cref="Transaction.Dtc"/>.</param>
+        /// <param name="transaction">can be NULL for no transaction, a <see cref="QueueTransaction"/>, <see cref="QueueTransaction.Single"/>, or <see cref="QueueTransaction.Dtc"/>.</param>
         /// <returns>The message, or NULL if the receive times out</returns>
-        public unsafe Message Receive(Properties properties, ReceiveAction action = ReceiveAction.Receive, TimeSpan? timeout = null, Transaction transaction = null)
+        public unsafe Message Receive(Properties properties = Properties.All, ReceiveAction action = ReceiveAction.Receive, TimeSpan? timeout = null, QueueTransaction transaction = null)
         {
             uint timeoutMS = TimeoutInMs(timeout);
             var msg = new Message();
@@ -176,9 +178,9 @@ namespace BusterWood.Msmq
         /// <param name="lookupId">The <see cref="Message.LookupId"/> of the message to read</param>
         /// <param name="action">Receive or peek a message?</param>
         /// <param name="timeout">The time allowed, defaults to infinite.  Use <see cref="TimeSpan.Zero"/> to return without waiting</param>
-        /// <param name="transaction">can be NULL for no transaction, a <see cref="Transaction"/>, <see cref="Transaction.Single"/>, or <see cref="Transaction.Dtc"/>.</param>
+        /// <param name="transaction">can be NULL for no transaction, a <see cref="QueueTransaction"/>, <see cref="QueueTransaction.Single"/>, or <see cref="QueueTransaction.Dtc"/>.</param>
         /// <returns>The message, or NULL if the receive times out</returns>
-        public unsafe Message Receive(Properties properties, long lookupId, LookupAction action = LookupAction.ReceiveCurrent, TimeSpan? timeout = null, Transaction transaction = null)
+        public unsafe Message Receive(Properties properties, long lookupId, LookupAction action = LookupAction.ReceiveCurrent, TimeSpan? timeout = null, QueueTransaction transaction = null)
         {
             uint timeoutMS = TimeoutInMs(timeout);
             var msg = new Message();
@@ -228,7 +230,7 @@ namespace BusterWood.Msmq
 
         /// <summary>Move the message specified by <paramref name="lookupId"/> to the <paramref name="subQueue"/></summary>
         /// <remarks>Moving message is 10 to 100 times faster than sending the message to another queue.</remarks>
-        public void Move(long lookupId, Queue subQueue, Transaction transaction = null)
+        public void Move(long lookupId, Queue subQueue, QueueTransaction transaction = null)
         {
             Contract.Requires(subQueue != null);
             int res;
