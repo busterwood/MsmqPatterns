@@ -18,8 +18,13 @@ namespace BusterWood.Msmq
         readonly QueueHandle _handle;
         string _formatName;
 
+        /// <summary>Has the queue been closed? (or disposed)</summary>
         public bool IsClosed { get; private set; }
+
+        /// <summary>How this queue was opened</summary>
         public QueueAccessMode AccessMode { get; }
+
+        /// <summary>How the queue is shared</summary>
         public QueueShareMode ShareMode { get; }
 
         private Queue(QueueHandle handle, QueueAccessMode access, QueueShareMode share)
