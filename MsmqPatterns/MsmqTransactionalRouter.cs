@@ -17,36 +17,6 @@ namespace MsmqPatterns
             Contract.Requires(inputQueueFormatName != null);
         }
 
-        protected override async Task RunAsync()
-        {
-            await base.RunAsync();
-            try
-            {
-                await SendBatchFromSubQueue(); // clean up the existing batch (if any)
-
-                for (;;)
-                {
-                    if (MoveBatchtoSubQueue() > 0)
-                        await SendBatchFromSubQueue();      // send messages
-                    else
-                        await _input.PeekAsync(PeekFilter); // wait for next message
-                }
-            }
-            catch (ObjectDisposedException)
-            {
-                // Stop was called
-            }
-            catch (QueueException ex) when (ex.ErrorCode == ErrorCode.OperationCanceled)
-            {
-                // Stop was called
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine("WARNING: " + ex);
-                throw;
-            }
-        }
-
         /*
          * 0) Recover - wait for acks for each message in batch
          * 1) Peek message
@@ -60,91 +30,120 @@ namespace MsmqPatterns
          *         on failure ?  move to dead letter?
          */
 
-        int MoveBatchtoSubQueue()
+        protected override async Task RunAsync()
         {
-            using (var txn = new QueueTransaction())
+            await base.RunAsync();
+            try
             {
-                int moved = MoveMessageToInProgess(txn);
-                if (moved > 0)
-                    txn.Commit();
-                return moved;
+                await Recover(); // clean up the existing batch (if any)
+
+                var sent = new List<PostedMessageHandle>();
+                for (;;)
+                {
+                    await _input.PeekAsync(PeekFilter); // wait for next message
+                    PostBatch(sent);
+                    await WaitForAcknowledgements(sent);
+                    sent.Clear();
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+                Console.Error.WriteLine("INFO: stopping");
+                // Stop was called
+            }
+            catch (QueueException ex) when (ex.ErrorCode == ErrorCode.OperationCanceled)
+            {
+                Console.Error.WriteLine("INFO: stopping");
+                // Stop was called
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("WARNING: " + ex);
+                throw;
             }
         }
 
-        int MoveMessageToInProgess(QueueTransaction txn)
+        private async Task Recover()
         {
-            int moved;
-            for (moved = 0; moved < MaxBatchSize; moved++)
+            var sent = new List<PostedMessageHandle>();
+            for(;;)
             {
-                var peeked = _input.Peek(Properties.LookupId, TimeSpan.Zero);
-                if (peeked == null)
+                var msg = _inProgressRead.Peek(PeekFilter, TimeSpan.Zero);
+                if (msg == null)
                     break;
-                _input.Move(peeked.LookupId, _inProgressMove, txn);
             }
-            return moved;
+            if (sent.Count == 0)
+                return;
+
+            Console.Error.WriteLine($"INFO recovering, waiting for {sent.Count} acknowledgements");
+            await WaitForAcknowledgements(sent);
+            Console.Error.WriteLine($"INFO recovered");
         }
 
-        async Task SendBatchFromSubQueue()
+        private void PostBatch(List<PostedMessageHandle> sent)
         {
-            for (;;)
+            try
             {
                 using (var txn = new QueueTransaction())
                 {
-                    try
+                    long lookupId = 0;
+                    LookupAction action = LookupAction.PeekFirst;
+                    for (int i = 0; i < MaxBatchSize; i++)
                     {
-                        var sent = RouteBatchOfMessages(txn);
-                        if (sent.Count == 0)
-                        {
-                            txn.Abort();
-                            return;
-                        }
+                        // peek for the next message
+                        var msg = _input.Receive(Properties.All, lookupId, action, TimeSpan.Zero);
+                        if (msg == null)
+                            break;
+                        action = LookupAction.PeekNext;
+                        lookupId = msg.LookupId;
 
-                        txn.Commit();  // must commit before waiting for delivery
-                        await Sender.WaitForDelivery(sent);
-                        return;
+                        // move to the batch subqueue so we know what we sent
+                        _input.Move(msg.LookupId, _inProgressMove, txn);
+
+                        // route to message to the destination
+                        var dest = GetRoute(msg);
+                        sent.Add(Sender.Post(msg, txn, dest));
                     }
-                    catch (RouteException ex)
-                    {
-                        txn.Abort();
-                        //TODO: log what happened and why
-                        Console.Error.WriteLine($"WARN {ex.Message}S {{Destination={ex.Destination}}}");
-                        BadMessageHandler(_inProgressRead, ex.LookupId, QueueTransaction.Single);
-                    }
+
+                    txn.Commit();
+                }
+            }
+            catch (RouteException ex)
+            {
+                Console.Error.WriteLine($"WARN {ex.Message} {{Destination={ex.Destination}}}");
+                BadMessageHandler(_input, ex.LookupId, QueueTransaction.Single);
+                sent.Clear();
+            }
+        }
+
+        private async Task WaitForAcknowledgements(List<PostedMessageHandle> sent)
+        {
+            if (sent.Count == 0)
+                return;
+
+            Console.Error.WriteLine($"INFO Waiting for {sent.Count} acknowledgements");
+
+            foreach (var item in sent)
+            {
+                try
+                {
+                    await Sender.WaitForDelivery(item);
+                    _inProgressRead.Receive(Properties.LookupId, item.LookupId, timeout: TimeSpan.Zero, transaction: QueueTransaction.Single);
+                }
+                catch (AcknowledgmentException ex)
+                {
+                    Console.Error.WriteLine("WARN:" + ex);
+                    _inProgressRead.Move(item.LookupId, _posionQueue, QueueTransaction.Single);
+                }
+                catch (AggregateException ex)
+                {
+                    //TODO: handle sent error to multi-element format name
+                    Console.Error.WriteLine($"WARN multi-elements format names are not yet supported");
+                    throw;
                 }
             }
         }
 
-        List<FormatNameAndMsgId> RouteBatchOfMessages(QueueTransaction txn)
-        {
-            var sent = new List<FormatNameAndMsgId>();
-            for (int i = 0; i < MaxBatchSize; i++)
-            {
-                var msg = RouteMessage(txn);
-                if (msg.IsEmpty)
-                    break;
-                sent.Add(msg);
-            }
-            return sent;
-        }
-
-        FormatNameAndMsgId RouteMessage(QueueTransaction txn)
-        {
-            var msg = _inProgressRead.Receive(Properties.All, timeout: TimeSpan.Zero, transaction: txn);
-            if (msg == null)
-                return default(FormatNameAndMsgId);
-
-            var dest = GetRoute(msg);
-            try
-            {
-                Sender.Post(msg, txn, dest);
-                return new FormatNameAndMsgId(dest.FormatName, msg.Id);
-            }
-            catch (QueueException ex)
-            {
-                // we cannot send to that queue
-                throw new RouteException("Failed to send to destination", ex, msg.LookupId, dest?.FormatName);
-            }
-        }
 
     }
 }

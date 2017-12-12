@@ -76,7 +76,8 @@ namespace MsmqPatterns
                         case Acknowledgment.ReachQueue:
                             break;
                         default:
-                            throw new AcknowledgmentException(msg.ResponseQueue.FormatName, msg.Acknowledgment);
+                            throw new NotImplementedException();
+                            //throw new AcknowledgmentException(msg.ResponseQueue.FormatName, msg.Acknowledgment);
                     }
                 }
             }
@@ -94,7 +95,8 @@ namespace MsmqPatterns
             SetupRequest(request);
             _requestQueue.Send(request);
             await WaitForAcknowledgementAsync(request);
-            return await _responseQueue.ReceiveByCorrelationIdAsync(request.Id);
+            throw new NotImplementedException();
+            //return await _responseQueue.ReceiveByCorrelationIdAsync(request.Id);
         }
 
         private async Task WaitForAcknowledgementAsync(Message request)
@@ -103,18 +105,20 @@ namespace MsmqPatterns
             _adminQueue.MessageReadPropertyFilter.ResponseQueue = true;
             for (;;)
             {
-                using (var msg = await _adminQueue.ReceiveByCorrelationIdAsync(request.Id))
-                {
-                    switch (msg.Acknowledgment)
-                    {
-                        case Acknowledgment.Receive:
-                            return;
-                        case Acknowledgment.ReachQueue:
-                            break;
-                        default:
-                            throw new AcknowledgmentException(msg.ResponseQueue.FormatName, msg.Acknowledgment);
-                    }
-                }
+                throw new NotImplementedException();
+                //using (var msg = await _adminQueue.ReceiveByCorrelationIdAsync(request.Id))
+                //{
+                //    switch (msg.Acknowledgment)
+                //    {
+                //        case Acknowledgment.Receive:
+                //            return;
+                //        case Acknowledgment.ReachQueue:
+                //            break;
+                //        default:
+                //            throw new NotImplementedException();
+                //            //throw new AcknowledgmentException(msg.ResponseQueue.FormatName, msg.Acknowledgment);
+                //    }
+                //}
             }
         }
 

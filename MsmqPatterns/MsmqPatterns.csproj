@@ -100,7 +100,6 @@
     <Compile Include="NonTransactionalRouter.cs" />
     <Compile Include="SubQueueFilterRouter.cs" />
     <Compile Include="IProcessor.cs" />
-    <Compile Include="MessageQueueExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RequestReply.cs" />
     <Compile Include="Router.cs" />

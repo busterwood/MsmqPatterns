@@ -129,6 +129,7 @@ namespace BusterWood.Msmq
         }
 
         /// <summary>Tries to receive a message from the queue</summary>
+        /// <remarks>Within a transaction you cannot receive a message that you moved to a subqueue</remarks>
         /// <param name="properties">The properties to read</param>
         /// <param name="action">Receive or peek a message?</param>
         /// <param name="timeout">The time allowed, defaults to infinite.  Use <see cref="TimeSpan.Zero"/> to return without waiting</param>
@@ -174,12 +175,13 @@ namespace BusterWood.Msmq
         }
 
         /// <summary>Tries to peek (or receive) a message using the queue-specific <paramref name="lookupId"/></summary>
+        /// <remarks>Within a transaction you cannot receive a message that you moved to a subqueue</remarks>
         /// <param name="properties">The properties to read</param>
         /// <param name="lookupId">The <see cref="Message.LookupId"/> of the message to read</param>
         /// <param name="action">Receive or peek a message?</param>
         /// <param name="timeout">The time allowed, defaults to infinite.  Use <see cref="TimeSpan.Zero"/> to return without waiting</param>
         /// <param name="transaction">can be NULL for no transaction, a <see cref="QueueTransaction"/>, <see cref="QueueTransaction.Single"/>, or <see cref="QueueTransaction.Dtc"/>.</param>
-        /// <returns>The message, or NULL if the receive times out</returns>
+        /// <returns>The message, or NULL if the message was not found or the receive times out</returns>
         public unsafe Message Receive(Properties properties, long lookupId, LookupAction action = LookupAction.ReceiveCurrent, TimeSpan? timeout = null, QueueTransaction transaction = null)
         {
             uint timeoutMS = TimeoutInMs(timeout);
@@ -203,7 +205,7 @@ namespace BusterWood.Msmq
                     msg.Props.Free();
                 }
 
-                if ((ErrorCode)res == ErrorCode.IOTimeout)
+                if ((ErrorCode)res == ErrorCode.IOTimeout || (ErrorCode)res == ErrorCode.MessageNotFound)
                     return null;
 
                 if (Native.NotEnoughMemory(res))
@@ -228,8 +230,11 @@ namespace BusterWood.Msmq
             return timeoutMS;
         }
 
-        /// <summary>Move the message specified by <paramref name="lookupId"/> to the <paramref name="subQueue"/></summary>
-        /// <remarks>Moving message is 10 to 100 times faster than sending the message to another queue.</remarks>
+        /// <summary>Move the message specified by <paramref name="lookupId"/> to the <paramref name="subQueue"/>.</summary>
+        /// <remarks>
+        /// Moving message is 10 to 100 times faster than sending the message to another queue.
+        /// Within a transaction you cannot receive a message that you moved to a subqueue.
+        /// </remarks>
         public void Move(long lookupId, Queue subQueue, QueueTransaction transaction = null)
         {
             Contract.Requires(subQueue != null);

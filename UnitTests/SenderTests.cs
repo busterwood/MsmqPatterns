@@ -62,7 +62,7 @@ namespace UnitTests
                 }
                 catch (AcknowledgmentException ex)
                 {
-                    Assert.AreEqual(MessageClass.NotTransactionalMessage, ex.Acknowledgment2);
+                    Assert.AreEqual(MessageClass.NotTransactionalMessage, ex.Acknowledgment);
                 }
             }
         }
@@ -83,7 +83,7 @@ namespace UnitTests
                 }
                 catch (AcknowledgmentException ex)
                 {
-                    Assert.AreEqual(MessageClass.ReachQueueTimeout, ex.Acknowledgment2);
+                    Assert.AreEqual(MessageClass.ReachQueueTimeout, ex.Acknowledgment);
                 }
             }
         }

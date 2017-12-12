@@ -18,7 +18,7 @@ namespace MsmqPatterns
     /// </remarks>
     public class Sender : IProcessor
     {
-        readonly Cache<FormatNameAndMsgId, TaskCompletionSource<MessageClass>> _reachQueue = new Cache<FormatNameAndMsgId, TaskCompletionSource<MessageClass>>(null, TimeSpan.FromMinutes(5));
+        readonly Cache<PostedMessageHandle, TaskCompletionSource<MessageClass>> _reachQueue = new Cache<PostedMessageHandle, TaskCompletionSource<MessageClass>>(null, TimeSpan.FromMinutes(5));
         Queue _adminQueue;
         Task _run;
 
@@ -52,7 +52,7 @@ namespace MsmqPatterns
                 for (;;)
                 {
                     var msg = await _adminQueue.ReceiveAsync(AdminFilter);
-                    var tcs = ReachQueueCompletionSource(new FormatNameAndMsgId(msg.ResponseQueue, msg.CorrelationId));
+                    var tcs = ReachQueueCompletionSource(new PostedMessageHandle(msg.ResponseQueue, msg.CorrelationId));
                     var ack = msg.Acknowledgement();
                     switch (ack)
                     {
@@ -115,7 +115,7 @@ namespace MsmqPatterns
         /// <summary>
         /// Posts a <paramref name="message"/> to the <paramref name="queue"/> with acknowledgement requested to be sent to <see cref="AdminQueueFormatName"/>. 
         /// </summary>
-        public void Post(Message message, QueueTransaction transaction, Queue queue)
+        public PostedMessageHandle Post(Message message, QueueTransaction transaction, Queue queue)
         {
             Contract.Requires(message != null);
             Contract.Requires(queue != null);
@@ -125,6 +125,7 @@ namespace MsmqPatterns
             message.TimeToReachQueue = ReachQueueTimeout;
             message.AdministrationQueue = _adminQueue.FormatName;
             queue.Post(message, transaction);
+            return new PostedMessageHandle(queue.FormatName, message.Id, message.LookupId);
         }
 
         /// <summary>
@@ -143,7 +144,7 @@ namespace MsmqPatterns
             Contract.Assert(_run != null);
 
             Post(message, transaction, queue);
-            return WaitForDelivery(message.Id, queue.FormatName);
+            return WaitForDelivery(new PostedMessageHandle(message.Id, queue.FormatName));
         }
 
         /// <summary>
@@ -152,60 +153,65 @@ namespace MsmqPatterns
         /// </summary>
         /// <param name="messageId">The message that was sent</param>
         /// <param name="destinationFormatName">the format name of the queue the message was sent to</param>
-        public Task WaitForDelivery(string messageId, string destinationFormatName)
+        public Task WaitForDelivery(PostedMessageHandle fnId)
         {
-            Contract.Requires(!string.IsNullOrEmpty(messageId));
-            Contract.Requires(!string.IsNullOrEmpty(destinationFormatName));
+            Contract.Requires(!fnId.IsEmpty);
 
             // handle multiple destination format names (comma separated list)
-            if (destinationFormatName.IndexOf(',') >= 0)
+            if (fnId.FormatName.IndexOf(',') >= 0)
             {
-                return Task.WhenAll(destinationFormatName.Split(',')
-                    .Select(formatName => new FormatNameAndMsgId(formatName, messageId))
+                return Task.WhenAll(fnId.FormatName.Split(',')
+                    .Select(formatName => new PostedMessageHandle(formatName, fnId.MessageId))
                     .Select(ReachQueueCompletionSource)
                     .Select(qtcs => qtcs.Task)
                 );
             }
 
             // single element format name
-            var key = new FormatNameAndMsgId(destinationFormatName, messageId);
+            var key = new PostedMessageHandle(fnId.FormatName, fnId.MessageId);
             var tcs = ReachQueueCompletionSource(key);
             return tcs.Task;
         }
 
-        internal Task WaitForDelivery(IReadOnlyCollection<FormatNameAndMsgId> sent)
+        internal Task WaitForDelivery(IReadOnlyCollection<PostedMessageHandle> sent)
         {
             Contract.Requires(sent != null);
             Contract.Requires(sent.Count > 0);
-            return Task.WhenAll(sent.Select(s => WaitForDelivery(s.MessageId, s.FormatName)));
+            return Task.WhenAll(sent.Select(WaitForDelivery));
         }
 
-        TaskCompletionSource<MessageClass> ReachQueueCompletionSource(FormatNameAndMsgId key) => _reachQueue.GetOrAdd(key, _ => new TaskCompletionSource<MessageClass>());
+        TaskCompletionSource<MessageClass> ReachQueueCompletionSource(PostedMessageHandle key) => _reachQueue.GetOrAdd(key, _ => new TaskCompletionSource<MessageClass>());
         
     }
 
-    public struct FormatNameAndMsgId : IEquatable<FormatNameAndMsgId>
+    public struct PostedMessageHandle : IEquatable<PostedMessageHandle>
     {
         public string FormatName { get; }
         public string MessageId { get; }
+        public long LookupId { get; }
 
         public bool IsEmpty => FormatName == null;
 
-        public FormatNameAndMsgId(string formatName, string messageId)
+        public PostedMessageHandle(string formatName, string messageId) : this(formatName, messageId, 0)
+        {
+        }
+
+        public PostedMessageHandle(string formatName, string messageId, long lookupId)
         {
             Contract.Requires(messageId != null);
             Contract.Requires(formatName != null);
             FormatName = formatName;
             MessageId = messageId;
+            LookupId = lookupId;
         }
 
-        public bool Equals(FormatNameAndMsgId other)
+        public bool Equals(PostedMessageHandle other)
         {
             return StringComparer.OrdinalIgnoreCase.Equals(FormatName, other.FormatName)
                 && StringComparer.OrdinalIgnoreCase.Equals(MessageId, other.MessageId);
         }
 
-        public override bool Equals(object obj) => obj is FormatNameAndMsgId && Equals((FormatNameAndMsgId)obj);
+        public override bool Equals(object obj) => obj is PostedMessageHandle && Equals((PostedMessageHandle)obj);
 
         public override int GetHashCode() => StringComparer.OrdinalIgnoreCase.GetHashCode(FormatName) ^ StringComparer.OrdinalIgnoreCase.GetHashCode(MessageId);
     }

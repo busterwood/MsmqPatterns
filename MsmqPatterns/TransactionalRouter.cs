@@ -29,7 +29,7 @@ namespace MsmqPatterns
         /// Maximum number of messages batched into one transaction.
         /// We try to include multiple messages in a batch as it is MUCH faster (up to 10x)
         /// </summary>
-        public int MaxBatchSize { get; set; } = 100;
+        public int MaxBatchSize { get; set; } = 250;
 
         public string InProgressSubQueue { get; set; } = "batch";
 
