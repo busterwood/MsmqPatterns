@@ -3,7 +3,6 @@ using System.Diagnostics.Contracts;
 using BusterWood.Msmq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace MsmqPatterns
 {
@@ -18,18 +17,75 @@ namespace MsmqPatterns
             Contract.Requires(inputQueueFormatName != null);
         }
 
-        protected override async Task OnNewMessage(Message peeked)
+        protected override async Task RunAsync()
         {
-            //TODO: read existing batch?
+            await base.RunAsync();
+            try
+            {
+                await SendBatchFromSubQueue(); // clean up the existing batch (if any)
 
+                for (;;)
+                {
+                    if (MoveBatchtoSubQueue() > 0)
+                        await SendBatchFromSubQueue();      // send messages
+                    else
+                        await _input.PeekAsync(PeekFilter); // wait for next message
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+                // Stop was called
+            }
+            catch (QueueException ex) when (ex.ErrorCode == ErrorCode.OperationCanceled)
+            {
+                // Stop was called
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("WARNING: " + ex);
+                throw;
+            }
+        }
+
+        /*
+         * 0) Recover - wait for acks for each message in batch
+         * 1) Peek message
+         * 2) begin transaction
+         * 3)   move to "batch" subqueue
+         * 4)   send
+         * 5) commit
+         * 6) for each message in batch
+         * 7)   wait for ack 
+         *         on success remove message from "batch" subqueue (Transaction.Single)
+         *         on failure ?  move to dead letter?
+         */
+
+        int MoveBatchtoSubQueue()
+        {
             using (var txn = new QueueTransaction())
             {
                 int moved = MoveMessageToInProgess(txn);
-                if (moved == 0)
-                    return;
-                txn.Commit();
+                if (moved > 0)
+                    txn.Commit();
+                return moved;
             }
+        }
 
+        int MoveMessageToInProgess(QueueTransaction txn)
+        {
+            int moved;
+            for (moved = 0; moved < MaxBatchSize; moved++)
+            {
+                var peeked = _input.Peek(Properties.LookupId, TimeSpan.Zero);
+                if (peeked == null)
+                    break;
+                _input.Move(peeked.LookupId, _inProgressMove, txn);
+            }
+            return moved;
+        }
+
+        async Task SendBatchFromSubQueue()
+        {
             for (;;)
             {
                 using (var txn = new QueueTransaction())
@@ -58,19 +114,6 @@ namespace MsmqPatterns
             }
         }
 
-        private int MoveMessageToInProgess(QueueTransaction txn)
-        {
-            int moved;
-            for (moved = 0; moved < MaxBatchSize; moved++)
-            {
-                var peeked = _input.Peek(Properties.LookupId, TimeSpan.Zero);
-                if (peeked == null)
-                    break;
-                _input.Move(peeked.LookupId, _inProgressMove, txn);
-            }
-            return moved;
-        }
-
         List<FormatNameAndMsgId> RouteBatchOfMessages(QueueTransaction txn)
         {
             var sent = new List<FormatNameAndMsgId>();
@@ -84,7 +127,7 @@ namespace MsmqPatterns
             return sent;
         }
 
-        private FormatNameAndMsgId RouteMessage(QueueTransaction txn)
+        FormatNameAndMsgId RouteMessage(QueueTransaction txn)
         {
             var msg = _inProgressRead.Receive(Properties.All, timeout: TimeSpan.Zero, transaction: txn);
             if (msg == null)

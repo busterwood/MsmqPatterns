@@ -65,32 +65,7 @@ namespace MsmqPatterns
             return Task.FromResult(_run);
         }
 
-        protected virtual async Task RunAsync()
-        {
-            try
-            {
-                for(;;)
-                {
-                    var msg = await _input.PeekAsync(PeekFilter);
-                    await OnNewMessage(msg);
-                }
-            }
-            catch (ObjectDisposedException) 
-            {
-                // Stop was called
-            }
-            catch (QueueException ex) when (ex.ErrorCode == ErrorCode.OperationCanceled)
-            {
-                // Stop was called
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine("WARNING: " + ex);
-                throw;
-            }
-        }
-        
-        protected abstract Task OnNewMessage(Message peeked);
+        protected abstract Task RunAsync();        
 
         protected Queue GetRoute(Message msg)
         {

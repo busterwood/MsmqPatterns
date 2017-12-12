@@ -18,8 +18,33 @@ namespace MsmqPatterns
             Contract.Requires(sender != null);
             Contract.Requires(route != null);
         }
-        
-        protected override async Task OnNewMessage(Message peeked)
+
+        protected override async Task RunAsync()
+        {
+            try
+            {
+                for (;;)
+                {
+                    var msg = await _input.PeekAsync(PeekFilter);
+                    await OnNewMessage(msg);
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+                // Stop was called
+            }
+            catch (QueueException ex) when (ex.ErrorCode == ErrorCode.OperationCanceled)
+            {
+                // Stop was called
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("WARNING: " + ex);
+                throw;
+            }
+        }
+
+        async Task OnNewMessage(Message peeked)
         {
             try
             {

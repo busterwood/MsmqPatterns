@@ -37,7 +37,7 @@ namespace MsmqPatterns
         {
             _inProgressRead = Queue.Open(InputQueueFormatName + ";" + InProgressSubQueue, QueueAccessMode.Receive);
             _inProgressMove = Queue.Open(InputQueueFormatName + ";" + InProgressSubQueue, QueueAccessMode.Move);
-            return base.RunAsync();
+            return Task.FromResult(true);
         }
 
         public override Task StopAsync()
