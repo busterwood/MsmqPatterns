@@ -121,7 +121,7 @@ namespace MsmqPatterns
             if (sent.Count == 0)
                 return;
 
-            Console.Error.WriteLine($"INFO Waiting for {sent.Count} acknowledgements");
+            Console.Error.WriteLine($"DEBUG Waiting for {sent.Count} acknowledgements");
 
             foreach (var item in sent)
             {

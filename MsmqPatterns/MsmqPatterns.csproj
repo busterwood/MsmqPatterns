@@ -96,7 +96,6 @@
     <Compile Include="RouteException.cs" />
     <Compile Include="Sender.cs" />
     <Compile Include="TransactionalRouter.cs" />
-    <Compile Include="MsmqSafeHandle.cs" />
     <Compile Include="NonTransactionalRouter.cs" />
     <Compile Include="SubQueueFilterRouter.cs" />
     <Compile Include="IProcessor.cs" />
