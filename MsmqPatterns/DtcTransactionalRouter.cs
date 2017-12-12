@@ -1,0 +1,71 @@
+﻿using System;
+using System.Diagnostics.Contracts;
+using System.Threading.Tasks;
+using System.Transactions;
+using BusterWood.Msmq;
+
+namespace MsmqPatterns
+{
+    /// <summary>Routes batches of messages in local or remote queues using DTC <see cref = "TransactionScope"/></summary>
+    public class DtcTransactionalRouter : TransactionalRouter
+    {
+        public DtcTransactionalRouter(string inputQueueFormatName, Sender sender, Func<Message, Queue> route)
+            : base(inputQueueFormatName, sender, route)
+        {
+            Contract.Requires(inputQueueFormatName != null);
+            Contract.Requires(route != null);
+        }
+
+        protected override async Task OnNewMessage(Message peeked)
+        {
+            try
+            {
+                using (var txn = new TransactionScope(TransactionScopeOption.RequiresNew))
+                {
+                    int count = await RouteBatchOfMessages();
+                    if (count > 0)
+                        txn.Complete();
+                }
+            }
+            catch (RouteException ex)
+            {
+                //TODO: log what happened and why
+                Console.Error.WriteLine($"WARN {ex.Message} {{Destination={ex.Destination}}}");
+                BadMessageHandler(_input, ex.LookupId, QueueTransaction.Dtc); //TODO: what type is good here?
+            }
+        }
+
+        async Task<int> RouteBatchOfMessages()
+        {
+            //TODO: use Sender
+            int sent = 0;
+            for (int i = 0; i < MaxBatchSize; i++)
+            {
+                if (RouteMessage())
+                    sent++;
+                else
+                    break;
+            }
+
+            return sent;
+        }
+
+        private bool RouteMessage()
+        {
+            Message msg = _input.Receive(Properties.All, timeout: TimeSpan.Zero, transaction: QueueTransaction.Dtc); //note: no waiting
+            if (msg == null)
+                return false;
+            var dest = GetRoute(msg);
+            try
+            {
+                dest.Post(msg, QueueTransaction.Dtc);
+                return true;
+            }
+            catch (QueueException ex)
+            {
+                // we cannot send to that queue
+                throw new RouteException("Failed to send to destination", ex, msg.LookupId, dest?.FormatName);
+            }
+        }
+    }
+}

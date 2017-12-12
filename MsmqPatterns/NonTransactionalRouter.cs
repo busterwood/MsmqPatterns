@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics.Contracts;
 using BusterWood.Msmq;
+using System.Threading.Tasks;
 
 namespace MsmqPatterns
 {
@@ -10,28 +11,29 @@ namespace MsmqPatterns
     /// </summary>
     public class NonTransactionalRouter : Router
     {
-        public NonTransactionalRouter(string inputQueueFormatName, Func<Message, Queue> route)
-            : base (inputQueueFormatName, route)
+        public NonTransactionalRouter(string inputQueueFormatName, Sender sender, Func<Message, Queue> route)
+            : base (inputQueueFormatName, sender, route)
         {
             Contract.Requires(inputQueueFormatName != null);
+            Contract.Requires(sender != null);
             Contract.Requires(route != null);
         }
         
-        protected override void OnNewMessage(Message peeked)
+        protected override async Task OnNewMessage(Message peeked)
         {
             try
             {
-                RouteMessage(peeked);
+                await RouteMessage(peeked);
             }
             catch (RouteException ex)
             {
                 //TODO: logging
                 Console.Error.WriteLine($"WARN {ex.Message} {{{ex.Destination}}}");
-                BadMessageHandler(ex.LookupId, QueueTransaction.None);
+                BadMessageHandler(_input, ex.LookupId, QueueTransaction.None);
             }            
         }
 
-        private void RouteMessage(Message peeked)
+        private async Task RouteMessage(Message peeked)
         {
             var dest = GetRoute(peeked);
 
@@ -41,7 +43,7 @@ namespace MsmqPatterns
 
             try
             {
-                dest.Post(msg);
+                await Sender.SendAsync(msg, QueueTransaction.None, dest);
             }
             catch (QueueException ex)
             {

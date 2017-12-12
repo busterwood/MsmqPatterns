@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using System.Diagnostics.Contracts;
 using BusterWood.Caching;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace MsmqPatterns
 {
@@ -18,9 +19,10 @@ namespace MsmqPatterns
     public class Sender : IProcessor
     {
         readonly Cache<FormatNameAndMsgId, TaskCompletionSource<MessageClass>> _reachQueue = new Cache<FormatNameAndMsgId, TaskCompletionSource<MessageClass>>(null, TimeSpan.FromMinutes(5));
-        readonly string _adminQueueFormatName;
         Queue _adminQueue;
         Task _run;
+
+        public string AdminQueueFormatName { get; }
 
         public Properties AdminFilter { get; } = Properties.CorrelationId  | Properties.Class | Properties.ResponseQueue;
 
@@ -32,13 +34,13 @@ namespace MsmqPatterns
         public Sender(string adminQueue)
         {
             Contract.Requires(adminQueue != null);
-            _adminQueueFormatName = adminQueue;
+            AdminQueueFormatName = adminQueue;
         }
 
         /// <summary>Starts listening for acknowledgement messages</summary>
         public Task<Task> StartAsync()
         {
-            _adminQueue = Queue.Open(_adminQueueFormatName, QueueAccessMode.Receive);
+            _adminQueue = Queue.Open(AdminQueueFormatName, QueueAccessMode.Receive);
             _run = RunAsync();
             return Task.FromResult(_run);
         }
@@ -110,11 +112,10 @@ namespace MsmqPatterns
             }
         }
 
-        /// <summary>Sends a <paramref name="message"/> to the <paramref name="queue"/> and waits for it to be delivered</summary>
-        /// <returns>Task that completes when the message has been delivered</returns>
-        /// <exception cref="TimeoutException">Thrown if the message does not reach the queue before the <see cref="ReachQueueTimeout"/> has been reached</exception>
-        /// <exception cref="AcknowledgmentException">Thrown if something bad happens, e.g. message could not be sent, access denied, the queue was purged, etc</exception>
-        public async Task SendAsync(Message message, QueueTransaction transaction, Queue queue)
+        /// <summary>
+        /// Posts a <paramref name="message"/> to the <paramref name="queue"/> with acknowledgement requested to be sent to <see cref="AdminQueueFormatName"/>. 
+        /// </summary>
+        public void Post(Message message, QueueTransaction transaction, Queue queue)
         {
             Contract.Requires(message != null);
             Contract.Requires(queue != null);
@@ -124,69 +125,89 @@ namespace MsmqPatterns
             message.TimeToReachQueue = ReachQueueTimeout;
             message.AdministrationQueue = _adminQueue.FormatName;
             queue.Post(message, transaction);
-
-            var formatName = queue.FormatName;
-            var tcs = ReachQueueCompletionSource(new FormatNameAndMsgId(formatName, message.Id));
-            await tcs.Task;
         }
 
-        /// <summary>Send a message to many queues at the same time and wait for all acknowledgements</summary>
-        public async Task SendToManyAsync(Message message, QueueTransaction transaction, params Queue[] queues)
+        /// <summary>
+        /// Sends a <paramref name="message"/> to the <paramref name="queue"/> and waits for it to be delivered. 
+        /// Waits for responses from all queues when the <paramref name="queue"/> is a multi-element format name.
+        /// Note that the transaction MUST commit before the acknowledgements are received.
+        /// </summary>
+        /// <returns>Task that completes when the message has been delivered</returns>
+        /// <exception cref="TimeoutException">Thrown if the message does not reach the queue before the <see cref="ReachQueueTimeout"/> has been reached</exception>
+        /// <exception cref="AcknowledgmentException">Thrown if something bad happens, e.g. message could not be sent, access denied, the queue was purged, etc</exception>
+        public Task SendAsync(Message message, QueueTransaction transaction, Queue queue)
         {
             Contract.Requires(message != null);
-            Contract.Requires(queues != null);
-            Contract.Requires(queues.Length > 0);
+            Contract.Requires(queue != null);
+            Contract.Requires(transaction == null || transaction == QueueTransaction.None || transaction == QueueTransaction.Single);
             Contract.Assert(_run != null);
 
-            message.AcknowledgmentTypes |= AcknowledgmentTypes.ReachQueue;
-            message.TimeToReachQueue = ReachQueueTimeout;
-            message.AdministrationQueue = _adminQueue.FormatName;
-            var multiElementFormatName = string.Join(",", queues.Select(q => q.FormatName)); 
-
-            var tasks = new Task[queues.Length];
-            using (var q = Queue.Open(multiElementFormatName, QueueAccessMode.Send))
-            {
-                q.Post(message, transaction);
-            }
-
-            // expand host name
-            var hostNames = queues.Select(q => q.FormatName).ToArray();
-
-            await Task.WhenAll(hostNames
-                .Select(host => new FormatNameAndMsgId(host, message.Id)) 
-                .Select(ReachQueueCompletionSource)
-                .Select(tcs => tcs.Task)
-            );
+            Post(message, transaction, queue);
+            return WaitForDelivery(message.Id, queue.FormatName);
         }
 
-        //NOTE: no overload that takes a QueueTransaction as we would not get the acknowledgement until after the transaction has committed.
-
-        TaskCompletionSource<MessageClass> ReachQueueCompletionSource(FormatNameAndMsgId key)
+        /// <summary>
+        /// Waits for positive or negative delivery of a message to a <paramref name="destinationFormatName"/>
+        /// Waits for responses from all queues when the <paramref name="destinationFormatName"/> is a multi-element format name.
+        /// </summary>
+        /// <param name="messageId">The message that was sent</param>
+        /// <param name="destinationFormatName">the format name of the queue the message was sent to</param>
+        public Task WaitForDelivery(string messageId, string destinationFormatName)
         {
-            return _reachQueue.GetOrAdd(key, _ => new TaskCompletionSource<MessageClass>());
+            Contract.Requires(!string.IsNullOrEmpty(messageId));
+            Contract.Requires(!string.IsNullOrEmpty(destinationFormatName));
+
+            // handle multiple destination format names (comma separated list)
+            if (destinationFormatName.IndexOf(',') >= 0)
+            {
+                return Task.WhenAll(destinationFormatName.Split(',')
+                    .Select(formatName => new FormatNameAndMsgId(formatName, messageId))
+                    .Select(ReachQueueCompletionSource)
+                    .Select(qtcs => qtcs.Task)
+                );
+            }
+
+            // single element format name
+            var key = new FormatNameAndMsgId(destinationFormatName, messageId);
+            var tcs = ReachQueueCompletionSource(key);
+            return tcs.Task;
         }
 
-        struct FormatNameAndMsgId : IEquatable<FormatNameAndMsgId>
+        internal Task WaitForDelivery(IReadOnlyCollection<FormatNameAndMsgId> sent)
         {
-            public string FormatName { get;  }
-            public string MessageId { get;  }
-
-            public FormatNameAndMsgId(string formatName, string messageId)
-            {
-                FormatName = formatName;
-                MessageId = messageId;
-            }
-
-            public bool Equals(FormatNameAndMsgId other)
-            {
-                return StringComparer.OrdinalIgnoreCase.Equals(FormatName, other.FormatName)
-                    && StringComparer.OrdinalIgnoreCase.Equals(MessageId, other.MessageId);
-            }
-
-            public override bool Equals(object obj) => obj is FormatNameAndMsgId && Equals((FormatNameAndMsgId)obj);
-
-            public override int GetHashCode() => StringComparer.OrdinalIgnoreCase.GetHashCode(FormatName) ^ StringComparer.OrdinalIgnoreCase.GetHashCode(MessageId);
+            Contract.Requires(sent != null);
+            Contract.Requires(sent.Count > 0);
+            return Task.WhenAll(sent.Select(s => WaitForDelivery(s.MessageId, s.FormatName)));
         }
+
+        TaskCompletionSource<MessageClass> ReachQueueCompletionSource(FormatNameAndMsgId key) => _reachQueue.GetOrAdd(key, _ => new TaskCompletionSource<MessageClass>());
         
     }
+
+    public struct FormatNameAndMsgId : IEquatable<FormatNameAndMsgId>
+    {
+        public string FormatName { get; }
+        public string MessageId { get; }
+
+        public bool IsEmpty => FormatName == null;
+
+        public FormatNameAndMsgId(string formatName, string messageId)
+        {
+            Contract.Requires(messageId != null);
+            Contract.Requires(formatName != null);
+            FormatName = formatName;
+            MessageId = messageId;
+        }
+
+        public bool Equals(FormatNameAndMsgId other)
+        {
+            return StringComparer.OrdinalIgnoreCase.Equals(FormatName, other.FormatName)
+                && StringComparer.OrdinalIgnoreCase.Equals(MessageId, other.MessageId);
+        }
+
+        public override bool Equals(object obj) => obj is FormatNameAndMsgId && Equals((FormatNameAndMsgId)obj);
+
+        public override int GetHashCode() => StringComparer.OrdinalIgnoreCase.GetHashCode(FormatName) ^ StringComparer.OrdinalIgnoreCase.GetHashCode(MessageId);
+    }
+
 }

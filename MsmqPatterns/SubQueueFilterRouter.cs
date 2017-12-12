@@ -91,7 +91,7 @@ namespace MsmqPatterns
 
         public Task StopAsync()
         {
-            _input?.Dispose(); // this will close any pending operations peek operations
+            _input?.Dispose(); // this will stop any pending peek operations
             _posionSubQueue?.Dispose();
             return _run;
         }

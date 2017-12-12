@@ -117,6 +117,12 @@ namespace BusterWood.Msmq
                 SetUndefined(Native.MESSAGE_PROPID_DEST_QUEUE_LEN);
             }
 
+            if (!IsUndefined(Native.MESSAGE_PROPID_ABORT_COUNT))
+                SetUndefined(Native.MESSAGE_PROPID_ABORT_COUNT);
+
+            if (!IsUndefined(Native.MESSAGE_PROPID_MOVE_COUNT))
+                SetUndefined(Native.MESSAGE_PROPID_MOVE_COUNT);
+
             if (!IsUndefined(Native.MESSAGE_PROPID_FIRST_IN_XACT))
                 SetUndefined(Native.MESSAGE_PROPID_FIRST_IN_XACT);
 
@@ -580,22 +586,22 @@ namespace BusterWood.Msmq
                 msgProps.SetByteArray(Native.MESSAGE_PROPID_XACTID, new byte[Message.MessageIdSize]);
             }
 
-            if ((read & Properties.AbortCount) != 0)
+            if ((read & Properties.TransactionAbortCount) != 0)
             {
                 msgProps.SetUInt(Native.MESSAGE_PROPID_ABORT_COUNT, 0);
             }
 
-            if ((read & Properties.TotalAbortCount) != 0)
+            if ((read & Properties.TransactionMoveCount) != 0)
             {
                 msgProps.SetUInt(Native.MESSAGE_PROPID_MOVE_COUNT, 0);
             }
 
-            if ((read & Properties.FirstInTransaction) != 0)
+            if ((read & Properties.TransactionFirst) != 0)
             {
                 msgProps.SetByte(Native.MESSAGE_PROPID_FIRST_IN_XACT, 0);
             }
 
-            if ((read & Properties.LastInTransaction) != 0)
+            if ((read & Properties.TransactionLast) != 0)
             {
                 msgProps.SetByte(Native.MESSAGE_PROPID_LAST_IN_XACT, 0);
             }

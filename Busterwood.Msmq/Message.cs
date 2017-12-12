@@ -46,28 +46,6 @@ namespace BusterWood.Msmq
             return $"{guid}\\{id}";
         }
 
-        /// <summary>Indicates the number of times that transactional processing has been aborted on a message since it was placed in its current queue.</summary>
-        /// <remarks>Moving a message to/from a subqueue resets this count</remarks>
-        public int AbortCount
-        {
-            get
-            {
-                if (Props.IsUndefined(Native.MESSAGE_PROPID_ABORT_COUNT))
-                    return 0;
-                return Props.GetUInt(Native.MESSAGE_PROPID_ABORT_COUNT);
-            }
-        }
-
-        /// <summary>Indicates the number of times that transactional processing has been aborted on a message during its lifetime.</summary>
-        public int AbortCountTotal
-        {
-            get
-            {
-                if (Props.IsUndefined(Native.MESSAGE_PROPID_MOVE_COUNT))
-                    return 0;
-                return Props.GetUInt(Native.MESSAGE_PROPID_MOVE_COUNT);
-            }
-        }
 
         /// <summary>The type of acknowledgement messages that should be sent to the <see cref="AdministrationQueue"/></summary>
         public AcknowledgmentTypes AcknowledgmentTypes
@@ -534,7 +512,7 @@ namespace BusterWood.Msmq
         }
 
         /// <summary>Is the message the first message in a transaction</summary>
-        public bool FirstInTransaction
+        public bool TransactionFirst
         {
             get
             {
@@ -543,9 +521,9 @@ namespace BusterWood.Msmq
                 return Props.GetByte(Native.MESSAGE_PROPID_FIRST_IN_XACT) == 1;
             }
         }
-
+        
         /// <summary>Is the message the last message in a transaction</summary>
-        public bool LastInTransaction
+        public bool TransactionLast
         {
             get
             {
@@ -554,5 +532,29 @@ namespace BusterWood.Msmq
                 return Props.GetByte(Native.MESSAGE_PROPID_LAST_IN_XACT) == 1;
             }
         }
+
+        /// <summary>Indicates the number of times that transactional processing has been aborted on a message since it was placed in its current queue.</summary>
+        /// <remarks>Moving a message to/from a subqueue resets this count</remarks>
+        public int TransactionAbortCount
+        {
+            get
+            {
+                if (Props.IsUndefined(Native.MESSAGE_PROPID_ABORT_COUNT))
+                    return 0;
+                return Props.GetUInt(Native.MESSAGE_PROPID_ABORT_COUNT);
+            }
+        }
+
+        /// <summary>Indicates the number of times that transactional processing has been aborted on a message during its lifetime.</summary>
+        public int TransactionMoveCount
+        {
+            get
+            {
+                if (Props.IsUndefined(Native.MESSAGE_PROPID_MOVE_COUNT))
+                    return 0;
+                return Props.GetUInt(Native.MESSAGE_PROPID_MOVE_COUNT);
+            }
+        }
+
     }
 }

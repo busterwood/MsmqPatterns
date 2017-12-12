@@ -1,5 +1,4 @@
 ﻿using System;
-using System.ComponentModel;
 using System.Diagnostics.Contracts;
 using System.Threading.Tasks;
 using BusterWood.Msmq;
@@ -9,17 +8,20 @@ namespace MsmqPatterns
     /// <summary>A router of messages between <see cref="MessageQueue"/></summary>
     public abstract class Router : IProcessor
     {
-        protected readonly string _inputQueueFormatName;
         protected readonly Func<Message, Queue> _route;
         protected Queue _input;
-        Queue _posionQueue;
+        protected Queue _posionQueue;
         Task _run;
+
+        public string InputQueueFormatName { get; }
 
         /// <summary>The filter used when peeking messages, the default does NOT include the message body</summary>
         public Properties PeekFilter { get; } = Properties.AppSpecific | Properties.Label | Properties.Extension | Properties.LookupId;
 
+        public Sender Sender { get; }
+
         /// <summary>Handle messages that cannot be routed.  Defaults to moving messages to a "Poison" subqueue of the input queue</summary>
-        public Action<long, QueueTransaction> BadMessageHandler { get; set; }
+        public Action<Queue, long, QueueTransaction> BadMessageHandler { get; set; }
 
         ///// <summary>
         ///// Static factory method for creating the appropriate <see cref="Router"/> 
@@ -42,12 +44,14 @@ namespace MsmqPatterns
         //    }
         //}
 
-        protected Router(string inputQueueFormatName, Func<Message, Queue> route)
+        protected Router(string inputQueueFormatName, Sender sender, Func<Message, Queue> route)
         {
             Contract.Requires(inputQueueFormatName != null);
+            Contract.Requires(sender != null);
             Contract.Requires(route != null);
 
-            _inputQueueFormatName = inputQueueFormatName;
+            InputQueueFormatName = inputQueueFormatName;
+            Sender = sender;
             _route = route;
             BadMessageHandler = MoveToPoisonSubqueue;
         }
@@ -56,7 +60,7 @@ namespace MsmqPatterns
         /// <returns></returns>
         public Task<Task> StartAsync()
         {
-            _input = Queue.Open(_inputQueueFormatName, QueueAccessMode.Receive);
+            _input = Queue.Open(InputQueueFormatName, QueueAccessMode.Receive);
             _run = RunAsync();
             return Task.FromResult(_run);
         }
@@ -68,7 +72,7 @@ namespace MsmqPatterns
                 for(;;)
                 {
                     var msg = await _input.PeekAsync(PeekFilter);
-                    OnNewMessage(msg);
+                    await OnNewMessage(msg);
                 }
             }
             catch (ObjectDisposedException) 
@@ -79,9 +83,14 @@ namespace MsmqPatterns
             {
                 // Stop was called
             }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("WARNING: " + ex);
+                throw;
+            }
         }
         
-        protected abstract void OnNewMessage(Message peeked);
+        protected abstract Task OnNewMessage(Message peeked);
 
         protected Queue GetRoute(Message msg)
         {
@@ -111,19 +120,20 @@ namespace MsmqPatterns
             StopAsync()?.Wait();
         }
         
-        private void MoveToPoisonSubqueue(long lookupId, QueueTransaction transaction)
+        private void MoveToPoisonSubqueue(Queue fromQueue, long lookupId, QueueTransaction transaction)
         {
+            Contract.Requires(fromQueue != null);
             const string poisonSubqueue = "Poison";
             if (_posionQueue == null)
             {
-                _posionQueue = Queue.Open(_inputQueueFormatName + ";Poison", QueueAccessMode.Move);
+                _posionQueue = Queue.Open(InputQueueFormatName + ";Poison", QueueAccessMode.Move);
             }
             try
             {
-                _input.Move(lookupId, _posionQueue, transaction);
+                fromQueue.Move(lookupId, _posionQueue, transaction);
                 return;
             }
-            catch (Win32Exception e)
+            catch (QueueException e)
             {
                 Console.Error.WriteLine($"WARN Failed to move message {{lookupId={lookupId}}} {{subqueue={poisonSubqueue}}} {{error={e.Message}}}");
             }            
