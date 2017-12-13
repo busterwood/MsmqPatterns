@@ -7,7 +7,7 @@ using BusterWood.Msmq;
 
 namespace UnitTests
 {
-    [TestFixture, Timeout(5000)]
+    [TestFixture, Timeout(5000), Ignore]
     public class TransactionalRouterTests
     {
         static readonly string inputQueuePath = $".\\private$\\{nameof(TransactionalRouterTests)}.Input";

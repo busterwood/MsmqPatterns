@@ -16,7 +16,7 @@ namespace MsmqPatterns
         public string InputQueueFormatName { get; }
 
         /// <summary>The filter used when peeking messages, the default does NOT include the message body</summary>
-        public Properties PeekFilter { get; } = Properties.AppSpecific | Properties.Label | Properties.Extension | Properties.LookupId;
+        public Properties PeekFilter { get; set; } = Properties.AppSpecific | Properties.Label | Properties.Extension | Properties.LookupId;
 
         public Sender Sender { get; }
 

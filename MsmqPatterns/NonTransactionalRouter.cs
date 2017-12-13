@@ -17,6 +17,7 @@ namespace MsmqPatterns
             Contract.Requires(inputQueueFormatName != null);
             Contract.Requires(sender != null);
             Contract.Requires(route != null);
+            PeekFilter = Properties.All;
         }
 
         protected override async Task RunAsync()
@@ -58,17 +59,13 @@ namespace MsmqPatterns
             }            
         }
 
-        private async Task RouteMessage(Message peeked)
+        private async Task RouteMessage(Message msg)
         {
-            var dest = GetRoute(peeked);
-
-            var msg = _input.Receive(Properties.All, timeout: TimeSpan.Zero);
-            if (msg == null) // message has been received by another process or thread
-                return;
-
+            var dest = GetRoute(msg);
             try
             {
                 await Sender.SendAsync(msg, QueueTransaction.None, dest);
+                _input.Receive(Properties.LookupId, timeout: TimeSpan.Zero); // remove message from queue
             }
             catch (QueueException ex)
             {
