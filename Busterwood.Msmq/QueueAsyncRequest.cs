@@ -14,11 +14,11 @@ namespace BusterWood.Msmq
         readonly Message Message;
         readonly uint timeoutMS;
         readonly QueueHandle handle;
-        readonly ReceiveAction action;
+        readonly ReadAction action;
         readonly TaskCompletionSource<Message> Tcs;
         public MQPROPS Props;
 
-        public QueueAsyncRequest(Message message, HashSet<QueueAsyncRequest> outstanding, uint timeoutMS, QueueHandle handle, ReceiveAction action)
+        public QueueAsyncRequest(Message message, HashSet<QueueAsyncRequest> outstanding, uint timeoutMS, QueueHandle handle, ReadAction action)
         {
             this.action = action;
             this.handle = handle;

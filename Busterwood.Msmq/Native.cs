@@ -62,7 +62,7 @@ namespace BusterWood.Msmq
         public unsafe static extern int ReceiveMessage(
             QueueHandle handle, 
             uint timeout, 
-            ReceiveAction action, 
+            ReadAction action, 
             MQPROPS properties, 
             NativeOverlapped* overlapped,
             ReceiveCallback receiveCallback, 
@@ -73,7 +73,7 @@ namespace BusterWood.Msmq
         public unsafe static extern int ReceiveMessage(
             QueueHandle handle, 
             uint timeout,
-            ReceiveAction action, 
+            ReadAction action, 
             MQPROPS properties, 
             NativeOverlapped* overlapped,
             ReceiveCallback receiveCallback, 

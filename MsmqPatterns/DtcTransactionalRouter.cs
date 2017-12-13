@@ -9,7 +9,7 @@ namespace MsmqPatterns
     /// <summary>Routes batches of messages in local or remote queues using DTC <see cref = "TransactionScope"/></summary>
     public class DtcTransactionalRouter : TransactionalRouter
     {
-        public DtcTransactionalRouter(string inputQueueFormatName, Sender sender, Func<Message, QueueWriter> route)
+        public DtcTransactionalRouter(string inputQueueFormatName, QueueSender sender, Func<Message, QueueWriter> route)
             : base(inputQueueFormatName, sender, route)
         {
             Contract.Requires(inputQueueFormatName != null);
@@ -78,13 +78,13 @@ namespace MsmqPatterns
 
         private bool RouteMessage()
         {
-            Message msg = _input.Receive(Properties.All, timeout: TimeSpan.Zero, transaction: QueueTransaction.Dtc); //note: no waiting
+            Message msg = _input.Read(Properties.All, timeout: TimeSpan.Zero, transaction: QueueTransaction.Dtc); //note: no waiting
             if (msg == null)
                 return false;
             var dest = GetRoute(msg);
             try
             {
-                dest.Post(msg, QueueTransaction.Dtc);
+                dest.Write(msg, QueueTransaction.Dtc);
                 return true;
             }
             catch (QueueException ex)

@@ -1,7 +1,7 @@
 ﻿namespace BusterWood.Msmq
 {
     /// Queue actions
-    public enum ReceiveAction
+    public enum ReadAction
     {
         /// <summary>Reads the current message off the queue</summary>
         Receive = 0x00000000,

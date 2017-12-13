@@ -44,11 +44,11 @@ namespace UnitTests
                     using (var q = new QueueWriter(testQueueFormatName))
                     {
                         var msg = new Message { Label = "my.sq", AppSpecific = key };
-                        q.Post(msg);
+                        q.Write(msg);
                     }
                     using (var sq = new QueueReader(testQueueFormatName + ";sq"))
                     {
-                        var got = sq.Receive(Properties.AppSpecific, timeout: TimeSpan.FromMilliseconds(500));
+                        var got = sq.Read(Properties.AppSpecific, timeout: TimeSpan.FromMilliseconds(500));
                         {
                             Assert.AreEqual(key, got.AppSpecific);
                         }
@@ -72,16 +72,16 @@ namespace UnitTests
                 {
                     using (var q = new QueueWriter(testQueueFormatName))
                     {
-                        q.Post(new Message { Label = "my.sq", AppSpecific = key });
-                        q.Post(new Message { Label = "my.sq", AppSpecific = key + 1 });
+                        q.Write(new Message { Label = "my.sq", AppSpecific = key });
+                        q.Write(new Message { Label = "my.sq", AppSpecific = key + 1 });
                     }
 
                     using (var sq = new QueueReader(testQueueFormatName + ";sq"))
                     {
-                        var got = sq.Receive(Properties.AppSpecific, timeout: TimeSpan.FromMilliseconds(500));
+                        var got = sq.Read(Properties.AppSpecific, timeout: TimeSpan.FromMilliseconds(500));
                         Assert.AreEqual(key, got.AppSpecific);
 
-                        got = sq.Receive(Properties.AppSpecific, timeout: TimeSpan.FromMilliseconds(500));
+                        got = sq.Read(Properties.AppSpecific, timeout: TimeSpan.FromMilliseconds(500));
                         Assert.AreEqual(key + 1, got.AppSpecific);                        
                     }
                 }
@@ -103,13 +103,13 @@ namespace UnitTests
                 {
                     using (var q = new QueueWriter(testQueueFormatName))
                     {
-                        q.Post(new Message { Label = "skipped", AppSpecific = key - 1 });
-                        q.Post(new Message { Label = "my.sq", AppSpecific = key });
+                        q.Write(new Message { Label = "skipped", AppSpecific = key - 1 });
+                        q.Write(new Message { Label = "my.sq", AppSpecific = key });
                     }
 
                     using (var sq = new QueueReader(testQueueFormatName + ";sq"))
                     {
-                        var got = sq.Receive(Properties.AppSpecific, timeout: TimeSpan.FromMilliseconds(500));
+                        var got = sq.Read(Properties.AppSpecific, timeout: TimeSpan.FromMilliseconds(500));
                         Assert.AreEqual(key, got.AppSpecific);
                     }
                 }
@@ -133,8 +133,8 @@ namespace UnitTests
 
                 for (int i = 0; i < 1000; i++)
                 {
-                    input.Post(new Message { Label = "1", AppSpecific = i });
-                    input.Post(new Message { Label = "2", AppSpecific = i });
+                    input.Write(new Message { Label = "1", AppSpecific = i });
+                    input.Write(new Message { Label = "2", AppSpecific = i });
                 }
                 var sw = new Stopwatch();
                 sw.Start();
@@ -144,10 +144,10 @@ namespace UnitTests
                 {
                     for (int i = 0; i < 1000; i++)
                     {
-                        var got = out1.Receive(Properties.Label | Properties.AppSpecific);
+                        var got = out1.Read(Properties.Label | Properties.AppSpecific);
                         Assert.AreEqual("1", got.Label, "Label");
                         Assert.AreEqual(i, got.AppSpecific, "AppSpecific");
-                        got = out2.Receive(Properties.Label | Properties.AppSpecific);
+                        got = out2.Read(Properties.Label | Properties.AppSpecific);
                         Assert.AreEqual("2", got.Label, "Label");
                         Assert.AreEqual(i, got.AppSpecific, "AppSpecific");
                     }

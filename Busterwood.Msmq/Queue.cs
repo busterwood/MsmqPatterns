@@ -174,7 +174,7 @@ namespace BusterWood.Msmq
         /// </summary>
         /// <param name="message">The message to try to send</param>
         /// <param name="transaction">can be NULL for no transaction, a <see cref="QueueTransaction"/>, <see cref="QueueTransaction.Single"/>, or <see cref="QueueTransaction.Dtc"/>.</param>
-        public void Post(Message message, QueueTransaction transaction = null)
+        public void Write(Message message, QueueTransaction transaction = null)
         {
             Contract.Requires(message != null);
 
@@ -235,7 +235,7 @@ namespace BusterWood.Msmq
         /// <param name="action">Receive or peek a message?</param>
         /// <param name="timeout">The time allowed, defaults to infinite.  Use <see cref="TimeSpan.Zero"/> to return without waiting</param>
         /// <returns>The a task that contains a message, or a task will a null Result if the receive times out</returns>
-        public Task<Message> ReceiveAsync(Properties properties, ReceiveAction action = ReceiveAction.Receive, TimeSpan? timeout = null)
+        public Task<Message> ReadAsync(Properties properties, ReadAction action = ReadAction.Receive, TimeSpan? timeout = null)
         {
             if (IsClosed) throw new ObjectDisposedException(nameof(Queue));
 
@@ -264,7 +264,7 @@ namespace BusterWood.Msmq
         /// <param name="timeout">The time allowed, defaults to infinite.  Use <see cref="TimeSpan.Zero"/> to return without waiting</param>
         /// <param name="transaction">can be NULL for no transaction, a <see cref="QueueTransaction"/>, <see cref="QueueTransaction.Single"/>, or <see cref="QueueTransaction.Dtc"/>.</param>
         /// <returns>The message, or NULL if the receive times out</returns>
-        public unsafe Message Receive(Properties properties = Properties.All, ReceiveAction action = ReceiveAction.Receive, TimeSpan? timeout = null, QueueTransaction transaction = null)
+        public unsafe Message Read(Properties properties = Properties.All, ReadAction action = ReadAction.Receive, TimeSpan? timeout = null, QueueTransaction transaction = null)
         {
             if (IsClosed) throw new ObjectDisposedException(nameof(Queue));
 
@@ -313,7 +313,7 @@ namespace BusterWood.Msmq
         /// <param name="timeout">The time allowed, defaults to infinite.  Use <see cref="TimeSpan.Zero"/> to return without waiting</param>
         /// <param name="transaction">can be NULL for no transaction, a <see cref="QueueTransaction"/>, <see cref="QueueTransaction.Single"/>, or <see cref="QueueTransaction.Dtc"/>.</param>
         /// <returns>The message, or NULL if the message was not found or the receive times out</returns>
-        public unsafe Message Receive(Properties properties, long lookupId, LookupAction action = LookupAction.ReceiveCurrent, TimeSpan? timeout = null, QueueTransaction transaction = null)
+        public unsafe Message Lookup(Properties properties, long lookupId, LookupAction action = LookupAction.ReceiveCurrent, TimeSpan? timeout = null, QueueTransaction transaction = null)
         {
             if (IsClosed) throw new ObjectDisposedException(nameof(Queue));
 
@@ -388,7 +388,7 @@ namespace BusterWood.Msmq
         /// Moving message is 10 to 100 times faster than sending the message to another queue.
         /// Within a transaction you cannot receive a message that you moved to a subqueue.
         /// </remarks>
-        public void MoveFrom(Queue sourceQueue, long lookupId, QueueTransaction transaction = null)
+        public void MoveFrom(QueueReader sourceQueue, long lookupId, QueueTransaction transaction = null)
         {
             Contract.Requires(sourceQueue != null);
 

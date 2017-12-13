@@ -24,7 +24,7 @@ namespace UnitTests
         QueueReader outRead2;
         QueueWriter outSend1;
         QueueWriter outSend2;
-        Sender sender;
+        QueueSender sender;
 
 
         [SetUp]
@@ -55,7 +55,7 @@ namespace UnitTests
             outSend1 = new QueueWriter(outputQueueFormatName1);
             outSend2 = new QueueWriter(outputQueueFormatName2);
 
-            sender = new Sender(adminQueueFormatName);
+            sender = new QueueSender(adminQueueFormatName);
         }
 
         [Test]
@@ -68,7 +68,7 @@ namespace UnitTests
                 {
                     var rtask = router.StartAsync();
                     await sender.SendAsync(new Message { Label = "1", AppSpecific = 1 }, QueueTransaction.None, input);
-                    var got = outRead1.Receive();
+                    var got = outRead1.Read();
                     Assert.AreEqual("1", got.Label);
                 }
                 finally
@@ -89,7 +89,7 @@ namespace UnitTests
                 {
                     var rtask = router.StartAsync();
                     await sender.SendAsync(new Message { Label = "2", AppSpecific = 1 }, QueueTransaction.None, input);
-                    var got = outRead2.Receive();
+                    var got = outRead2.Read();
                     Assert.AreEqual("2", got.Label);
                 }
                 finally
@@ -110,7 +110,7 @@ namespace UnitTests
                 {
                     var rtask = router.StartAsync();
                     await sender.SendAsync(new Message { Label = "3", AppSpecific = 1 }, QueueTransaction.None, input);
-                    var got = dead.Receive();
+                    var got = dead.Read();
                     Assert.AreEqual("3", got.Label);
                 }
                 finally

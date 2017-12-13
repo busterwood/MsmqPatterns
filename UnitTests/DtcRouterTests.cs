@@ -25,7 +25,7 @@ namespace UnitTests
         QueueReader outRead2;
         QueueWriter outSend1;
         QueueWriter outSend2;
-        Sender sender;
+        QueueSender sender;
 
         [SetUp]
         public void Setup()
@@ -56,7 +56,7 @@ namespace UnitTests
             outSend1 = new QueueWriter(outputQueueFormatName1);
             outSend2 = new QueueWriter(outputQueueFormatName2);
 
-            sender = new Sender(adminQueueFormatName);
+            sender = new QueueSender(adminQueueFormatName);
         }
 
         [Test]
@@ -67,8 +67,8 @@ namespace UnitTests
                 var rtask = router.StartAsync();
                 try
                 {
-                    input.Post(new Message { Label = "1", AppSpecific = 1 }, QueueTransaction.Single);
-                    var got = outRead1.Receive(Properties.All);
+                    input.Write(new Message { Label = "1", AppSpecific = 1 }, QueueTransaction.Single);
+                    var got = outRead1.Read(Properties.All);
                     Assert.AreEqual("1", got.Label);
                 }
                 finally
@@ -86,8 +86,8 @@ namespace UnitTests
                 var rtask = router.StartAsync();
                 try
                 {
-                    input.Post(new Message { Label = "2", AppSpecific = 1 }, QueueTransaction.Single);
-                    var got = outRead1.Receive(Properties.All);
+                    input.Write(new Message { Label = "2", AppSpecific = 1 }, QueueTransaction.Single);
+                    var got = outRead1.Read(Properties.All);
                     Assert.AreEqual("2", got.Label);
                 }
                 finally
@@ -105,8 +105,8 @@ namespace UnitTests
                 var rtask = router.StartAsync();
                 try
                 {
-                    input.Post(new Message { Label = "3", AppSpecific = 1 }, QueueTransaction.Single);
-                    var got = dead.Receive(Properties.All);
+                    input.Write(new Message { Label = "3", AppSpecific = 1 }, QueueTransaction.Single);
+                    var got = dead.Read(Properties.All);
                     Assert.AreEqual("3", got.Label);
                 }
                 finally

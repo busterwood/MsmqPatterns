@@ -19,7 +19,7 @@ namespace ConsoleApplication1
             var postMsg = new Message { AppSpecific = 1, Label = "async1", Journal = Journal.DeadLetter, Delivery = Delivery.Express };
             postMsg.BodyUTF8(string.Join(Environment.NewLine, Enumerable.Repeat("hello world! and hello again", 9000)));
             postMsg.ExtensionUTF8("context-type: text/utf-8");
-            postQ.Post(postMsg, QueueTransaction.Single);
+            postQ.Write(postMsg, QueueTransaction.Single);
 
             var readQ = new QueueReader(fn);
             try
@@ -30,7 +30,7 @@ namespace ConsoleApplication1
                 moveQ.MoveFrom(readQ, peeked.LookupId, QueueTransaction.Single);
 
                 var subQ = new QueueReader(fn + ";test");
-                var msg = subQ.Receive(Properties.All, peeked.LookupId, transaction: QueueTransaction.Single);
+                var msg = subQ.Lookup(Properties.All, peeked.LookupId, transaction: QueueTransaction.Single);
 
                 var body = msg.BodyUTF8();
                 var l = msg.Label;

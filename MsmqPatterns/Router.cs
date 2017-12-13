@@ -18,10 +18,10 @@ namespace MsmqPatterns
         /// <summary>The filter used when peeking messages, the default does NOT include the message body</summary>
         public Properties PeekFilter { get; set; } = Properties.AppSpecific | Properties.Label | Properties.Extension | Properties.LookupId;
 
-        public Sender Sender { get; }
+        public QueueSender Sender { get; }
 
         /// <summary>Handle messages that cannot be routed.  Defaults to moving messages to a "Poison" subqueue of the input queue</summary>
-        public Action<Queue, long, QueueTransaction> BadMessageHandler { get; set; }
+        public Action<QueueReader, long, QueueTransaction> BadMessageHandler { get; set; }
 
         ///// <summary>
         ///// Static factory method for creating the appropriate <see cref="Router"/> 
@@ -44,7 +44,7 @@ namespace MsmqPatterns
         //    }
         //}
 
-        protected Router(string inputQueueFormatName, Sender sender, Func<Message, QueueWriter> route)
+        protected Router(string inputQueueFormatName, QueueSender sender, Func<Message, QueueWriter> route)
         {
             Contract.Requires(inputQueueFormatName != null);
             Contract.Requires(sender != null);
@@ -95,7 +95,7 @@ namespace MsmqPatterns
             StopAsync()?.Wait();
         }
         
-        private void MoveToPoisonSubqueue(Queue fromQueue, long lookupId, QueueTransaction transaction)
+        private void MoveToPoisonSubqueue(QueueReader fromQueue, long lookupId, QueueTransaction transaction)
         {
             Contract.Requires(fromQueue != null);
             const string poisonSubqueue = "Poison";

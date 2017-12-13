@@ -40,7 +40,7 @@ namespace UnitTests
         [Test]
         public async Task send_completes_when_delivered_to_queue()
         {
-            using (var sender = new Sender(adminFormatName))
+            using (var sender = new QueueSender(adminFormatName))
             {
                 await sender.StartAsync();
                 var msg = new Message { Label = "send1" };
@@ -51,7 +51,7 @@ namespace UnitTests
         [Test]
         public async Task send_throw_exception_when_sending_non_transactional_message_to_transactional_queue()
         {
-            using (var sender = new Sender(adminFormatName))
+            using (var sender = new QueueSender(adminFormatName))
             {
                 await sender.StartAsync();
                 var msg = new Message { Label = "send2" };
@@ -71,7 +71,7 @@ namespace UnitTests
         public async Task send_throw_exception_when_destination_machine_does_not_exist()
         {
             using (var doesNotExist = new QueueWriter("FormatName:Direct=OS:not.known.server\\private$\\some-queue"))
-            using (var sender = new Sender(adminFormatName))
+            using (var sender = new QueueSender(adminFormatName))
             {
                 sender.ReachQueueTimeout = TimeSpan.FromMilliseconds(100);
                 await sender.StartAsync();

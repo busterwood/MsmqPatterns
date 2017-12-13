@@ -81,13 +81,13 @@ namespace BusterWood.Msmq
         public static Message Peek(this QueueReader queue, Properties properties, TimeSpan? timeout = null, QueueTransaction transaction = null)
         {
             Contract.Requires(queue != null);
-            return queue.Receive(properties, ReceiveAction.PeekCurrent, timeout, transaction);
+            return queue.Read(properties, ReadAction.PeekCurrent, timeout, transaction);
         }
 
         public static Task<Message> PeekAsync(this QueueReader queue, Properties properties, TimeSpan? timeout = null)
         {
             Contract.Requires(queue != null);
-            return queue.ReceiveAsync(properties, ReceiveAction.PeekCurrent, timeout);
+            return queue.ReadAsync(properties, ReadAction.PeekCurrent, timeout);
         }
 
         public static void ExtensionUTF8(this Message msg, string text)

@@ -9,7 +9,7 @@ namespace MsmqPatterns
     /// <summary>Routes batches of messages between local <see cref = "Queue"/> using a MSMQ transaction</summary>
     public class MsmqTransactionalRouter : TransactionalRouter
     {
-        public MsmqTransactionalRouter(string inputQueueFormatName, Sender sender, Func<Message, QueueWriter> route)
+        public MsmqTransactionalRouter(string inputQueueFormatName, QueueSender sender, Func<Message, QueueWriter> route)
             : base (inputQueueFormatName, sender, route)
         {
             Contract.Requires(sender != null);
@@ -91,7 +91,7 @@ namespace MsmqPatterns
                     for (int i = 0; i < MaxBatchSize; i++)
                     {
                         // peek for the next message
-                        var msg = _input.Receive(Properties.All, lookupId, action, TimeSpan.Zero);
+                        var msg = _input.Lookup(Properties.All, lookupId, action, TimeSpan.Zero);
                         if (msg == null)
                             break;
                         action = LookupAction.PeekNext;
@@ -128,7 +128,7 @@ namespace MsmqPatterns
                 try
                 {
                     await Sender.WaitForDelivery(item);
-                    _inProgressRead.Receive(Properties.LookupId, item.LookupId, timeout: TimeSpan.Zero, transaction: QueueTransaction.Single);
+                    _inProgressRead.Lookup(Properties.LookupId, item.LookupId, timeout: TimeSpan.Zero, transaction: QueueTransaction.Single);
                 }
                 catch (AcknowledgmentException ex)
                 {

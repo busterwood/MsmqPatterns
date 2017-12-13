@@ -16,7 +16,7 @@ namespace MsmqPatterns
     /// <remarks>
     /// You can use one instance per process (singleton), share the instance between multiple queues, or even one instance per output queue.
     /// </remarks>
-    public class Sender : IProcessor
+    public class QueueSender : IProcessor
     {
         readonly Cache<PostedMessageHandle, TaskCompletionSource<MessageClass>> _reachQueue = new Cache<PostedMessageHandle, TaskCompletionSource<MessageClass>>(null, TimeSpan.FromMinutes(5));
         QueueReader _adminQueue;
@@ -31,7 +31,7 @@ namespace MsmqPatterns
 
         /// <summary>Creates a new sender that waits for confirmation of deliver</summary>
         /// <param name="adminQueue">The format name of the <see cref="Message.AdministrationQueue"/></param>
-        public Sender(string adminQueue)
+        public QueueSender(string adminQueue)
         {
             Contract.Requires(adminQueue != null);
             AdminQueueFormatName = adminQueue;
@@ -51,7 +51,7 @@ namespace MsmqPatterns
             {
                 for (;;)
                 {
-                    var msg = await _adminQueue.ReceiveAsync(AdminFilter);
+                    var msg = await _adminQueue.ReadAsync(AdminFilter);
                     var tcs = ReachQueueCompletionSource(new PostedMessageHandle(msg.ResponseQueue, msg.CorrelationId));
                     var ack = msg.Acknowledgement();
                     switch (ack)
@@ -124,7 +124,7 @@ namespace MsmqPatterns
             message.AcknowledgmentTypes |= AcknowledgmentTypes.ReachQueue;
             message.TimeToReachQueue = ReachQueueTimeout;
             message.AdministrationQueue = _adminQueue.FormatName;
-            queue.Post(message, transaction);
+            queue.Write(message, transaction);
             return new PostedMessageHandle(queue.FormatName, message.Id, message.LookupId);
         }
 
