@@ -12,12 +12,12 @@ namespace MsmqPatterns
     /// </summary>
     public abstract class TransactionalRouter : Router
     {
-        protected Queue _inProgressRead;
-        protected Queue _inProgressMove;
+        protected QueueReader _inProgressRead;
+        protected SubQueueMover _inProgressMove;
         private string inputQueueFormatName;
         private Func<Message, Queue> route;
 
-        protected TransactionalRouter(string inputQueueFormatName, Sender sender, Func<Message, Queue> route)
+        protected TransactionalRouter(string inputQueueFormatName, Sender sender, Func<Message, QueueWriter> route)
             : base(inputQueueFormatName, sender, route)
         {
             Contract.Requires(sender != null);
@@ -35,8 +35,8 @@ namespace MsmqPatterns
 
         protected override Task RunAsync()
         {
-            _inProgressRead = Queue.Open(InputQueueFormatName + ";" + InProgressSubQueue, QueueAccessMode.Receive);
-            _inProgressMove = Queue.Open(InputQueueFormatName + ";" + InProgressSubQueue, QueueAccessMode.Move);
+            _inProgressRead = new QueueReader(InputQueueFormatName + ";" + InProgressSubQueue);
+            _inProgressMove = new SubQueueMover(InputQueueFormatName + ";" + InProgressSubQueue);
             return Task.FromResult(true);
         }
 

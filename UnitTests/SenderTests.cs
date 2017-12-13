@@ -11,8 +11,8 @@ namespace UnitTests
     {
         static string destQueuePath = $".\\private$\\{nameof(SenderTests)}.Input";
         string adminQueuePath = $".\\private$\\{nameof(SenderTests)}.Admin";
-        Queue dest;
-        Queue admin;
+        QueueWriter dest;
+        QueueReader admin;
         string destFormatName;
         string adminFormatName;
 
@@ -21,20 +21,20 @@ namespace UnitTests
         {
             destFormatName = Queue.TryCreate(destQueuePath, QueueTransactional.Transactional);
             adminFormatName = Queue.TryCreate(adminQueuePath, QueueTransactional.None);
-            using (var purgeDest = Queue.Open(destFormatName, QueueAccessMode.Receive))
+            using (var purgeDest = new QueueReader(destFormatName))
             {
                 purgeDest.Purge();
             }
-            dest = Queue.Open(destFormatName, QueueAccessMode.Send);
-            admin = Queue.Open(adminFormatName, QueueAccessMode.Receive);
+            dest = new QueueWriter(destFormatName);
+            admin = new QueueReader(adminFormatName);
             admin.Purge();
         }
 
         [TearDown]
         public void TearDown()
         {
-            dest.Close();
-            admin.Close();
+            dest.Dispose();
+            admin.Dispose();
         }
 
         [Test]
@@ -70,7 +70,7 @@ namespace UnitTests
         [Test]
         public async Task send_throw_exception_when_destination_machine_does_not_exist()
         {
-            using (var doesNotExist = Queue.Open("FormatName:Direct=OS:not.known.server\\private$\\some-queue", QueueAccessMode.Send))
+            using (var doesNotExist = new QueueWriter("FormatName:Direct=OS:not.known.server\\private$\\some-queue"))
             using (var sender = new Sender(adminFormatName))
             {
                 sender.ReachQueueTimeout = TimeSpan.FromMilliseconds(100);

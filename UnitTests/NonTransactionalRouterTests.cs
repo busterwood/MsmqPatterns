@@ -18,12 +18,12 @@ namespace UnitTests
         string deadQueueFormatName;
         string outputQueueFormatName1;
         string outputQueueFormatName2;
-        Queue input;
-        Queue dead;
-        Queue outRead1;
-        Queue outRead2;
-        Queue outSend1;
-        Queue outSend2;
+        QueueWriter input;
+        QueueReader dead;
+        QueueReader outRead1;
+        QueueReader outRead2;
+        QueueWriter outSend1;
+        QueueWriter outSend2;
         Sender sender;
 
 
@@ -36,24 +36,24 @@ namespace UnitTests
             outputQueueFormatName2 = Queue.TryCreate(outputQueuePath2, QueueTransactional.None);
             deadQueueFormatName = $"{inputQueueFormatName };Poison";
 
-            using (var q = Queue.Open(inputQueueFormatName, QueueAccessMode.Receive))
+            using (var q = new QueueReader(inputQueueFormatName))
                 q.Purge();
-            using (var q = Queue.Open(adminQueueFormatName, QueueAccessMode.Receive))
+            using (var q = new QueueReader(adminQueueFormatName))
                 q.Purge();
 
-            input = Queue.Open(inputQueueFormatName, QueueAccessMode.Send);
+            input = new QueueWriter(inputQueueFormatName);
 
-            dead = Queue.Open(deadQueueFormatName, QueueAccessMode.Receive);
+            dead = new QueueReader(deadQueueFormatName);
             dead.Purge();
 
-            outRead1 = Queue.Open(outputQueueFormatName1, QueueAccessMode.Receive);
+            outRead1 = new QueueReader(outputQueueFormatName1);
             outRead1.Purge();
 
-            outRead2 = Queue.Open(outputQueueFormatName2, QueueAccessMode.Receive);
+            outRead2 = new QueueReader(outputQueueFormatName2);
             outRead2.Purge();
 
-            outSend1 = Queue.Open(outputQueueFormatName1, QueueAccessMode.Send);
-            outSend2 = Queue.Open(outputQueueFormatName2, QueueAccessMode.Send);
+            outSend1 = new QueueWriter(outputQueueFormatName1);
+            outSend2 = new QueueWriter(outputQueueFormatName2);
 
             sender = new Sender(adminQueueFormatName);
         }

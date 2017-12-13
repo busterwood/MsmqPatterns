@@ -11,7 +11,7 @@ namespace MsmqPatterns
     /// </summary>
     public class NonTransactionalRouter : Router
     {
-        public NonTransactionalRouter(string inputQueueFormatName, Sender sender, Func<Message, Queue> route)
+        public NonTransactionalRouter(string inputQueueFormatName, Sender sender, Func<Message, QueueWriter> route)
             : base (inputQueueFormatName, sender, route)
         {
             Contract.Requires(inputQueueFormatName != null);

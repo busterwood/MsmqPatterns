@@ -14,9 +14,9 @@ namespace MsmqPatterns
     public class SubQueueFilterRouter : IProcessor
     {
         readonly string _inputFormatName;
-        readonly Func<Message, Queue> _getSubQueue;
-        Queue _input;
-        Queue _posionSubQueue;
+        readonly Func<Message, SubQueueMover> _getSubQueue;
+        QueueReader _input;
+        SubQueueMover _posionSubQueue;
         QueueTransaction _transaction;
         Task _run;
 
@@ -26,7 +26,7 @@ namespace MsmqPatterns
         /// <summary>Handle messages that cannot be routed.  Defaults to moving messages to a "Poison" subqueue of the input queue</summary>
         public Action<long, QueueTransaction> BadMessageHandler { get; set; }
 
-        public SubQueueFilterRouter(string inputFormatName, Func<Message, Queue> getSubQueueName) 
+        public SubQueueFilterRouter(string inputFormatName, Func<Message, SubQueueMover> getSubQueueName) 
         {
             Contract.Requires(inputFormatName != null);
             Contract.Requires(getSubQueueName != null);
@@ -37,7 +37,7 @@ namespace MsmqPatterns
 
         public Task<Task> StartAsync()
         {
-            _input = Queue.Open(_inputFormatName, QueueAccessMode.Receive);
+            _input = new QueueReader(_inputFormatName);
             if (Queue.IsTransactional(_input.FormatName) == QueueTransactional.Transactional)
                 _transaction = QueueTransaction.Single;
             _run = RunAsync();
@@ -54,7 +54,7 @@ namespace MsmqPatterns
                     try
                     {
                         var subQueue = GetRoute(peeked);
-                        _input.Move(peeked.LookupId, subQueue, _transaction);
+                        subQueue.MoveFrom(_input, peeked.LookupId, _transaction);
                     }
                     catch (RouteException ex)
                     {
@@ -73,9 +73,9 @@ namespace MsmqPatterns
             }
         }
 
-        protected Queue GetRoute(Message msg)
+        protected SubQueueMover GetRoute(Message msg)
         {
-            Queue subQueue = null;
+            SubQueueMover subQueue = null;
             try
             {
                 subQueue = _getSubQueue(msg);
@@ -106,14 +106,14 @@ namespace MsmqPatterns
             try
             {
                 if (_posionSubQueue == null)
-                    _posionSubQueue = Queue.Open(_input.FormatName + ";Poison", QueueAccessMode.Move);
+                    _posionSubQueue = new SubQueueMover(_input.FormatName + ";Poison");
 
-                _input.Move(lookupId, _posionSubQueue, transaction);
+                _posionSubQueue.MoveFrom(_input, lookupId, transaction);
                 return;
             }
-            catch (Win32Exception e)
+            catch (QueueException e)
             {
-                Console.Error.WriteLine($"WARN Failed to move message {{lookupId={lookupId}}} {{subqueue={_posionSubQueue?.SubQueue()}}} {{error={e.Message}}}");
+                Console.Error.WriteLine($"WARN Failed to move message {{lookupId={lookupId}}} {{subqueue={_posionSubQueue?.SubQueueName()}}} {{error={e.Message}}}");
             }
         }
 

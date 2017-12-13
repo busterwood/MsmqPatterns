@@ -22,9 +22,9 @@ namespace UnitTests
         [SetUp]
         public void Setup()
         {
-            using (var input = Queue.Open(testQueueFormatName, QueueAccessMode.Receive))
-            using (var out1 = Queue.Open(testQueueFormatName + ";one", QueueAccessMode.Receive))
-            using (var out2 = Queue.Open(testQueueFormatName + ";two", QueueAccessMode.Receive))
+            using (var input = new QueueReader(testQueueFormatName))
+            using (var out1 = new QueueReader(testQueueFormatName + ";one"))
+            using (var out2 = new QueueReader(testQueueFormatName + ";two"))
             {
                 input.Purge();
                 out1.Purge();
@@ -41,12 +41,12 @@ namespace UnitTests
                 await router.StartAsync();
                 try
                 {
-                    using (var q = Queue.Open(testQueueFormatName, QueueAccessMode.Send))
+                    using (var q = new QueueWriter(testQueueFormatName))
                     {
                         var msg = new Message { Label = "my.sq", AppSpecific = key };
                         q.Post(msg);
                     }
-                    using (var sq = Queue.Open(testQueueFormatName + ";sq", QueueAccessMode.Receive))
+                    using (var sq = new QueueReader(testQueueFormatName + ";sq"))
                     {
                         var got = sq.Receive(Properties.AppSpecific, timeout: TimeSpan.FromMilliseconds(500));
                         {
@@ -70,13 +70,13 @@ namespace UnitTests
                 await router.StartAsync();
                 try
                 {
-                    using (var q = Queue.Open(testQueueFormatName, QueueAccessMode.Send))
+                    using (var q = new QueueWriter(testQueueFormatName))
                     {
                         q.Post(new Message { Label = "my.sq", AppSpecific = key });
                         q.Post(new Message { Label = "my.sq", AppSpecific = key + 1 });
                     }
 
-                    using (var sq = Queue.Open(testQueueFormatName + ";sq", QueueAccessMode.Receive))
+                    using (var sq = new QueueReader(testQueueFormatName + ";sq"))
                     {
                         var got = sq.Receive(Properties.AppSpecific, timeout: TimeSpan.FromMilliseconds(500));
                         Assert.AreEqual(key, got.AppSpecific);
@@ -101,13 +101,13 @@ namespace UnitTests
                 await router.StartAsync();
                 try
                 {
-                    using (var q = Queue.Open(testQueueFormatName, QueueAccessMode.Send))
+                    using (var q = new QueueWriter(testQueueFormatName))
                     {
                         q.Post(new Message { Label = "skipped", AppSpecific = key - 1 });
                         q.Post(new Message { Label = "my.sq", AppSpecific = key });
                     }
 
-                    using (var sq = Queue.Open(testQueueFormatName + ";sq", QueueAccessMode.Receive))
+                    using (var sq = new QueueReader(testQueueFormatName + ";sq"))
                     {
                         var got = sq.Receive(Properties.AppSpecific, timeout: TimeSpan.FromMilliseconds(500));
                         Assert.AreEqual(key, got.AppSpecific);
@@ -123,9 +123,9 @@ namespace UnitTests
         [Test]
         public async Task can_route_many()
         {
-            using (var input = Queue.Open(testQueueFormatName, QueueAccessMode.Send))
-            using (var out1 = Queue.Open(testQueueFormatName+";one", QueueAccessMode.Receive))
-            using (var out2 = Queue.Open(testQueueFormatName+";two", QueueAccessMode.Receive))
+            using (var input = new QueueWriter(testQueueFormatName))
+            using (var out1 = new QueueReader(testQueueFormatName+";one"))
+            using (var out2 = new QueueReader(testQueueFormatName+";two"))
             using (var router = new SubQueueFilterRouter(testQueueFormatName, GetSubQueue))
             {
                 out1.Purge();
@@ -162,9 +162,9 @@ namespace UnitTests
             }
         }
 
-        QueueCache _cache = new QueueCache();
+        QueueCache<SubQueueMover> _cache = new QueueCache<SubQueueMover>((fn, access, share) => new SubQueueMover(fn, share));
 
-        Queue GetSubQueue(Message peeked)
+        SubQueueMover GetSubQueue(Message peeked)
         {
             if (peeked.Label.EndsWith("sq", StringComparison.OrdinalIgnoreCase))
                 return _cache.Open(testQueueFormatName + ";sq", QueueAccessMode.Move);

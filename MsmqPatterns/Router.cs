@@ -8,9 +8,9 @@ namespace MsmqPatterns
     /// <summary>A router of messages between <see cref="MessageQueue"/></summary>
     public abstract class Router : IProcessor
     {
-        protected readonly Func<Message, Queue> _route;
-        protected Queue _input;
-        protected Queue _posionQueue;
+        protected readonly Func<Message, QueueWriter> _route;
+        protected QueueReader _input;
+        protected SubQueueMover _posionQueue;
         Task _run;
 
         public string InputQueueFormatName { get; }
@@ -44,7 +44,7 @@ namespace MsmqPatterns
         //    }
         //}
 
-        protected Router(string inputQueueFormatName, Sender sender, Func<Message, Queue> route)
+        protected Router(string inputQueueFormatName, Sender sender, Func<Message, QueueWriter> route)
         {
             Contract.Requires(inputQueueFormatName != null);
             Contract.Requires(sender != null);
@@ -60,16 +60,16 @@ namespace MsmqPatterns
         /// <returns></returns>
         public Task<Task> StartAsync()
         {
-            _input = Queue.Open(InputQueueFormatName, QueueAccessMode.Receive);
+            _input = new QueueReader(InputQueueFormatName);
             _run = RunAsync();
             return Task.FromResult(_run);
         }
 
         protected abstract Task RunAsync();        
 
-        protected Queue GetRoute(Message msg)
+        protected QueueWriter GetRoute(Message msg)
         {
-            Queue r = null;
+            QueueWriter r = null;
             try
             {
                 r = _route(msg);
@@ -101,11 +101,11 @@ namespace MsmqPatterns
             const string poisonSubqueue = "Poison";
             if (_posionQueue == null)
             {
-                _posionQueue = Queue.Open(InputQueueFormatName + ";Poison", QueueAccessMode.Move);
+                _posionQueue = new SubQueueMover(InputQueueFormatName + ";Poison");
             }
             try
             {
-                fromQueue.Move(lookupId, _posionQueue, transaction);
+                _posionQueue.MoveFrom(fromQueue, lookupId, transaction);
                 return;
             }
             catch (QueueException e)

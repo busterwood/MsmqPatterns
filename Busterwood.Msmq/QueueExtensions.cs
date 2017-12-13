@@ -9,7 +9,7 @@ namespace BusterWood.Msmq
     {
         static readonly Encoding utf8NoBom = new UTF8Encoding(false);
 
-        public static string SubQueue(this Queue queue)
+        public static string SubQueueName(this Queue queue)
         {
             Contract.Requires(queue != null);
             var fn = queue.FormatName;
@@ -78,13 +78,13 @@ namespace BusterWood.Msmq
             return Encoding.Unicode.GetString(buf, 0, chars);
         }
 
-        public static Message Peek(this Queue queue, Properties properties, TimeSpan? timeout = null, QueueTransaction transaction = null)
+        public static Message Peek(this QueueReader queue, Properties properties, TimeSpan? timeout = null, QueueTransaction transaction = null)
         {
             Contract.Requires(queue != null);
             return queue.Receive(properties, ReceiveAction.PeekCurrent, timeout, transaction);
         }
 
-        public static Task<Message> PeekAsync(this Queue queue, Properties properties, TimeSpan? timeout = null)
+        public static Task<Message> PeekAsync(this QueueReader queue, Properties properties, TimeSpan? timeout = null)
         {
             Contract.Requires(queue != null);
             return queue.ReceiveAsync(properties, ReceiveAction.PeekCurrent, timeout);

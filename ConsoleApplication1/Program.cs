@@ -15,27 +15,27 @@ namespace ConsoleApplication1
 
             var fn = Queue.TryCreate(path, QueueTransactional.Transactional);
 
-            var postQ = Queue.Open(fn, QueueAccessMode.Send);
+            var postQ = new QueueWriter(fn);
             var postMsg = new Message { AppSpecific = 1, Label = "async1", Journal = Journal.DeadLetter, Delivery = Delivery.Express };
             postMsg.BodyUTF8(string.Join(Environment.NewLine, Enumerable.Repeat("hello world! and hello again", 9000)));
             postMsg.ExtensionUTF8("context-type: text/utf-8");
             postQ.Post(postMsg, QueueTransaction.Single);
 
-            var readQ = Queue.Open(fn, QueueAccessMode.Receive);
+            var readQ = new QueueReader(fn);
             try
             {
                 var peeked = readQ.Peek(Properties.AppSpecific | Properties.Label | Properties.LookupId, transaction: QueueTransaction.Single);
                 GC.KeepAlive(peeked.CorrelationId);
-                var moveQ = Queue.Open(fn + ";test", QueueAccessMode.Move);
-                readQ.Move(peeked.LookupId, moveQ, QueueTransaction.Single);
+                var moveQ = new SubQueueMover(fn + ";test");
+                moveQ.MoveFrom(readQ, peeked.LookupId, QueueTransaction.Single);
 
-                var subQ = Queue.Open(fn + ";test", QueueAccessMode.Receive);
+                var subQ = new QueueReader(fn + ";test");
                 var msg = subQ.Receive(Properties.All, peeked.LookupId, transaction: QueueTransaction.Single);
 
                 var body = msg.BodyUTF8();
                 var l = msg.Label;
                 var ttr = msg.TimeToBeReceived;
-                var sq = subQ.SubQueue();
+                var sq = subQ.SubQueueName();
                 var ttrq = msg.TimeToReachQueue;
                 var ext = msg.ExtensionUTF8();
             }

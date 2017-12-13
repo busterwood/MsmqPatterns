@@ -9,7 +9,7 @@ namespace MsmqPatterns
     /// <summary>Routes batches of messages between local <see cref = "Queue"/> using a MSMQ transaction</summary>
     public class MsmqTransactionalRouter : TransactionalRouter
     {
-        public MsmqTransactionalRouter(string inputQueueFormatName, Sender sender, Func<Message, Queue> route)
+        public MsmqTransactionalRouter(string inputQueueFormatName, Sender sender, Func<Message, QueueWriter> route)
             : base (inputQueueFormatName, sender, route)
         {
             Contract.Requires(sender != null);
@@ -98,7 +98,7 @@ namespace MsmqPatterns
                         lookupId = msg.LookupId;
 
                         // move to the batch subqueue so we know what we sent
-                        _input.Move(msg.LookupId, _inProgressMove, txn);
+                        _inProgressMove.MoveFrom(_input, msg.LookupId, txn);
 
                         // route to message to the destination
                         var dest = GetRoute(msg);
@@ -133,7 +133,7 @@ namespace MsmqPatterns
                 catch (AcknowledgmentException ex)
                 {
                     Console.Error.WriteLine("WARN:" + ex);
-                    _inProgressRead.Move(item.LookupId, _posionQueue, QueueTransaction.Single);
+                    _posionQueue.MoveFrom(_inProgressRead, item.LookupId, QueueTransaction.Single);
                 }
                 catch (AggregateException ex)
                 {
