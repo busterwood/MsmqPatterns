@@ -7,7 +7,7 @@ using BusterWood.Msmq;
 
 namespace UnitTests
 {
-    [TestFixture, Timeout(5000), Ignore]
+    [TestFixture, Timeout(5000)]
     public class TransactionalRouterTests
     {
         static readonly string inputQueuePath = $".\\private$\\{nameof(TransactionalRouterTests)}.Input";
@@ -25,7 +25,7 @@ namespace UnitTests
         QueueReader outRead2;
         QueueWriter outSend1;
         QueueWriter outSend2;
-        QueueSender sender;
+        Postman sender;
 
         [SetUp]
         public void Setup()
@@ -59,7 +59,7 @@ namespace UnitTests
             outSend1 = new QueueWriter(outputQueueFormatName1);
             outSend2 = new QueueWriter(outputQueueFormatName2);
 
-            sender = new QueueSender(adminQueueFormatName);
+            sender = new Postman(adminQueueFormatName);
         }
 
         [Test]

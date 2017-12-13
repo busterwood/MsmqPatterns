@@ -40,24 +40,24 @@ namespace UnitTests
         [Test]
         public async Task send_completes_when_delivered_to_queue()
         {
-            using (var sender = new QueueSender(adminFormatName))
+            using (var sender = new Postman(adminFormatName))
             {
                 await sender.StartAsync();
                 var msg = new Message { Label = "send1" };
-                await sender.SendAsync(msg, QueueTransaction.Single, dest);
+                await sender.DeliverAsync(msg, QueueTransaction.Single, dest);
             }
         }
 
         [Test]
         public async Task send_throw_exception_when_sending_non_transactional_message_to_transactional_queue()
         {
-            using (var sender = new QueueSender(adminFormatName))
+            using (var sender = new Postman(adminFormatName))
             {
                 await sender.StartAsync();
                 var msg = new Message { Label = "send2" };
                 try
                 {
-                    await sender.SendAsync(msg, QueueTransaction.None, dest);
+                    await sender.DeliverAsync(msg, QueueTransaction.None, dest);
                     Assert.Fail("Exception not thrown");
                 }
                 catch (AcknowledgmentException ex)
@@ -71,14 +71,14 @@ namespace UnitTests
         public async Task send_throw_exception_when_destination_machine_does_not_exist()
         {
             using (var doesNotExist = new QueueWriter("FormatName:Direct=OS:not.known.server\\private$\\some-queue"))
-            using (var sender = new QueueSender(adminFormatName))
+            using (var sender = new Postman(adminFormatName))
             {
                 sender.ReachQueueTimeout = TimeSpan.FromMilliseconds(100);
                 await sender.StartAsync();
                 var msg = new Message { Label = "send3" };
                 try
                 {
-                    await sender.SendAsync(msg, QueueTransaction.Single, doesNotExist);
+                    await sender.DeliverAsync(msg, QueueTransaction.Single, doesNotExist);
                     Assert.Fail("Exception not thrown");
                 }
                 catch (AcknowledgmentException ex)

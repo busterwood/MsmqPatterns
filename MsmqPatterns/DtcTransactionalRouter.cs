@@ -9,7 +9,7 @@ namespace MsmqPatterns
     /// <summary>Routes batches of messages in local or remote queues using DTC <see cref = "TransactionScope"/></summary>
     public class DtcTransactionalRouter : TransactionalRouter
     {
-        public DtcTransactionalRouter(string inputQueueFormatName, QueueSender sender, Func<Message, QueueWriter> route)
+        public DtcTransactionalRouter(string inputQueueFormatName, Postman sender, Func<Message, QueueWriter> route)
             : base(inputQueueFormatName, sender, route)
         {
             Contract.Requires(inputQueueFormatName != null);

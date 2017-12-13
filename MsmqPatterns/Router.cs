@@ -18,7 +18,7 @@ namespace MsmqPatterns
         /// <summary>The filter used when peeking messages, the default does NOT include the message body</summary>
         public Properties PeekFilter { get; set; } = Properties.AppSpecific | Properties.Label | Properties.Extension | Properties.LookupId;
 
-        public QueueSender Sender { get; }
+        public Postman Sender { get; }
 
         /// <summary>Handle messages that cannot be routed.  Defaults to moving messages to a "Poison" subqueue of the input queue</summary>
         public Action<QueueReader, long, QueueTransaction> BadMessageHandler { get; set; }
@@ -44,7 +44,7 @@ namespace MsmqPatterns
         //    }
         //}
 
-        protected Router(string inputQueueFormatName, QueueSender sender, Func<Message, QueueWriter> route)
+        protected Router(string inputQueueFormatName, Postman sender, Func<Message, QueueWriter> route)
         {
             Contract.Requires(inputQueueFormatName != null);
             Contract.Requires(sender != null);

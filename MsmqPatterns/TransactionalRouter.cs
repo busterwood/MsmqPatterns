@@ -17,7 +17,7 @@ namespace MsmqPatterns
         private string inputQueueFormatName;
         private Func<Message, Queue> route;
 
-        protected TransactionalRouter(string inputQueueFormatName, QueueSender sender, Func<Message, QueueWriter> route)
+        protected TransactionalRouter(string inputQueueFormatName, Postman sender, Func<Message, QueueWriter> route)
             : base(inputQueueFormatName, sender, route)
         {
             Contract.Requires(sender != null);

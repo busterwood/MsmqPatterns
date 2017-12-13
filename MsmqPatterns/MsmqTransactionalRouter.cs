@@ -9,7 +9,7 @@ namespace MsmqPatterns
     /// <summary>Routes batches of messages between local <see cref = "Queue"/> using a MSMQ transaction</summary>
     public class MsmqTransactionalRouter : TransactionalRouter
     {
-        public MsmqTransactionalRouter(string inputQueueFormatName, QueueSender sender, Func<Message, QueueWriter> route)
+        public MsmqTransactionalRouter(string inputQueueFormatName, Postman sender, Func<Message, QueueWriter> route)
             : base (inputQueueFormatName, sender, route)
         {
             Contract.Requires(sender != null);
@@ -102,7 +102,7 @@ namespace MsmqPatterns
 
                         // route to message to the destination
                         var dest = GetRoute(msg);
-                        sent.Add(Sender.Post(msg, txn, dest));
+                        sent.Add(Sender.RequestDelivery(msg, txn, dest));
                     }
 
                     txn.Commit();

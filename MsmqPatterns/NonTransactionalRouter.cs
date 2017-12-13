@@ -11,7 +11,7 @@ namespace MsmqPatterns
     /// </summary>
     public class NonTransactionalRouter : Router
     {
-        public NonTransactionalRouter(string inputQueueFormatName, QueueSender sender, Func<Message, QueueWriter> route)
+        public NonTransactionalRouter(string inputQueueFormatName, Postman sender, Func<Message, QueueWriter> route)
             : base (inputQueueFormatName, sender, route)
         {
             Contract.Requires(inputQueueFormatName != null);
@@ -64,7 +64,7 @@ namespace MsmqPatterns
             var dest = GetRoute(msg);
             try
             {
-                await Sender.SendAsync(msg, QueueTransaction.None, dest);
+                await Sender.DeliverAsync(msg, QueueTransaction.None, dest);
                 _input.Read(Properties.LookupId, timeout: TimeSpan.Zero); // remove message from queue
             }
             catch (QueueException ex)

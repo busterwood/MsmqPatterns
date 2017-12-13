@@ -16,7 +16,7 @@ namespace MsmqPatterns
     /// <remarks>
     /// You can use one instance per process (singleton), share the instance between multiple queues, or even one instance per output queue.
     /// </remarks>
-    public class QueueSender : IProcessor
+    public class Postman : IProcessor
     {
         readonly Cache<PostedMessageHandle, TaskCompletionSource<MessageClass>> _reachQueue = new Cache<PostedMessageHandle, TaskCompletionSource<MessageClass>>(null, TimeSpan.FromMinutes(5));
         QueueReader _adminQueue;
@@ -31,7 +31,7 @@ namespace MsmqPatterns
 
         /// <summary>Creates a new sender that waits for confirmation of deliver</summary>
         /// <param name="adminQueue">The format name of the <see cref="Message.AdministrationQueue"/></param>
-        public QueueSender(string adminQueue)
+        public Postman(string adminQueue)
         {
             Contract.Requires(adminQueue != null);
             AdminQueueFormatName = adminQueue;
@@ -115,7 +115,7 @@ namespace MsmqPatterns
         /// <summary>
         /// Posts a <paramref name="message"/> to the <paramref name="queue"/> with acknowledgement requested to be sent to <see cref="AdminQueueFormatName"/>. 
         /// </summary>
-        public PostedMessageHandle Post(Message message, QueueTransaction transaction, QueueWriter queue)
+        public PostedMessageHandle RequestDelivery(Message message, QueueTransaction transaction, QueueWriter queue)
         {
             Contract.Requires(message != null);
             Contract.Requires(queue != null);
@@ -136,14 +136,14 @@ namespace MsmqPatterns
         /// <returns>Task that completes when the message has been delivered</returns>
         /// <exception cref="TimeoutException">Thrown if the message does not reach the queue before the <see cref="ReachQueueTimeout"/> has been reached</exception>
         /// <exception cref="AcknowledgmentException">Thrown if something bad happens, e.g. message could not be sent, access denied, the queue was purged, etc</exception>
-        public Task SendAsync(Message message, QueueTransaction transaction, QueueWriter queue)
+        public Task DeliverAsync(Message message, QueueTransaction transaction, QueueWriter queue)
         {
             Contract.Requires(message != null);
             Contract.Requires(queue != null);
             Contract.Requires(transaction == null || transaction == QueueTransaction.None || transaction == QueueTransaction.Single);
             Contract.Assert(_run != null);
 
-            Post(message, transaction, queue);
+            RequestDelivery(message, transaction, queue);
             return WaitForDelivery(new PostedMessageHandle(message.Id, queue.FormatName));
         }
 
