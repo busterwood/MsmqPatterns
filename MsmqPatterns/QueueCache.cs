@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using BusterWood.Msmq;
 using System.Diagnostics.Contracts;
 
-namespace MsmqPatterns
+namespace BusterWood.MsmqPatterns
 {
     public class QueueCache<T> where T: Queue
     {

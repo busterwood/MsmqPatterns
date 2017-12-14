@@ -56,9 +56,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Busterwood.Msmq\Busterwood.Msmq.csproj">
+    <ProjectReference Include="..\Busterwood.Msmq\Msmq.csproj">
       <Project>{cb8a7c8c-db78-4aa7-a0f3-578a7ab2bb2b}</Project>
-      <Name>Busterwood.Msmq</Name>
+      <Name>Msmq</Name>
     </ProjectReference>
     <ProjectReference Include="..\MsmqPatterns\MsmqPatterns.csproj">
       <Project>{06693915-370D-490F-A491-72A2867DCD94}</Project>

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.Serialization;
 
-namespace MsmqPatterns
+namespace BusterWood.MsmqPatterns
 {
     [Serializable]
     public class RouteException : Exception

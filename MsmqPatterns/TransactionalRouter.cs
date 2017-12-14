@@ -3,7 +3,7 @@ using System.Diagnostics.Contracts;
 using System.Threading.Tasks;
 using BusterWood.Msmq;
 
-namespace MsmqPatterns
+namespace BusterWood.MsmqPatterns
 {
     /// <summary>
     /// Routes messages in a transaction. Up to <see cref="MaxBatchSize"/> messages are included in each transaction 

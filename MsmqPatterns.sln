@@ -1,13 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2003
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MsmqPatterns", "MsmqPatterns\MsmqPatterns.csproj", "{06693915-370D-490F-A491-72A2867DCD94}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTests", "UnitTests\UnitTests.csproj", "{DC13AD2E-ADCC-4963-9C9B-C2E0F1019D9C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Busterwood.Msmq", "Busterwood.Msmq\Busterwood.Msmq.csproj", "{CB8A7C8C-DB78-4AA7-A0F3-578A7AB2BB2B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Msmq", "Busterwood.Msmq\Msmq.csproj", "{CB8A7C8C-DB78-4AA7-A0F3-578A7AB2BB2B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApplication1", "ConsoleApplication1\ConsoleApplication1.csproj", "{C52CF884-DB8A-441B-BCED-9D76590C3341}"
 EndProject
@@ -36,5 +36,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {FA674E68-4826-4924-AD54-740B1057C147}
 	EndGlobalSection
 EndGlobal

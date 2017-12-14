@@ -3,7 +3,7 @@ using System.Diagnostics.Contracts;
 using BusterWood.Msmq;
 using System.Threading.Tasks;
 
-namespace MsmqPatterns
+namespace BusterWood.MsmqPatterns
 {
     /// <summary>
     /// Routes messages between local <see cref = "MessageQueue"/>.  

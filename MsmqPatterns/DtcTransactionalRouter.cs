@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using System.Transactions;
 using BusterWood.Msmq;
 
-namespace MsmqPatterns
+namespace BusterWood.MsmqPatterns
 {
     /// <summary>Routes batches of messages in local or remote queues using DTC <see cref = "TransactionScope"/></summary>
     public class DtcTransactionalRouter : TransactionalRouter

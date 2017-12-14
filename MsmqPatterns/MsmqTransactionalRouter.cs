@@ -4,7 +4,7 @@ using BusterWood.Msmq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 
-namespace MsmqPatterns
+namespace BusterWood.MsmqPatterns
 {
     /// <summary>Routes batches of messages between local <see cref = "Queue"/> using a MSMQ transaction</summary>
     public class MsmqTransactionalRouter : TransactionalRouter

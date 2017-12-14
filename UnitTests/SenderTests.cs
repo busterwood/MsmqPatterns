@@ -1,4 +1,4 @@
-﻿using MsmqPatterns;
+﻿using BusterWood.MsmqPatterns;
 using NUnit.Framework;
 using System;
 using BusterWood.Msmq;

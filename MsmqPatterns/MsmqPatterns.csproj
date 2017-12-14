@@ -7,8 +7,8 @@
     <ProjectGuid>{06693915-370D-490F-A491-72A2867DCD94}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>MsmqPatterns</RootNamespace>
-    <AssemblyName>MsmqPatterns</AssemblyName>
+    <RootNamespace>BusterWood.MsmqPatterns</RootNamespace>
+    <AssemblyName>BusterWood.MsmqPatterns</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <CodeContractsAssemblyMode>0</CodeContractsAssemblyMode>
@@ -78,10 +78,6 @@
       <HintPath>..\packages\BusterWood.Caching.2.1.0\lib\net45\BusterWood.Caching.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="MSMQ">
-      <HintPath>..\..\..\..\git\BusterWood\MsmqPatterns\MSMQ.dll</HintPath>
-      <EmbedInteropTypes>True</EmbedInteropTypes>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Transactions" />
   </ItemGroup>
@@ -104,9 +100,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Busterwood.Msmq\Busterwood.Msmq.csproj">
+    <ProjectReference Include="..\Busterwood.Msmq\Msmq.csproj">
       <Project>{cb8a7c8c-db78-4aa7-a0f3-578a7ab2bb2b}</Project>
-      <Name>Busterwood.Msmq</Name>
+      <Name>Msmq</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
