@@ -33,6 +33,13 @@ namespace UnitTests
                 q.Purge();
 
             postman = new Postman(adminQueueFormatName);
+            postman.StartAsync();
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            postman.Dispose();
         }
 
         [Test, Timeout(1000)]

@@ -67,6 +67,10 @@ namespace MsmqPatterns
             {
                 // queue handle was closed, i.e. stopped
             }
+            catch (ObjectDisposedException)
+            {
+                // queue handle was closed, i.e. stopped
+            }
             catch (Exception ex)
             {
                 Console.WriteLine(ex);
