@@ -70,7 +70,7 @@ namespace UnitTests
         [Test]
         public async Task send_throw_exception_when_destination_machine_does_not_exist()
         {
-            using (var doesNotExist = new QueueWriter("FormatName:Direct=OS:not.known.server\\private$\\some-queue"))
+            using (var doesNotExist = new QueueWriter("Direct=OS:mini-mac\\private$\\some-queue"))
             using (var sender = new Postman(adminFormatName))
             {
                 sender.ReachQueueTimeout = TimeSpan.FromMilliseconds(100);
