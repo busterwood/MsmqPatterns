@@ -14,7 +14,7 @@ namespace MsmqPatterns
     public class SubQueueFilterRouter : IProcessor
     {
         readonly string _inputFormatName;
-        readonly Func<Message, SubQueueMover> _getSubQueue;
+        readonly Func<Message, SubQueueMover> _router;
         QueueReader _input;
         SubQueueMover _posionSubQueue;
         QueueTransaction _transaction;
@@ -26,12 +26,12 @@ namespace MsmqPatterns
         /// <summary>Handle messages that cannot be routed.  Defaults to moving messages to a "Poison" subqueue of the input queue</summary>
         public Action<long, QueueTransaction> BadMessageHandler { get; set; }
 
-        public SubQueueFilterRouter(string inputFormatName, Func<Message, SubQueueMover> getSubQueueName) 
+        public SubQueueFilterRouter(string inputFormatName, Func<Message, SubQueueMover> router) 
         {
             Contract.Requires(inputFormatName != null);
-            Contract.Requires(getSubQueueName != null);
+            Contract.Requires(router != null);
             _inputFormatName = inputFormatName;
-            _getSubQueue = getSubQueueName;
+            _router = router;
             BadMessageHandler = MoveToPoisonSubqueue;
         }
 
@@ -82,7 +82,7 @@ namespace MsmqPatterns
             SubQueueMover subQueue = null;
             try
             {
-                subQueue = _getSubQueue(msg);
+                subQueue = _router(msg);
                 if (subQueue == null)
                     throw new NullReferenceException("route");
                 return subQueue;

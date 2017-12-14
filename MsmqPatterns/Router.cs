@@ -23,27 +23,6 @@ namespace MsmqPatterns
         /// <summary>Handle messages that cannot be routed.  Defaults to moving messages to a "Poison" subqueue of the input queue</summary>
         public Action<QueueReader, long, QueueTransaction> BadMessageHandler { get; set; }
 
-        ///// <summary>
-        ///// Static factory method for creating the appropriate <see cref="Router"/> 
-        ///// based on the <see cref="MessageQueue.Transactional"/> property
-        ///// </summary>
-        //public static Router New(Queue input, Func<Message, Queue> route)
-        //{
-        //    Contract.Requires(route != null);
-        //    Contract.Requires(input != null);
-        //    try
-        //    {
-        //        if (input.Transactional)
-        //            return new MsmqTransactionalRouter(input, route);
-        //        else
-        //            return new NonTransactionalRouter(input, route);
-        //    }
-        //    catch (MessageQueueException ex) when (ex.MessageQueueErrorCode == MessageQueueErrorCode.UnsupportedFormatNameOperation)
-        //    {
-        //        return new DtcTransactionalRouter(input, route);
-        //    }
-        //}
-
         protected Router(string inputQueueFormatName, Postman sender, Func<Message, QueueWriter> route)
         {
             Contract.Requires(inputQueueFormatName != null);

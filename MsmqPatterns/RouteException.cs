@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Messaging;
 using System.Runtime.Serialization;
 
 namespace MsmqPatterns
