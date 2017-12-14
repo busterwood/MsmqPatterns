@@ -218,19 +218,19 @@ namespace MsmqPatterns
     public struct Tracking : IEquatable<Tracking>
     {
         public string FormatName { get; }
-        public string MessageId { get; }
+        public MessageId MessageId { get; }
         public long LookupId { get; }
 
         public bool IsEmpty => FormatName == null;
 
-        public Tracking(string formatName, string messageId) : this(formatName, messageId, 0)
+        public Tracking(string formatName, MessageId messageId) : this(formatName, messageId, 0)
         {
         }
 
-        public Tracking(string formatName, string messageId, long lookupId)
+        public Tracking(string formatName, MessageId messageId, long lookupId)
         {
-            Contract.Requires(messageId != null);
-            Contract.Requires(formatName != null);
+            Contract.Requires(!string.IsNullOrEmpty(formatName));
+            Contract.Requires(!messageId.IsNullOrEmpty());
             FormatName = formatName;
             MessageId = messageId;
             LookupId = lookupId;
@@ -239,12 +239,12 @@ namespace MsmqPatterns
         public bool Equals(Tracking other)
         {
             return StringComparer.OrdinalIgnoreCase.Equals(FormatName, other.FormatName)
-                && StringComparer.OrdinalIgnoreCase.Equals(MessageId, other.MessageId);
+                && MessageId.Equals(other.MessageId);
         }
 
         public override bool Equals(object obj) => obj is Tracking && Equals((Tracking)obj);
 
-        public override int GetHashCode() => StringComparer.OrdinalIgnoreCase.GetHashCode(FormatName) ^ StringComparer.OrdinalIgnoreCase.GetHashCode(MessageId);
+        public override int GetHashCode() => StringComparer.OrdinalIgnoreCase.GetHashCode(FormatName) ^ MessageId.GetHashCode();
     }
 
 }

@@ -26,26 +26,16 @@ namespace BusterWood.Msmq
         }     
 
         /// <summary>The identifier of this message.  Only set after the message has been sent.</summary>
-        public string Id
+        public MessageId Id
         {
             get
             {
                 if (Props.IsUndefined(Native.MESSAGE_PROPID_MSGID))
-                    return "";
+                    return new MessageId();
                 var bytes = Props.GetByteArray(Native.MESSAGE_PROPID_MSGID);
-                return bytes == null ? "" : IdFromByteArray(bytes);
+                return new MessageId(bytes);
             }
         }
-
-        private string IdFromByteArray(byte[] bytes)
-        {
-            byte[] guidBytes = new byte[GenericIdSize];
-            Array.Copy(bytes, guidBytes, GenericIdSize);
-            int id = BitConverter.ToInt32(bytes, GenericIdSize);
-            var guid = new Guid(guidBytes);
-            return $"{guid}\\{id}";
-        }
-
 
         /// <summary>The type of acknowledgement messages that should be sent to the <see cref="AdministrationQueue"/></summary>
         public AcknowledgmentTypes AcknowledgmentTypes
@@ -195,45 +185,22 @@ namespace BusterWood.Msmq
         }
 
         /// <summary>used to match requests and replies.  Processes that handle requests with <see cref="ResponseQueue"/> set should reply with a message with <see cref="CorrelationId"/> set to the <see cref="Id"/> of the request message</summary>
-        public string CorrelationId
+        public MessageId CorrelationId
         {
             get
             {
                 if (Props.IsUndefined(Native.MESSAGE_PROPID_CORRELATIONID))
-                    return "";
+                    return new MessageId();
                 var id = Props.GetByteArray(Native.MESSAGE_PROPID_CORRELATIONID);
-                return id.Any(b => b != 0) ? IdFromByteArray(id) : "";
+                return new MessageId(id);
             }
             set
             {
-                if (value == null)
-                    throw new ArgumentNullException(nameof(value));
-
-                if (value.Length == 0)
+                if (value == MessageId.None)
                     Props.Remove(Native.MESSAGE_PROPID_CORRELATIONID);
                 else
-                    Props.SetByteArray(Native.MESSAGE_PROPID_CORRELATIONID, IdToByteArray(value));
+                    Props.SetByteArray(Native.MESSAGE_PROPID_CORRELATIONID, value.bytes);
             }
-        }
-
-        private byte[] IdToByteArray(string id)
-        {
-            string[] bits = id.Split('\\');
-            if (bits.Length != 2)
-                throw new InvalidOperationException("Id is invalid");
-            
-            Guid guid;
-            if (!Guid.TryParse(bits[0], out guid))
-                throw new InvalidOperationException("Guid of Id is invalid");
-
-            int intId;
-            if (!int.TryParse(bits[1], out intId))
-                throw new InvalidOperationException("Id is invalid");
-
-            byte[] bytes = new byte[MessageIdSize];
-            Array.Copy(guid.ToByteArray(), bytes, GenericIdSize);
-            Array.Copy(BitConverter.GetBytes(intId), 0, bytes, GenericIdSize, 4);
-            return bytes;
         }
 
         /// <summary>Is this an <see cref="BusterWood.Msmq.Delivery.Express"/> or <see cref="BusterWood.Msmq.Delivery.Recoverable"/> message?</summary>
@@ -509,6 +476,15 @@ namespace BusterWood.Msmq
                 var buf = Props.GetByteArray(Native.MESSAGE_PROPID_XACTID);
                 return buf.Any(b => b != 0) ? IdFromByteArray(buf) : "";
             }
+        }
+
+        private string IdFromByteArray(byte[] bytes)
+        {
+            byte[] guidBytes = new byte[GenericIdSize];
+            Array.Copy(bytes, guidBytes, GenericIdSize);
+            int id = BitConverter.ToInt32(bytes, GenericIdSize);
+            var guid = new Guid(guidBytes);
+            return $"{guid}\\{id}";
         }
 
         /// <summary>Is the message the first message in a transaction</summary>

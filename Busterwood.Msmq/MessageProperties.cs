@@ -102,6 +102,8 @@ namespace BusterWood.Msmq
         /// <summary>Unset properties that cannot be sent</summary>
         internal void PrepareToSend()
         {
+            SetByteArray(Native.MESSAGE_PROPID_MSGID, new byte[Message.MessageIdSize]);
+
             if (!IsUndefined(Native.MESSAGE_PROPID_CLASS))
                 SetUndefined(Native.MESSAGE_PROPID_CLASS);
 

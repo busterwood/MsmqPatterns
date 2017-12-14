@@ -115,7 +115,7 @@ namespace BusterWood.Msmq
         /// <summary>
         /// Uses a <see cref="Cursor"/> to look for messages with a matching <paramref name="correlationId"/>
         /// </summary>
-        public static Message ReadByCorrelationId(this QueueReader queue, string correlationId, Properties properties = Properties.All, TimeSpan? timeout = null, QueueTransaction transaction = null)
+        public static Message ReadByCorrelationId(this QueueReader queue, MessageId correlationId, Properties properties = Properties.All, TimeSpan? timeout = null, QueueTransaction transaction = null)
         {
             timeout = timeout ?? QueueReader.Infinite;
             var start = DateTime.UtcNow;
@@ -143,7 +143,7 @@ namespace BusterWood.Msmq
         /// <summary>
         /// Uses a <see cref="Cursor"/> to look for messages with a matching <paramref name="correlationId"/>
         /// </summary>
-        public static async Task<Message> ReadByCorrelationIdAsync(this QueueReader queue, string correlationId, Properties properties = Properties.All, TimeSpan? timeout = null, QueueTransaction transaction = null)
+        public static async Task<Message> ReadByCorrelationIdAsync(this QueueReader queue, MessageId correlationId, Properties properties = Properties.All, TimeSpan? timeout = null, QueueTransaction transaction = null)
         {
             timeout = timeout ?? QueueReader.Infinite;
             var start = DateTime.UtcNow;

@@ -134,6 +134,7 @@
     <Compile Include="LookupAction.cs" />
     <Compile Include="Message.cs" />
     <Compile Include="MessageClass.cs" />
+    <Compile Include="MessageId.cs" />
     <Compile Include="Native.MessageProperties.cs" />
     <Compile Include="MessageProperties.cs" />
     <Compile Include="MQMSGPROPS.cs" />
