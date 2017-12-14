@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics.Contracts;
 using System.Threading.Tasks;
-using System.Transactions;
 using BusterWood.Msmq;
 
 namespace MsmqPatterns
@@ -14,8 +13,6 @@ namespace MsmqPatterns
     {
         protected QueueReader _inProgressRead;
         protected SubQueueMover _inProgressMove;
-        private string inputQueueFormatName;
-        private Func<Message, Queue> route;
 
         protected TransactionalRouter(string inputQueueFormatName, Postman sender, Func<Message, QueueWriter> route)
             : base(inputQueueFormatName, sender, route)
