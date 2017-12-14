@@ -16,6 +16,8 @@ namespace BusterWood.Msmq
         public MessageId(byte[] id)
         {
             bytes = id;
+            if (bytes.Length != MessageIdSize)
+                Array.Resize(ref bytes, MessageIdSize);
         }
 
         /// <summary>Is this is null or all zeros?</summary>
@@ -26,13 +28,11 @@ namespace BusterWood.Msmq
             {
                 if (bytes[i] != 0)
                     return false;
-                if (i == MessageIdSize)
-                    break;
             }
             return true;
         }
 
-        /// <summary>Returns  Guid\long </summary>
+        /// <summary>Returns Guid\long </summary>
         public override string ToString()
         {
             if (IsNullOrEmpty()) return "";
@@ -53,8 +53,6 @@ namespace BusterWood.Msmq
             {
                 if (bytes[i] != other.bytes[i])
                     return false;
-                if (i == MessageIdSize)
-                    break;
             }
             return true;
         }
@@ -73,8 +71,6 @@ namespace BusterWood.Msmq
                 {
                     hc += bytes[i] * 12345; // if all bytes are zero the hash code will be zero
                 }
-                if (i == MessageIdSize)
-                    break;
             }
             return hc;
         }
@@ -84,7 +80,7 @@ namespace BusterWood.Msmq
         public static bool operator!=(MessageId left, MessageId right) => !left.Equals(right);
 
         /// <summary>Tries to parse the string for of the an id</summary>
-        public MessageId Parse(string id)
+        public static MessageId Parse(string id)
         {
             string[] bits = id.Split('\\');
             if (bits.Length != 2)
