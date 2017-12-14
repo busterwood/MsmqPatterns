@@ -20,6 +20,8 @@ namespace BusterWood.Msmq
 
         NotAcknowledgeReceive = NegativeReceive | NegativeArrival,
 
-        ReachQueue = NegativeArrival | PositiveArrival,
+        FullReachQueue = NegativeArrival | PositiveArrival,
+
+        FullReceive = PositiveReceive | NegativeReceive,
     }
 }

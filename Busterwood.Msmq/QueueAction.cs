@@ -1,7 +1,7 @@
 ﻿namespace BusterWood.Msmq
 {
     /// Queue actions
-    public enum ReadAction
+    enum ReadAction
     {
         /// <summary>Reads the current message off the queue</summary>
         Receive = 0x00000000,
@@ -10,6 +10,6 @@
         PeekCurrent = unchecked ((int)0x80000000),
 
         // <summary>Reads the next message (only applies to cursors)</summary>
-        //PeekNext = unchecked ((int)0x80000001),
+        PeekNext = unchecked ((int)0x80000001),
     }
 }

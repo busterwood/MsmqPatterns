@@ -18,7 +18,8 @@ namespace MsmqPatterns
     /// </remarks>
     public class Postman : IProcessor
     {
-        readonly Cache<PostedMessageHandle, TaskCompletionSource<MessageClass>> _reachQueue = new Cache<PostedMessageHandle, TaskCompletionSource<MessageClass>>(null, TimeSpan.FromMinutes(5));
+        readonly Cache<Tracking, TaskCompletionSource<MessageClass>> _reachQueue = new Cache<Tracking, TaskCompletionSource<MessageClass>>(null, TimeSpan.FromMinutes(10));
+        readonly Cache<Tracking, TaskCompletionSource<MessageClass>> _receiveQueue = new Cache<Tracking, TaskCompletionSource<MessageClass>>(null, TimeSpan.FromMinutes(10));
         QueueReader _adminQueue;
         Task _run;
 
@@ -30,11 +31,11 @@ namespace MsmqPatterns
         public TimeSpan ReachQueueTimeout { get; set; } = TimeSpan.FromSeconds(1);
 
         /// <summary>Creates a new sender that waits for confirmation of deliver</summary>
-        /// <param name="adminQueue">The format name of the <see cref="Message.AdministrationQueue"/></param>
-        public Postman(string adminQueue)
+        /// <param name="adminQueueFormatName">The format name of the <see cref="Message.AdministrationQueue"/></param>
+        public Postman(string adminQueueFormatName)
         {
-            Contract.Requires(adminQueue != null);
-            AdminQueueFormatName = adminQueue;
+            Contract.Requires(adminQueueFormatName != null);
+            AdminQueueFormatName = adminQueueFormatName;
         }
 
         /// <summary>Starts listening for acknowledgement messages</summary>
@@ -52,12 +53,12 @@ namespace MsmqPatterns
                 for (;;)
                 {
                     var msg = await _adminQueue.ReadAsync(AdminFilter);
-                    var tcs = ReachQueueCompletionSource(new PostedMessageHandle(msg.ResponseQueue, msg.CorrelationId));
                     var ack = msg.Acknowledgement();
                     switch (ack)
                     {
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                         case MessageClass.ReachQueue:
+                            var tcs = ReachQueueCompletionSource(new Tracking(msg.ResponseQueue, msg.CorrelationId));
                             Task.Run(() => tcs.TrySetResult(ack)); // set result is synchronous by default, make it async
                             break;
                         case MessageClass.ReachQueueTimeout:
@@ -71,13 +72,19 @@ namespace MsmqPatterns
                         case MessageClass.NotTransactionalQueue:
                         case MessageClass.Deleted:
                         case MessageClass.QueueDeleted:
-                        case MessageClass.QueueExceedQuota:
-                            Task.Run(() => tcs.TrySetException(new AcknowledgmentException(msg.ResponseQueue, ack))); // set result is synchronous by default, make it async
-                            break;
                         case MessageClass.QueuePurged:
-                        case MessageClass.ReceiveTimeout:
+                        case MessageClass.QueueExceedQuota:
+                            var tcs1 = ReachQueueCompletionSource(new Tracking(msg.ResponseQueue, msg.CorrelationId));
+                            Task.Run(() => tcs1.TrySetException(new AcknowledgmentException(msg.ResponseQueue, ack))); // set result is synchronous by default, make it async
+                            break;
                         case MessageClass.Received:
-                            break; // not handled here, can we detect if these were requested?
+                            var tcs2 = ReachQueueCompletionSource(new Tracking(msg.ResponseQueue, msg.CorrelationId));
+                            Task.Run(() => tcs2.TrySetResult(ack)); // set result is synchronous by default, make it async
+                            break; 
+                        case MessageClass.ReceiveTimeout:
+                            var tcs3 = ReachQueueCompletionSource(new Tracking(msg.ResponseQueue, msg.CorrelationId));
+                            Task.Run(() => tcs3.TrySetException(new AcknowledgmentException(msg.ResponseQueue, ack))); // set result is synchronous by default, make it async
+                            break; 
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                     }
                 }
@@ -115,17 +122,17 @@ namespace MsmqPatterns
         /// <summary>
         /// Posts a <paramref name="message"/> to the <paramref name="queue"/> with acknowledgement requested to be sent to <see cref="AdminQueueFormatName"/>. 
         /// </summary>
-        public PostedMessageHandle RequestDelivery(Message message, QueueTransaction transaction, QueueWriter queue)
+        public Tracking RequestDelivery(Message message, QueueTransaction transaction, QueueWriter queue)
         {
             Contract.Requires(message != null);
             Contract.Requires(queue != null);
             Contract.Assert(_run != null);
 
-            message.AcknowledgmentTypes |= AcknowledgmentTypes.ReachQueue;
+            message.AcknowledgmentTypes |= AcknowledgmentTypes.FullReachQueue;
             message.TimeToReachQueue = ReachQueueTimeout;
             message.AdministrationQueue = _adminQueue.FormatName;
             queue.Write(message, transaction);
-            return new PostedMessageHandle(queue.FormatName, message.Id, message.LookupId);
+            return new Tracking(queue.FormatName, message.Id, message.LookupId);
         }
 
         /// <summary>
@@ -144,47 +151,71 @@ namespace MsmqPatterns
             Contract.Assert(_run != null);
 
             RequestDelivery(message, transaction, queue);
-            return WaitForDelivery(new PostedMessageHandle(message.Id, queue.FormatName));
+            return WaitForDelivery(new Tracking(message.Id, queue.FormatName));
         }
 
         /// <summary>
-        /// Waits for positive or negative delivery of a message to a <paramref name="destinationFormatName"/>
+        /// Waits for positive or negative delivery of a message.
         /// Waits for responses from all queues when the <paramref name="destinationFormatName"/> is a multi-element format name.
         /// </summary>
-        /// <param name="messageId">The message that was sent</param>
-        /// <param name="destinationFormatName">the format name of the queue the message was sent to</param>
-        public Task WaitForDelivery(PostedMessageHandle fnId)
+        public Task WaitForDelivery(Tracking posted)
         {
-            Contract.Requires(!fnId.IsEmpty);
+            Contract.Requires(!posted.IsEmpty);
 
             // handle multiple destination format names (comma separated list)
-            if (fnId.FormatName.IndexOf(',') >= 0)
+            if (posted.FormatName.IndexOf(',') >= 0)
             {
-                return Task.WhenAll(fnId.FormatName.Split(',')
-                    .Select(formatName => new PostedMessageHandle(formatName, fnId.MessageId))
+                return Task.WhenAll(posted.FormatName.Split(',')
+                    .Select(formatName => new Tracking(formatName, posted.MessageId))
                     .Select(ReachQueueCompletionSource)
                     .Select(qtcs => qtcs.Task)
                 );
             }
 
             // single element format name
-            var key = new PostedMessageHandle(fnId.FormatName, fnId.MessageId);
+            var key = new Tracking(posted.FormatName, posted.MessageId);
             var tcs = ReachQueueCompletionSource(key);
             return tcs.Task;
         }
 
-        internal Task WaitForDelivery(IReadOnlyCollection<PostedMessageHandle> sent)
+        /// <summary>
+        /// Waits for positive or negative receive of a message.
+        /// Waits for responses from all queues when the <paramref name="destinationFormatName"/> is a multi-element format name.
+        /// </summary>
+        public Task WaitToBeReceived(Tracking posted)
+        {
+            Contract.Requires(!posted.IsEmpty);
+
+            // handle multiple destination format names (comma separated list)
+            if (posted.FormatName.IndexOf(',') >= 0)
+            {
+                return Task.WhenAll(posted.FormatName.Split(',')
+                    .Select(formatName => new Tracking(formatName, posted.MessageId))
+                    .Select(ReceiveCompletionSource)
+                    .Select(qtcs => qtcs.Task)
+                );
+            }
+
+            // single element format name
+            var key = new Tracking(posted.FormatName, posted.MessageId);
+            var tcs = ReceiveCompletionSource(key);
+            return tcs.Task;
+        }
+
+        internal Task WaitForDelivery(IReadOnlyCollection<Tracking> sent)
         {
             Contract.Requires(sent != null);
             Contract.Requires(sent.Count > 0);
             return Task.WhenAll(sent.Select(WaitForDelivery));
         }
 
-        TaskCompletionSource<MessageClass> ReachQueueCompletionSource(PostedMessageHandle key) => _reachQueue.GetOrAdd(key, _ => new TaskCompletionSource<MessageClass>());
+        TaskCompletionSource<MessageClass> ReachQueueCompletionSource(Tracking key) => _reachQueue.GetOrAdd(key, _ => new TaskCompletionSource<MessageClass>());
+
+        TaskCompletionSource<MessageClass> ReceiveCompletionSource(Tracking key) => _reachQueue.GetOrAdd(key, _ => new TaskCompletionSource<MessageClass>());
         
     }
 
-    public struct PostedMessageHandle : IEquatable<PostedMessageHandle>
+    public struct Tracking : IEquatable<Tracking>
     {
         public string FormatName { get; }
         public string MessageId { get; }
@@ -192,11 +223,11 @@ namespace MsmqPatterns
 
         public bool IsEmpty => FormatName == null;
 
-        public PostedMessageHandle(string formatName, string messageId) : this(formatName, messageId, 0)
+        public Tracking(string formatName, string messageId) : this(formatName, messageId, 0)
         {
         }
 
-        public PostedMessageHandle(string formatName, string messageId, long lookupId)
+        public Tracking(string formatName, string messageId, long lookupId)
         {
             Contract.Requires(messageId != null);
             Contract.Requires(formatName != null);
@@ -205,13 +236,13 @@ namespace MsmqPatterns
             LookupId = lookupId;
         }
 
-        public bool Equals(PostedMessageHandle other)
+        public bool Equals(Tracking other)
         {
             return StringComparer.OrdinalIgnoreCase.Equals(FormatName, other.FormatName)
                 && StringComparer.OrdinalIgnoreCase.Equals(MessageId, other.MessageId);
         }
 
-        public override bool Equals(object obj) => obj is PostedMessageHandle && Equals((PostedMessageHandle)obj);
+        public override bool Equals(object obj) => obj is Tracking && Equals((Tracking)obj);
 
         public override int GetHashCode() => StringComparer.OrdinalIgnoreCase.GetHashCode(FormatName) ^ StringComparer.OrdinalIgnoreCase.GetHashCode(MessageId);
     }

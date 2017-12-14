@@ -76,19 +76,7 @@ namespace BusterWood.Msmq
             if (buf == null) return null;
             var chars = buf.Length > 1 && buf[buf.Length - 1] == 0  && buf[buf.Length - 2] == 0 ? buf.Length - 2 : buf.Length; // remove trailing null
             return Encoding.Unicode.GetString(buf, 0, chars);
-        }
-
-        public static Message Peek(this QueueReader queue, Properties properties, TimeSpan? timeout = null, QueueTransaction transaction = null)
-        {
-            Contract.Requires(queue != null);
-            return queue.Read(properties, ReadAction.PeekCurrent, timeout, transaction);
-        }
-
-        public static Task<Message> PeekAsync(this QueueReader queue, Properties properties, TimeSpan? timeout = null)
-        {
-            Contract.Requires(queue != null);
-            return queue.ReadAsync(properties, ReadAction.PeekCurrent, timeout);
-        }
+        }       
 
         public static void ExtensionUTF8(this Message msg, string text)
         {
@@ -124,6 +112,61 @@ namespace BusterWood.Msmq
             return Encoding.ASCII.GetString(buf, 0, chars);
         }
 
+        /// <summary>
+        /// Uses a <see cref="Cursor"/> to look for messages with a matching <paramref name="correlationId"/>
+        /// </summary>
+        public static Message ReadByCorrelationId(this QueueReader queue, string correlationId, Properties properties = Properties.All, TimeSpan? timeout = null, QueueTransaction transaction = null)
+        {
+            timeout = timeout ?? QueueReader.Infinite;
+            var start = DateTime.UtcNow;
+            using (var cur = new Cursor(queue))
+            {
+                var msg = cur.Peek(Properties.CorrelationId | Properties.LookupId, timeout);
+                for(;;)
+                {
+                    if (msg == null)
+                        return null;
+
+                    if (msg.CorrelationId == correlationId)
+                        return queue.Lookup(properties, msg.LookupId, LookupAction.ReceiveCurrent, TimeSpan.Zero, transaction);
+
+                    var elapsed = DateTime.UtcNow - start;
+                    var remaining = timeout - elapsed;
+                    if (remaining <= TimeSpan.Zero)
+                        return null;
+
+                    msg = cur.PeekNext(Properties.CorrelationId | Properties.LookupId, remaining);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Uses a <see cref="Cursor"/> to look for messages with a matching <paramref name="correlationId"/>
+        /// </summary>
+        public static async Task<Message> ReadByCorrelationIdAsync(this QueueReader queue, string correlationId, Properties properties = Properties.All, TimeSpan? timeout = null, QueueTransaction transaction = null)
+        {
+            timeout = timeout ?? QueueReader.Infinite;
+            var start = DateTime.UtcNow;
+            using (var cur = new Cursor(queue))
+            {
+                var msg = await cur.PeekAsync(Properties.CorrelationId | Properties.LookupId, timeout);
+                for(;;)
+                {
+                    if (msg == null)
+                        return null;
+
+                    if (msg.CorrelationId == correlationId)
+                        return queue.Lookup(properties, msg.LookupId, LookupAction.ReceiveCurrent, TimeSpan.Zero, transaction);
+
+                    var elapsed = DateTime.UtcNow - start;
+                    var remaining = timeout - elapsed;
+                    if (remaining <= TimeSpan.Zero)
+                        return null;
+
+                    msg = await cur.PeekNextAsync(Properties.CorrelationId | Properties.LookupId, remaining);
+                }
+            }
+        }
     }
 
 }

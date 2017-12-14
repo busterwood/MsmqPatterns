@@ -1,4 +1,6 @@
-﻿using Microsoft.Win32.SafeHandles;
+﻿using System.Diagnostics.Contracts;
+using Microsoft.Win32.SafeHandles;
+using System;
 
 namespace BusterWood.Msmq
 {

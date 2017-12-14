@@ -37,7 +37,7 @@ namespace MsmqPatterns
             {
                 await Recover(); // clean up the existing batch (if any)
 
-                var sent = new List<PostedMessageHandle>();
+                var sent = new List<Tracking>();
                 for (;;)
                 {
                     await _input.PeekAsync(PeekFilter); // wait for next message
@@ -65,7 +65,7 @@ namespace MsmqPatterns
 
         private async Task Recover()
         {
-            var sent = new List<PostedMessageHandle>();
+            var sent = new List<Tracking>();
             for(;;)
             {
                 var msg = _inProgressRead.Peek(PeekFilter, TimeSpan.Zero);
@@ -80,7 +80,7 @@ namespace MsmqPatterns
             Console.Error.WriteLine($"INFO recovered");
         }
 
-        private void PostBatch(List<PostedMessageHandle> sent)
+        private void PostBatch(List<Tracking> sent)
         {
             try
             {
@@ -116,7 +116,7 @@ namespace MsmqPatterns
             }
         }
 
-        private async Task WaitForAcknowledgements(List<PostedMessageHandle> sent)
+        private async Task WaitForAcknowledgements(List<Tracking> sent)
         {
             if (sent.Count == 0)
                 return;

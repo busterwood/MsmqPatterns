@@ -1,37 +1,28 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Diagnostics.Contracts;
-using System.Messaging;
 using System.Threading.Tasks;
+using BusterWood.Msmq;
 
 namespace MsmqPatterns
 {
     public class RequestReply : IDisposable
     {
-        readonly MessageQueue _requestQueue;
-        readonly MessageQueue _responseQueue;
-        readonly MessageQueue _adminQueue; // for timeout acknowledgements
-
+        readonly QueueWriter _requestQueue;
+        readonly QueueReader _responseQueue;
+        readonly Postman _postman; // for receive and delivery notifications
+        
         /// <summary>Max time for the request to be received by the process that handles the request.  Defaults to 30 seconds</summary>
         public TimeSpan TimeToBeReceived { get; set; } = TimeSpan.FromSeconds(30);
 
-        public RequestReply(string requestQueue, string replyQueue, string adminQueue) 
-            : this(new MessageQueue(requestQueue, QueueAccessMode.Send), new MessageQueue(replyQueue, QueueAccessMode.Receive), new MessageQueue(adminQueue, QueueAccessMode.Receive))
+        public RequestReply(string requestQueueFormantName, string replyQueueFormatName, Postman postman) 
         {
-            Contract.Requires(adminQueue != null);
-            Contract.Requires(replyQueue != null);
-            Contract.Requires(requestQueue != null);
-        }
+            Contract.Requires(postman != null);
+            Contract.Requires(requestQueueFormantName != null);
+            Contract.Requires(replyQueueFormatName != null);
 
-        public RequestReply(MessageQueue requestQueue, MessageQueue replyQueue, MessageQueue adminQueue)
-        {
-            Contract.Requires(adminQueue != null);
-            Contract.Requires(replyQueue != null);
-            Contract.Requires(requestQueue != null);
-            _requestQueue = requestQueue;
-            _responseQueue = replyQueue;
-            _adminQueue = adminQueue;
-            _responseQueue.MessageReadPropertyFilter = new MessagePropertyFilter { Body = true, AppSpecific = true, CorrelationId = true, Label = true, Extension = true };
+            _requestQueue = new QueueWriter(requestQueueFormantName);
+            _responseQueue = new QueueReader(replyQueueFormatName);
+            _postman = postman;
         }
 
         /// <summary>Sends a request message and waits for a reply.</summary>
@@ -45,42 +36,20 @@ namespace MsmqPatterns
             Contract.Ensures(Contract.Result<Message>() != null);
 
             SetupRequest(request);
-            _requestQueue.Send(request);
-            WaitForAcknowledgement(request);
-            return _responseQueue.ReceiveByCorrelationId(request.Id, MessageQueue.InfiniteTimeout);
+            var tracking = _postman.RequestDelivery(request, null, _requestQueue);
+            _postman.WaitForDelivery(tracking).Wait();
+            _postman.WaitToBeReceived(tracking).Wait();
+            return _responseQueue.ReadByCorrelationId(request.Id);
         }
 
         private void SetupRequest(Message request)
         {
-            request.Recoverable = false; // express mode
-            request.ResponseQueue = _responseQueue;
+            request.Delivery = Delivery.Express;
+            request.ResponseQueue = _responseQueue.FormatName;
 
             // setup timeout with negative acknowledgement
             request.TimeToBeReceived = TimeToBeReceived;
-            request.AcknowledgeType =  AcknowledgeTypes.FullReceive | AcknowledgeTypes.NotAcknowledgeReachQueue;
-            request.AdministrationQueue = _adminQueue;
-        }
-
-        private void WaitForAcknowledgement(Message request)
-        {
-            _adminQueue.MessageReadPropertyFilter.Acknowledgment = true;
-            _adminQueue.MessageReadPropertyFilter.ResponseQueue = true;
-            for (;;)
-            {
-                using (var msg = _adminQueue.ReceiveByCorrelationId(request.Id, MessageQueue.InfiniteTimeout))
-                {
-                    switch (msg.Acknowledgment)
-                    {
-                        case Acknowledgment.Receive:
-                            return;
-                        case Acknowledgment.ReachQueue:
-                            break;
-                        default:
-                            throw new NotImplementedException();
-                            //throw new AcknowledgmentException(msg.ResponseQueue.FormatName, msg.Acknowledgment);
-                    }
-                }
-            }
+            request.AcknowledgmentTypes = AcknowledgmentTypes.FullReachQueue | AcknowledgmentTypes.FullReceive;
         }
 
         /// <summary>Sends a request message and waits for a reply.</summary>
@@ -93,40 +62,16 @@ namespace MsmqPatterns
             Contract.Requires(request != null);
 
             SetupRequest(request);
-            _requestQueue.Send(request);
-            await WaitForAcknowledgementAsync(request);
-            throw new NotImplementedException();
-            //return await _responseQueue.ReceiveByCorrelationIdAsync(request.Id);
-        }
-
-        private async Task WaitForAcknowledgementAsync(Message request)
-        {
-            _adminQueue.MessageReadPropertyFilter.Acknowledgment = true;
-            _adminQueue.MessageReadPropertyFilter.ResponseQueue = true;
-            for (;;)
-            {
-                throw new NotImplementedException();
-                //using (var msg = await _adminQueue.ReceiveByCorrelationIdAsync(request.Id))
-                //{
-                //    switch (msg.Acknowledgment)
-                //    {
-                //        case Acknowledgment.Receive:
-                //            return;
-                //        case Acknowledgment.ReachQueue:
-                //            break;
-                //        default:
-                //            throw new NotImplementedException();
-                //            //throw new AcknowledgmentException(msg.ResponseQueue.FormatName, msg.Acknowledgment);
-                //    }
-                //}
-            }
+            var tracking = _postman.RequestDelivery(request, null, _requestQueue);
+            await _postman.WaitForDelivery(tracking);
+            await _postman.WaitToBeReceived(tracking);
+            return await _responseQueue.ReadByCorrelationIdAsync(request.Id);
         }
 
         public void Dispose()
         {
             _requestQueue.Dispose();
             _responseQueue.Dispose();
-            _adminQueue.Dispose();
         }
     }
     
