@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace UnitTests
 {
-    [TestFixture, Timeout(1000), Ignore]
+    [TestFixture, Timeout(1000)]
     public class SenderTests
     {
         static string destQueuePath = $".\\private$\\{nameof(SenderTests)}.Input";

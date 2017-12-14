@@ -151,7 +151,7 @@ namespace MsmqPatterns
             Contract.Assert(_run != null);
 
             RequestDelivery(message, transaction, queue);
-            return WaitForDelivery(new Tracking(message.Id, queue.FormatName));
+            return WaitForDelivery(new Tracking(queue.FormatName, message.Id));
         }
 
         /// <summary>

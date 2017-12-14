@@ -6,7 +6,7 @@ using BusterWood.Msmq;
 
 namespace UnitTests
 {
-    [TestFixture, Timeout(5000), Ignore]
+    [TestFixture, Timeout(5000)]
     public class NonTransactionalRouterTests
     {
         static readonly string inputQueuePath = $".\\private$\\{nameof(NonTransactionalRouterTests)}.Input";
@@ -58,6 +58,9 @@ namespace UnitTests
             sender = new Postman(adminQueueFormatName);
         }
 
+        [TearDown]
+
+
         [Test]
         public async Task can_route_non_transactional()
         {
@@ -67,7 +70,7 @@ namespace UnitTests
                 try
                 {
                     var rtask = router.StartAsync();
-                    await sender.DeliverAsync(new Message { Label = "1", AppSpecific = 1 }, QueueTransaction.None, input);
+                    input.Write(new Message { Label = "1", AppSpecific = 1 });
                     var got = outRead1.Read();
                     Assert.AreEqual("1", got.Label);
                 }
@@ -88,7 +91,7 @@ namespace UnitTests
                 try
                 {
                     var rtask = router.StartAsync();
-                    await sender.DeliverAsync(new Message { Label = "2", AppSpecific = 1 }, QueueTransaction.None, input);
+                    input.Write(new Message { Label = "2", AppSpecific = 1 });
                     var got = outRead2.Read();
                     Assert.AreEqual("2", got.Label);
                 }
@@ -109,7 +112,7 @@ namespace UnitTests
                 try
                 {
                     var rtask = router.StartAsync();
-                    await sender.DeliverAsync(new Message { Label = "3", AppSpecific = 1 }, QueueTransaction.None, input);
+                    input.Write(new Message { Label = "3", AppSpecific = 1 });
                     var got = dead.Read();
                     Assert.AreEqual("3", got.Label);
                 }

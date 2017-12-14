@@ -45,11 +45,23 @@ namespace MsmqPatterns
             }
         }
 
-        async Task OnNewMessage(Message peeked)
+        async Task OnNewMessage(Message msg)
         {
+            var lookupId = msg.LookupId;
+            QueueWriter dest = null;
             try
             {
-                await RouteMessage(peeked);
+                dest = GetRoute(msg);
+                await Sender.DeliverAsync(msg, QueueTransaction.None, dest);
+                var removed = _input.Lookup(Properties.LookupId, lookupId, timeout: TimeSpan.Zero); // remove message from queue
+                if (removed == null)
+                    Console.Error.WriteLine($"WARN: router message to {dest.FormatName} but could not remove message from input queue");
+            }
+            catch (QueueException ex)
+            {
+                //TODO: logging
+                Console.Error.WriteLine($"WARN {ex.Message} {{{dest?.FormatName}}}");
+                BadMessageHandler(_input, lookupId, QueueTransaction.None);
             }
             catch (RouteException ex)
             {
@@ -57,21 +69,6 @@ namespace MsmqPatterns
                 Console.Error.WriteLine($"WARN {ex.Message} {{{ex.Destination}}}");
                 BadMessageHandler(_input, ex.LookupId, QueueTransaction.None);
             }            
-        }
-
-        private async Task RouteMessage(Message msg)
-        {
-            var dest = GetRoute(msg);
-            try
-            {
-                await Sender.DeliverAsync(msg, QueueTransaction.None, dest);
-                _input.Read(Properties.LookupId, timeout: TimeSpan.Zero); // remove message from queue
-            }
-            catch (QueueException ex)
-            {
-                // we cannot send to that queue
-                throw new RouteException("Failed to send to destination", ex, msg.LookupId, dest.FormatName);
-            }
         }
 
 

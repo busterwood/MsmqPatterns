@@ -62,6 +62,18 @@ namespace UnitTests
             sender = new Postman(adminQueueFormatName);
         }
 
+        [TearDown]
+        public void TearDown()
+        {
+            sender.Dispose();
+            input.Dispose();
+            dead.Dispose();
+            outRead1.Dispose();
+            outSend1.Dispose();
+            outRead2.Dispose();
+            outSend2.Dispose();
+        }
+
         [Test]
         public async Task can_route_transactional()
         {
