@@ -46,7 +46,7 @@ namespace BusterWood.Msmq
         }
 
         /// <summary>Closes this queue</summary>
-        public void Dispose()
+        public virtual void Dispose()
         {
             if (IsClosed) return;
             _handle.Dispose();
@@ -156,6 +156,28 @@ namespace BusterWood.Msmq
             return (QueueTransactional)props.GetByte(Native.QUEUE_PROPID_TRANSACTION);
         }
 
+        /// <summary>Move the message specified by <paramref name="lookupId"/> from <paramref name="sourceQueue"/> to the <paramref name="targetQueue"/>.</summary>
+        /// <remarks>
+        /// Moving message is 10 to 100 times faster than sending the message to another queue.
+        /// Within a transaction you cannot receive a message that you moved to a subqueue.
+        /// </remarks>
+        public static void MoveMessage(QueueReader sourceQueue, SubQueueReader targetQueue, long lookupId, QueueTransaction transaction = null)
+        {
+            Contract.Requires(sourceQueue != null);
+
+            if (sourceQueue.IsClosed) throw new ObjectDisposedException(nameof(sourceQueue));
+            if (targetQueue.IsClosed) throw new ObjectDisposedException(nameof(targetQueue));
+
+            int res;
+            IntPtr txnHandle;
+            if (transaction.TryGetHandle(out txnHandle))
+                res = Native.MoveMessage(sourceQueue._handle, targetQueue.MoveHandle, lookupId, txnHandle);
+            else
+                res = Native.MoveMessage(sourceQueue._handle, targetQueue.MoveHandle, lookupId, transaction.InternalTransaction);
+
+            if (Native.IsError(res))
+                throw new QueueException(res);
+        }
     }
 
     /// <summary>Class that represents a message queue that you can post messages to</summary>
@@ -200,6 +222,12 @@ namespace BusterWood.Msmq
 
     }
 
+    public enum QueueReaderMode
+    {
+        Receive = 1,
+        Peek = 32,
+    }
+
     /// <summary>Reads messages from a queue</summary>
     public class QueueReader : Queue, IQueueReader
     {
@@ -210,10 +238,14 @@ namespace BusterWood.Msmq
         bool _boundToThreadPool;
 
         /// <summary>Opens a queue using a <paramref name="formatName"/>.  Use <see cref="Queue.PathToFormatName(string)"/> to get the <paramref name="formatName"/> for a queue path.</summary>
-        public QueueReader(string formatName, QueueAccessMode accessMode = QueueAccessMode.Receive, QueueShareMode share = QueueShareMode.Shared)
-            : base(formatName, QueueAccessMode.Receive, share)
+        public QueueReader(string formatName, QueueReaderMode readerMode = QueueReaderMode.Receive, QueueShareMode share = QueueShareMode.Shared)
+            : this(formatName, (QueueAccessMode)readerMode, share)
         {
-            Contract.Requires(accessMode == QueueAccessMode.Receive || accessMode == QueueAccessMode.Peek);
+        }
+
+        internal QueueReader(string formatName, QueueAccessMode accessMode, QueueShareMode share)
+            : base(formatName, accessMode, share)
+        {
             Open();
         }
 
@@ -400,37 +432,28 @@ namespace BusterWood.Msmq
 
     }
 
-    /// <summary>A sub-queue that you can move messages to</summary>
-    public class SubQueueMover : Queue
-    {        
+    /// <summary>A sub-queue that you can peek and read from, but also move message to via <see cref="Queue.MoveMessage(QueueReader, SubQueueReader, long, QueueTransaction)"/></summary>
+    public class SubQueueReader : QueueReader
+    {
+        private QueueHandle _moveHandle;
+
+        internal QueueHandle MoveHandle => _moveHandle;
+
         /// <summary>Opens a queue using a <paramref name="formatName"/>.  Use <see cref="Queue.PathToFormatName(string)"/> to get the <paramref name="formatName"/> for a queue path.</summary>
-        public SubQueueMover(string formatName, QueueShareMode share = QueueShareMode.Shared)
-            : base(formatName, QueueAccessMode.Move, share)
+        public SubQueueReader(string formatName, QueueReaderMode mode = QueueReaderMode.Receive, QueueShareMode share = QueueShareMode.Shared)
+            : base(formatName, mode, share)
         {
-            Open();
-        }
+            Contract.Requires(formatName.IndexOf(';') > 0, "formatName is not a subqueue");
 
-        /// <summary>Move the message specified by <paramref name="lookupId"/> from <paramref name="sourceQueue"/> to this subqueue.</summary>
-        /// <remarks>
-        /// Moving message is 10 to 100 times faster than sending the message to another queue.
-        /// Within a transaction you cannot receive a message that you moved to a subqueue.
-        /// </remarks>
-        public void MoveFrom(QueueReader sourceQueue, long lookupId, QueueTransaction transaction = null)
-        {
-            Contract.Requires(sourceQueue != null);
-
-            if (IsClosed) throw new ObjectDisposedException(nameof(Queue));
-
-            int res;
-            IntPtr txnHandle;
-            if (transaction.TryGetHandle(out txnHandle))
-                res = Native.MoveMessage(sourceQueue._handle, _handle, lookupId, txnHandle);
-            else
-                res = Native.MoveMessage(sourceQueue._handle, _handle, lookupId, transaction.InternalTransaction);
-
-            if (Native.IsError(res))
+            int res = Native.OpenQueue(FormatName, QueueAccessMode.Move, ShareMode, out _moveHandle);
+            if (res != 0)
                 throw new QueueException(res);
         }
 
+        public override void Dispose()
+        {
+            base.Dispose();
+            _moveHandle?.Dispose();
+        }
     }
 }

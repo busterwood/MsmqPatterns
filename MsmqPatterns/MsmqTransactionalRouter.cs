@@ -68,7 +68,7 @@ namespace BusterWood.MsmqPatterns
             var sent = new List<Tracking>();
             for(;;)
             {
-                var msg = _inProgressRead.Peek(PeekFilter, TimeSpan.Zero);
+                var msg = _batchQueue.Peek(PeekFilter, TimeSpan.Zero);
                 if (msg == null)
                     break;
             }
@@ -98,7 +98,7 @@ namespace BusterWood.MsmqPatterns
                         lookupId = msg.LookupId;
 
                         // move to the batch subqueue so we know what we sent
-                        _inProgressMove.MoveFrom(_input, msg.LookupId, txn);
+                        Queue.MoveMessage(_input, _batchQueue, msg.LookupId, txn);
 
                         // route to message to the destination
                         var dest = GetRoute(msg);
@@ -128,12 +128,12 @@ namespace BusterWood.MsmqPatterns
                 try
                 {
                     await Sender.WaitForDelivery(item);
-                    _inProgressRead.Lookup(Properties.LookupId, item.LookupId, timeout: TimeSpan.Zero, transaction: QueueTransaction.Single);
+                    _batchQueue.Lookup(Properties.LookupId, item.LookupId, timeout: TimeSpan.Zero, transaction: QueueTransaction.Single);
                 }
                 catch (AcknowledgmentException ex)
                 {
                     Console.Error.WriteLine("WARN:" + ex);
-                    _posionQueue.MoveFrom(_inProgressRead, item.LookupId, QueueTransaction.Single);
+                    Queue.MoveMessage(_batchQueue, _posionQueue, item.LookupId, QueueTransaction.Single);
                 }
                 catch (AggregateException ex)
                 {

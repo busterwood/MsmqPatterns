@@ -14,9 +14,9 @@ namespace BusterWood.MsmqPatterns
     public class SubQueueFilterRouter : IProcessor
     {
         readonly string _inputFormatName;
-        readonly Func<Message, SubQueueMover> _router;
+        readonly Func<Message, SubQueueReader> _router;
         QueueReader _input;
-        SubQueueMover _posionSubQueue;
+        SubQueueReader _posionSubQueue;
         QueueTransaction _transaction;
         Task _run;
 
@@ -26,7 +26,7 @@ namespace BusterWood.MsmqPatterns
         /// <summary>Handle messages that cannot be routed.  Defaults to moving messages to a "Poison" subqueue of the input queue</summary>
         public Action<long, QueueTransaction> BadMessageHandler { get; set; }
 
-        public SubQueueFilterRouter(string inputFormatName, Func<Message, SubQueueMover> router) 
+        public SubQueueFilterRouter(string inputFormatName, Func<Message, SubQueueReader> router) 
         {
             Contract.Requires(inputFormatName != null);
             Contract.Requires(router != null);
@@ -54,7 +54,7 @@ namespace BusterWood.MsmqPatterns
                     try
                     {
                         var subQueue = GetRoute(peeked);
-                        subQueue.MoveFrom(_input, peeked.LookupId, _transaction);
+                        Queue.MoveMessage(_input, subQueue, peeked.LookupId, _transaction);
                     }
                     catch (RouteException ex)
                     {
@@ -77,9 +77,9 @@ namespace BusterWood.MsmqPatterns
             }
         }
 
-        protected SubQueueMover GetRoute(Message msg)
+        protected SubQueueReader GetRoute(Message msg)
         {
-            SubQueueMover subQueue = null;
+            SubQueueReader subQueue = null;
             try
             {
                 subQueue = _router(msg);
@@ -110,9 +110,9 @@ namespace BusterWood.MsmqPatterns
             try
             {
                 if (_posionSubQueue == null)
-                    _posionSubQueue = new SubQueueMover(_input.FormatName + ";Poison");
+                    _posionSubQueue = new SubQueueReader(_input.FormatName + ";Poison");
 
-                _posionSubQueue.MoveFrom(_input, lookupId, transaction);
+                Queue.MoveMessage(_input, _posionSubQueue, lookupId, transaction);
                 return;
             }
             catch (QueueException e)

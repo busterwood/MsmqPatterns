@@ -162,9 +162,9 @@ namespace UnitTests
             }
         }
 
-        QueueCache<SubQueueMover> _cache = new QueueCache<SubQueueMover>((fn, access, share) => new SubQueueMover(fn, share));
+        QueueCache<SubQueueReader> _cache = new QueueCache<SubQueueReader>((fn, access, share) => new SubQueueReader(fn, share: share));
 
-        SubQueueMover GetSubQueue(Message peeked)
+        SubQueueReader GetSubQueue(Message peeked)
         {
             if (peeked.Label.EndsWith("sq", StringComparison.OrdinalIgnoreCase))
                 return _cache.Open(testQueueFormatName + ";sq", QueueAccessMode.Move);

@@ -44,7 +44,7 @@ namespace UnitTests
 
             
             input = new QueueWriter(inputQueueFormatName);
-            dead = new QueueReader(deadQueueFormatName, QueueAccessMode.Receive);
+            dead = new QueueReader(deadQueueFormatName);
             dead.Purge();
 
             outRead1 = new QueueReader(outputQueueFormatName1);

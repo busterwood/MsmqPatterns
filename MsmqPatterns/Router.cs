@@ -10,7 +10,7 @@ namespace BusterWood.MsmqPatterns
     {
         protected readonly Func<Message, QueueWriter> _route;
         protected QueueReader _input;
-        protected SubQueueMover _posionQueue;
+        protected SubQueueReader _posionQueue;
         Task _run;
 
         public string InputQueueFormatName { get; }
@@ -80,11 +80,11 @@ namespace BusterWood.MsmqPatterns
             const string poisonSubqueue = "Poison";
             if (_posionQueue == null)
             {
-                _posionQueue = new SubQueueMover(InputQueueFormatName + ";Poison");
+                _posionQueue = new SubQueueReader(InputQueueFormatName + ";Poison");
             }
             try
             {
-                _posionQueue.MoveFrom(fromQueue, lookupId, transaction);
+                Queue.MoveMessage(fromQueue, _posionQueue, lookupId, transaction);
                 return;
             }
             catch (QueueException e)
