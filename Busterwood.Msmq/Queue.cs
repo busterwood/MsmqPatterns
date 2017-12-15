@@ -19,12 +19,12 @@ namespace BusterWood.Msmq
         public QueueAccessMode AccessMode { get; }
 
         /// <summary>How the queue is shared</summary>
-        public QueueShareMode ShareMode { get; }
+        public QueueShareReceive ShareMode { get; }
 
         /// <summary>Has the queue been closed? (or disposed)</summary>
         public bool IsClosed => _handle == null || _handle.IsClosed;
 
-        internal Queue(string formatName, QueueAccessMode accessMode, QueueShareMode shareMode)
+        internal Queue(string formatName, QueueAccessMode accessMode, QueueShareReceive shareMode)
         {
             Contract.Requires(formatName != null);
             AccessMode = accessMode;
@@ -75,6 +75,8 @@ namespace BusterWood.Msmq
         public static string TryCreate(string path, QueueTransactional transactional)
         {
             Contract.Requires(!string.IsNullOrWhiteSpace(path));
+            Contract.Ensures(Contract.Result<string>() != null);
+
             const int MaxLabelLength = 124;
 
             //Create properties.
@@ -131,6 +133,8 @@ namespace BusterWood.Msmq
         /// <summary>Tests if a queue existing. Does NOT accept format names</summary>
         public static bool Exists(string path)
         {
+            Contract.Requires(path != null);
+
             int size = 255;
             var sb = new StringBuilder(size);
             int res = Native.PathNameToFormatName(path, sb, ref size);
@@ -146,6 +150,7 @@ namespace BusterWood.Msmq
         /// <summary>Returns the transactional property of the queue</summary>
         public static QueueTransactional IsTransactional(string formatName)
         {
+            Contract.Requires(formatName != null);
             var props = new QueueProperties();
             props.SetByte(Native.QUEUE_PROPID_TRANSACTION, 0);
             int status = Native.GetQueueProperties(formatName, props.Allocate());
@@ -164,6 +169,7 @@ namespace BusterWood.Msmq
         public static void MoveMessage(QueueReader sourceQueue, SubQueue targetQueue, long lookupId, QueueTransaction transaction = null)
         {
             Contract.Requires(sourceQueue != null);
+            Contract.Requires(targetQueue != null);
 
             if (sourceQueue.IsClosed) throw new ObjectDisposedException(nameof(sourceQueue));
             if (targetQueue.IsClosed) throw new ObjectDisposedException(nameof(targetQueue));
@@ -185,7 +191,7 @@ namespace BusterWood.Msmq
     {
         /// <summary>Opens a queue using a <paramref name="formatName"/>.  Use <see cref="Queue.PathToFormatName(string)"/> to get the <paramref name="formatName"/> for a queue path.</summary>
         public QueueWriter(string formatName) 
-            : base(formatName, QueueAccessMode.Send, QueueShareMode.Shared)
+            : base(formatName, QueueAccessMode.Send, QueueShareReceive.Shared)
         {
             Open();
         }
@@ -232,7 +238,7 @@ namespace BusterWood.Msmq
         bool _boundToThreadPool;
 
         /// <summary>Opens a queue using a <paramref name="formatName"/>.  Use <see cref="Queue.PathToFormatName(string)"/> to get the <paramref name="formatName"/> for a queue path.</summary>
-        public QueueReader(string formatName, QueueReaderMode readerMode = QueueReaderMode.Receive, QueueShareMode share = QueueShareMode.Shared)
+        public QueueReader(string formatName, QueueReaderMode readerMode = QueueReaderMode.Receive, QueueShareReceive share = QueueShareReceive.Shared)
             : base(formatName, (QueueAccessMode)readerMode, share)
         {
             Open();
@@ -429,12 +435,12 @@ namespace BusterWood.Msmq
         internal QueueHandle MoveHandle => _moveHandle;
 
         /// <summary>Opens a queue using a <paramref name="formatName"/>.  Use <see cref="Queue.PathToFormatName(string)"/> to get the <paramref name="formatName"/> for a queue path.</summary>
-        public SubQueue(string formatName, QueueReaderMode mode = QueueReaderMode.Receive, QueueShareMode share = QueueShareMode.Shared)
+        public SubQueue(string formatName, QueueReaderMode mode = QueueReaderMode.Receive, QueueShareReceive share = QueueShareReceive.Shared)
             : base(formatName, mode, share)
         {
             Contract.Requires(formatName.IndexOf(';') > 0, "formatName is not a subqueue");
 
-            int res = Native.OpenQueue(FormatName, QueueAccessMode.Move, QueueShareMode.Shared, out _moveHandle);
+            int res = Native.OpenQueue(FormatName, QueueAccessMode.Move, QueueShareReceive.Shared, out _moveHandle);
             if (res != 0)
                 throw new QueueException(res);
         }

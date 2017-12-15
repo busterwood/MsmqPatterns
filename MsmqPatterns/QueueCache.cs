@@ -10,13 +10,13 @@ namespace BusterWood.MsmqPatterns
     {
         readonly Cache<Key, T> _cache;
 
-        public QueueCache(Func<string, QueueAccessMode, QueueShareMode, T> factory) : this(factory, 500, TimeSpan.FromMinutes(5))
+        public QueueCache(Func<string, QueueAccessMode, QueueShareReceive, T> factory) : this(factory, 500, TimeSpan.FromMinutes(5))
         {
         }
 
-        readonly Func<string, QueueAccessMode, QueueShareMode, T> _factory;
+        readonly Func<string, QueueAccessMode, QueueShareReceive, T> _factory;
 
-        public QueueCache(Func<string, QueueAccessMode, QueueShareMode, T> factory, int? gen0Limit, TimeSpan? timeToLive)
+        public QueueCache(Func<string, QueueAccessMode, QueueShareReceive, T> factory, int? gen0Limit, TimeSpan? timeToLive)
         {
             Contract.Requires(factory != null);
             _factory = factory;
@@ -32,7 +32,7 @@ namespace BusterWood.MsmqPatterns
             }
         }
 
-        public T Open(string formatName, QueueAccessMode mode, QueueShareMode share = QueueShareMode.Shared)
+        public T Open(string formatName, QueueAccessMode mode, QueueShareReceive share = QueueShareReceive.Shared)
         {
             Contract.Requires(!string.IsNullOrWhiteSpace(formatName));
             var key = new Key(formatName, mode, share);
@@ -46,7 +46,7 @@ namespace BusterWood.MsmqPatterns
             }
         }
 
-        public T Borrow(string formatName, QueueAccessMode mode, QueueShareMode share = QueueShareMode.Shared)
+        public T Borrow(string formatName, QueueAccessMode mode, QueueShareReceive share = QueueShareReceive.Shared)
         {
             Contract.Requires(!string.IsNullOrWhiteSpace(formatName));
             T queue;
@@ -73,9 +73,9 @@ namespace BusterWood.MsmqPatterns
         {
             public readonly string formatName;
             public readonly QueueAccessMode mode;
-            public readonly QueueShareMode share;
+            public readonly QueueShareReceive share;
 
-            public Key(string formatName, QueueAccessMode mode, QueueShareMode share)
+            public Key(string formatName, QueueAccessMode mode, QueueShareReceive share)
             {
                 this.formatName = formatName;
                 this.mode = mode;

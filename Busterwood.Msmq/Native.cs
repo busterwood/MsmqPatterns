@@ -14,7 +14,7 @@ namespace BusterWood.Msmq
         public unsafe delegate void ReceiveCallback(int result, IntPtr handle, int timeout, int action, IntPtr propertiesPointer, NativeOverlapped* overlappedPointer, IntPtr cursorHandle);
 
         [DllImport(MQRT, EntryPoint = "MQOpenQueue", CharSet = CharSet.Unicode)]
-        public static extern int OpenQueue(string formatName, QueueAccessMode access, QueueShareMode shareMode, out QueueHandle handle);
+        public static extern int OpenQueue(string formatName, QueueAccessMode access, QueueShareReceive shareMode, out QueueHandle handle);
 
         [DllImport(MQRT, EntryPoint = "MQBeginTransaction")]
         public static extern int BeginTransaction(out ITransaction refTransaction);
