@@ -184,8 +184,8 @@ namespace BusterWood.Msmq
     public class QueueWriter : Queue
     {
         /// <summary>Opens a queue using a <paramref name="formatName"/>.  Use <see cref="Queue.PathToFormatName(string)"/> to get the <paramref name="formatName"/> for a queue path.</summary>
-        public QueueWriter(string formatName, QueueShareMode share = QueueShareMode.Shared) 
-            : base(formatName, QueueAccessMode.Send, share)
+        public QueueWriter(string formatName) 
+            : base(formatName, QueueAccessMode.Send, QueueShareMode.Shared)
         {
             Open();
         }
@@ -222,12 +222,6 @@ namespace BusterWood.Msmq
 
     }
 
-    public enum QueueReaderMode
-    {
-        Receive = 1,
-        Peek = 32,
-    }
-
     /// <summary>Reads messages from a queue</summary>
     public class QueueReader : Queue, IQueueReader
     {
@@ -239,12 +233,7 @@ namespace BusterWood.Msmq
 
         /// <summary>Opens a queue using a <paramref name="formatName"/>.  Use <see cref="Queue.PathToFormatName(string)"/> to get the <paramref name="formatName"/> for a queue path.</summary>
         public QueueReader(string formatName, QueueReaderMode readerMode = QueueReaderMode.Receive, QueueShareMode share = QueueShareMode.Shared)
-            : this(formatName, (QueueAccessMode)readerMode, share)
-        {
-        }
-
-        internal QueueReader(string formatName, QueueAccessMode accessMode, QueueShareMode share)
-            : base(formatName, accessMode, share)
+            : base(formatName, (QueueAccessMode)readerMode, share)
         {
             Open();
         }
@@ -445,7 +434,7 @@ namespace BusterWood.Msmq
         {
             Contract.Requires(formatName.IndexOf(';') > 0, "formatName is not a subqueue");
 
-            int res = Native.OpenQueue(FormatName, QueueAccessMode.Move, ShareMode, out _moveHandle);
+            int res = Native.OpenQueue(FormatName, QueueAccessMode.Move, QueueShareMode.Shared, out _moveHandle);
             if (res != 0)
                 throw new QueueException(res);
         }
