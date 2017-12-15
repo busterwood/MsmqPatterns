@@ -8,8 +8,11 @@ missing features from MSMQ 3.0, i.e. sub-queues.
 ### Feature summary
 
 New a `QueueReader` to peek or read messages from a queue.
+
 New a `QueueWriter` to send messages to a queue.
+
 New a `SubQueue` to peek or read message, and to move messages via `Queue.MoveMessage` method.
+
 New a `Cursor` to peek or receive messages using a MSMQ cursor.
 
 ### Differences from System.Messaging
