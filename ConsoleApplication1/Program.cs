@@ -26,7 +26,7 @@ namespace ConsoleApplication1
             {
                 var peeked = readQ.Peek(Properties.AppSpecific | Properties.Label | Properties.LookupId, transaction: QueueTransaction.Single);
                 GC.KeepAlive(peeked.CorrelationId);
-                var moveQ = new SubQueueReader(fn + ";test");
+                var moveQ = new SubQueue(fn + ";test");
                 Queue.MoveMessage(readQ, moveQ, peeked.LookupId, QueueTransaction.Single);
 
                 var subQ = new QueueReader(fn + ";test");

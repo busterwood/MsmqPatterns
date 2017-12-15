@@ -11,7 +11,7 @@ namespace BusterWood.MsmqPatterns
     /// </summary>
     public abstract class TransactionalRouter : Router
     {
-        protected SubQueueReader _batchQueue;
+        protected SubQueue _batchQueue;
 
         protected TransactionalRouter(string inputQueueFormatName, Postman sender, Func<Message, QueueWriter> route)
             : base(inputQueueFormatName, sender, route)
@@ -31,7 +31,7 @@ namespace BusterWood.MsmqPatterns
 
         protected override Task RunAsync()
         {
-            _batchQueue = new SubQueueReader(InputQueueFormatName + ";" + InProgressSubQueue);
+            _batchQueue = new SubQueue(InputQueueFormatName + ";" + InProgressSubQueue);
             return Task.FromResult(true);
         }
 

@@ -161,7 +161,7 @@ namespace BusterWood.Msmq
         /// Moving message is 10 to 100 times faster than sending the message to another queue.
         /// Within a transaction you cannot receive a message that you moved to a subqueue.
         /// </remarks>
-        public static void MoveMessage(QueueReader sourceQueue, SubQueueReader targetQueue, long lookupId, QueueTransaction transaction = null)
+        public static void MoveMessage(QueueReader sourceQueue, SubQueue targetQueue, long lookupId, QueueTransaction transaction = null)
         {
             Contract.Requires(sourceQueue != null);
 
@@ -432,15 +432,15 @@ namespace BusterWood.Msmq
 
     }
 
-    /// <summary>A sub-queue that you can peek and read from, but also move message to via <see cref="Queue.MoveMessage(QueueReader, SubQueueReader, long, QueueTransaction)"/></summary>
-    public class SubQueueReader : QueueReader
+    /// <summary>A sub-queue that you can peek and read from, but also move message to via <see cref="Queue.MoveMessage(QueueReader, SubQueue, long, QueueTransaction)"/></summary>
+    public class SubQueue : QueueReader
     {
         private QueueHandle _moveHandle;
 
         internal QueueHandle MoveHandle => _moveHandle;
 
         /// <summary>Opens a queue using a <paramref name="formatName"/>.  Use <see cref="Queue.PathToFormatName(string)"/> to get the <paramref name="formatName"/> for a queue path.</summary>
-        public SubQueueReader(string formatName, QueueReaderMode mode = QueueReaderMode.Receive, QueueShareMode share = QueueShareMode.Shared)
+        public SubQueue(string formatName, QueueReaderMode mode = QueueReaderMode.Receive, QueueShareMode share = QueueShareMode.Shared)
             : base(formatName, mode, share)
         {
             Contract.Requires(formatName.IndexOf(';') > 0, "formatName is not a subqueue");

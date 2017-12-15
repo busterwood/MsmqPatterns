@@ -14,9 +14,9 @@ namespace BusterWood.MsmqPatterns
     public class SubQueueFilterRouter : IProcessor
     {
         readonly string _inputFormatName;
-        readonly Func<Message, SubQueueReader> _router;
+        readonly Func<Message, SubQueue> _router;
         QueueReader _input;
-        SubQueueReader _posionSubQueue;
+        SubQueue _posionSubQueue;
         QueueTransaction _transaction;
         Task _run;
 
@@ -26,7 +26,7 @@ namespace BusterWood.MsmqPatterns
         /// <summary>Handle messages that cannot be routed.  Defaults to moving messages to a "Poison" subqueue of the input queue</summary>
         public Action<long, QueueTransaction> BadMessageHandler { get; set; }
 
-        public SubQueueFilterRouter(string inputFormatName, Func<Message, SubQueueReader> router) 
+        public SubQueueFilterRouter(string inputFormatName, Func<Message, SubQueue> router) 
         {
             Contract.Requires(inputFormatName != null);
             Contract.Requires(router != null);
@@ -77,9 +77,9 @@ namespace BusterWood.MsmqPatterns
             }
         }
 
-        protected SubQueueReader GetRoute(Message msg)
+        protected SubQueue GetRoute(Message msg)
         {
-            SubQueueReader subQueue = null;
+            SubQueue subQueue = null;
             try
             {
                 subQueue = _router(msg);
@@ -110,7 +110,7 @@ namespace BusterWood.MsmqPatterns
             try
             {
                 if (_posionSubQueue == null)
-                    _posionSubQueue = new SubQueueReader(_input.FormatName + ";Poison");
+                    _posionSubQueue = new SubQueue(_input.FormatName + ";Poison");
 
                 Queue.MoveMessage(_input, _posionSubQueue, lookupId, transaction);
                 return;

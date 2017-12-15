@@ -10,7 +10,7 @@ namespace BusterWood.MsmqPatterns
     {
         protected readonly Func<Message, QueueWriter> _route;
         protected QueueReader _input;
-        protected SubQueueReader _posionQueue;
+        protected SubQueue _posionQueue;
         Task _run;
 
         public string InputQueueFormatName { get; }
@@ -80,7 +80,7 @@ namespace BusterWood.MsmqPatterns
             const string poisonSubqueue = "Poison";
             if (_posionQueue == null)
             {
-                _posionQueue = new SubQueueReader(InputQueueFormatName + ";Poison");
+                _posionQueue = new SubQueue(InputQueueFormatName + ";Poison");
             }
             try
             {

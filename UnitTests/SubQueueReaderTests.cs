@@ -22,11 +22,11 @@ namespace UnitTests
                 qWriter.Write(new Message { AppSpecific = 234 });
             }
             using (var qReader = new QueueReader(fn))
-            using (var sqReader = new SubQueueReader(sqfn))
+            using (var subQueue = new SubQueue(sqfn))
             {
                 var msg = qReader.Peek(Properties.LookupId);
-                Queue.MoveMessage(qReader, sqReader, msg.LookupId);
-                var got = sqReader.Read();
+                Queue.MoveMessage(qReader, subQueue, msg.LookupId);
+                var got = subQueue.Read();
                 Assert.AreEqual(234, got.AppSpecific);
             }
         }
