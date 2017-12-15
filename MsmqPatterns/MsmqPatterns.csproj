@@ -83,8 +83,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AcknowledgmentException.cs" />
-    <Compile Include="DtcTransactionalRouter.cs" />
-    <Compile Include="MsmqTransactionalRouter.cs" />
     <Compile Include="QueueCache.cs" />
     <Compile Include="RouteException.cs" />
     <Compile Include="Postman.cs" />

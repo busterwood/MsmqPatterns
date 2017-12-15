@@ -77,7 +77,7 @@ namespace UnitTests
         [Test]
         public async Task can_route_transactional()
         {
-            using (var router = new MsmqTransactionalRouter(inputQueueFormatName, sender, Route))
+            using (var router = new TransactionalRouter(inputQueueFormatName, sender, Route))
             {
                 await sender.StartAsync();
                 try
@@ -98,7 +98,7 @@ namespace UnitTests
         [Test]
         public async Task can_route_transactional_to_other_queue()
         {
-            using (var router = new MsmqTransactionalRouter(inputQueueFormatName, sender, Route))
+            using (var router = new TransactionalRouter(inputQueueFormatName, sender, Route))
             {
                 await sender.StartAsync();
                 try
@@ -119,7 +119,7 @@ namespace UnitTests
         [Test]
         public async Task can_route_transactional_to_deadletter()
         {
-            using (var router = new MsmqTransactionalRouter(inputQueueFormatName, sender, Route))
+            using (var router = new TransactionalRouter(inputQueueFormatName, sender, Route))
             {
                 await sender.StartAsync();
                 try
@@ -140,7 +140,7 @@ namespace UnitTests
         [Test]
         public async Task can_route_many()
         {
-            using (var router = new MsmqTransactionalRouter(inputQueueFormatName, sender, Route))
+            using (var router = new TransactionalRouter(inputQueueFormatName, sender, Route))
             {
                 for (int i = 0; i < 1000; i++)
                 {

@@ -45,7 +45,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="SubQueueReaderTests.cs" />
-    <Compile Include="DtcRouterTests.cs" />
     <Compile Include="SenderTests.cs" />
     <Compile Include="TransactionalRouterTests.cs" />
     <Compile Include="NonTransactionalRouterTests.cs" />
