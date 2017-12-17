@@ -31,7 +31,7 @@ Supports poison message handling via the `TransactionAbortCount` and `Transactio
 * All the `Read..` and `Peek...` methods accept a `Properties` parameter (default is `All`), which replaces the `Message.MessageReadFilter` 
 * The `QueueTransaction` class automatically starts a transaction when it is created, and replaces `MessageQueueTransaction` class
 * `MessageQueueTransactionType` enum is replaced with the static `QueueTransaction.Single` or `QueueTransaction.Dtc` fields
-* Support for rejecting messages via the `MarkRejected` method (see [MQMarkMessageRejected](https://msdn.microsoft.com/en-us/library/ms707071(v=vs.85).aspx)).
+* Support for rejecting messages on transactional queues via the `MarkRejected` method (see [MQMarkMessageRejected](https://msdn.microsoft.com/en-us/library/ms707071(v=vs.85).aspx)).
 
 # BusterWood.MsmqPatterns
 
