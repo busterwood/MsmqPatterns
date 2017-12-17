@@ -19,6 +19,7 @@ New a `QueueTransaction` to begin a MSMQ transaction, or use the static `QueueTr
 
 ### Differences from System.Messaging
 
+* BusterWood.MSMQ only fully supports private queues at the moment, some public queue message properties are missing
 * Direct support for Task via `PeekAsync()` and `ReadAsync()` methods.
 * You can only open queues using format names.  Use `Queue.TryCreate()` or `Queue.PathToFormatName()` to get a format name from a queue path.
 * Additional message properties are supported, e.g. `TransactionFirst`, `TransactionLast`, `TransactionAbortCount`, `TransactionMoveCount`.
