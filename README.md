@@ -39,7 +39,7 @@ Reuseable messaging patterns for MSMQ.
 
 ## Summary
 
-The core pattern is the `Postman`, which supports to send messages with confirmation the message was delivered to the destination queue or an error if it cannot be delivered.
+The core pattern is the `Postman`, which supports sending messages with confirmation of delivery to the destination queue (and receiving), _or_ an error if it cannot be delivered or was not received in time.
 
 The following patterns are then use the `Postman`:
 * Send requests and wait for reply with the `RequestReply`class
