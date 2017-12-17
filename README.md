@@ -39,8 +39,10 @@ Reuseable messaging patterns for MSMQ.
 
 ## Summary
 
-* Start a `Postman` to send messages with confirmation the message was delivered to the destination queue or get and error if it cannot be delivered.
-* Send requests and wait for reply with the `RequestReply`class (uses the `Postman` to confirm delivery and processing)
+The core pattern is the `Postman`, which supports to send messages with confirmation the message was delivered to the destination queue or an error if it cannot be delivered.
+
+The following patterns are then use the `Postman`:
+* Send requests and wait for reply with the `RequestReply`class
 * Route messages to [subqueues](https://msdn.microsoft.com/en-us/library/ms711414(v=vs.85).aspx) with the `SubQueueFilterRouter` class
-* Route batches of messages between transactional queues with the `TransactionalRouter` class (uses the `Postman` to confirm delivery)
+* Route batches of messages between transactional queues with the `TransactionalRouter` class
 * Route messages between non-transactional queues with the `NonTransactionalRouter` class
