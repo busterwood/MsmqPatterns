@@ -126,7 +126,7 @@
   <ItemGroup>
     <Compile Include="AcknowledgmentTypes.cs" />
     <Compile Include="BodyType.cs" />
-    <Compile Include="Cursor.cs" />
+    <Compile Include="QueueCursor.cs" />
     <Compile Include="Delivery.cs" />
     <Compile Include="ErrorCode.cs" />
     <Compile Include="IQueueReader.cs" />

@@ -5,12 +5,13 @@ using System.Threading.Tasks;
 namespace BusterWood.Msmq
 {
     /// <summary>Use can use a cursor to iterate over the messages in a queue</summary>
-    public class Cursor : IDisposable, IQueueReader
+    public class QueueCursor : IDisposable, IQueueReader
     {
         readonly QueueReader _reader;
         readonly CursorHandle _cursorHandle;
 
-        public Cursor(QueueReader reader)
+        /// <summary>Creates a new cursor for queue represented by the <paramref name="reader"/>.</summary>
+        public QueueCursor(QueueReader reader)
         {
             Contract.Requires(reader != null);
             _reader = reader;
@@ -20,6 +21,7 @@ namespace BusterWood.Msmq
                 throw new QueueException(res);
         }
 
+        /// <summary>Close the cursor</summary>
         public void Dispose()
         {
             _cursorHandle.Dispose();
