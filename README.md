@@ -17,6 +17,8 @@ New a `Cursor` to peek or receive messages using a MSMQ cursor.
 
 New a `QueueTransaction` to begin a MSMQ transaction, or use the static `QueueTransaction.Single` or `QueueTransaction.Dtc` fields.
 
+Supports poison message handling via the `TransactionAbortCount` and `TransactionMoveCount`properties and the `MarkRejected` method that sends notification to the message sender that the message was rejected.
+
 ### Differences from System.Messaging
 
 * BusterWood.MSMQ only fully supports private queues at the moment, some public queue message properties are missing
@@ -29,6 +31,7 @@ New a `QueueTransaction` to begin a MSMQ transaction, or use the static `QueueTr
 * All the `Read..` and `Peek...` methods accept a `Properties` parameter (default is `All`), which replaces the `Message.MessageReadFilter` 
 * The `QueueTransaction` class automatically starts a transaction when it is created, and replaces `MessageQueueTransaction` class
 * `MessageQueueTransactionType` enum is replaced with the static `QueueTransaction.Single` or `QueueTransaction.Dtc` fields
+* Support for rejecting messages via the `MarkRejected` method (see [MQMarkMessageRejected](https://msdn.microsoft.com/en-us/library/ms707071(v=vs.85).aspx)).
 
 # BusterWood.MsmqPatterns
 
