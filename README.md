@@ -13,7 +13,7 @@ New a `QueueWriter` to send messages to a queue.
 
 New a `SubQueue` to peek or read message, and to move messages to [subqueues](https://msdn.microsoft.com/en-us/library/ms711414(v=vs.85).aspx) via `Queue.MoveMessage` method.
 
-New a `Cursor` to peek or receive messages using a MSMQ cursor.
+New a `QueueCursor` to peek or receive messages using a MSMQ cursor.
 
 New a `QueueTransaction` to begin a MSMQ transaction, or use the static `QueueTransaction.Single` or `QueueTransaction.Dtc` fields.
 
