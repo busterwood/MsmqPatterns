@@ -15,7 +15,7 @@ New a `SubQueue` to peek or read message, and to move messages to [subqueues](ht
 
 New a `QueueCursor` to peek or receive messages using a MSMQ cursor.
 
-New a `QueueTransaction` to begin a MSMQ transaction, or use the static `QueueTransaction.Single` or `QueueTransaction.Dtc` fields.
+New a `QueueTransaction` to begin a MSMQ transaction, or use the static fields `QueueTransaction.None`, `QueueTransaction.Single` or `QueueTransaction.Dtc`.
 
 Supports [poison message handling for transactional queues](https://msdn.microsoft.com/en-us/library/ms703179(v=vs.85).aspx) via the `TransactionAbortCount` and `TransactionMoveCount`properties and the `MarkRejected` method that sends notification to the message sender that the message was rejected.
 
@@ -30,9 +30,8 @@ Supports [poison message handling for transactional queues](https://msdn.microso
 * `Body` has a type of `byte[]`, and is either a byte array, ACSII or UTF-16 string
 * All the `Read..` and `Peek...` methods accept a `Properties` parameter (default is `All`), _which replaces the `Message.MessageReadFilter`_.
 * The `QueueTransaction` class automatically starts a transaction when it is created, _and replaces `MessageQueueTransaction` class_.
-* `MessageQueueTransactionType` enum is replaced with the static `QueueTransaction.Single` or `QueueTransaction.Dtc` fields
+* `MessageQueueTransactionType` enum is replaced with the static fields `QueueTransaction.None`, `QueueTransaction.Single` or `QueueTransaction.Dtc`.
 * Additional message properties are supported, e.g. `TransactionFirst`, `TransactionLast`, `TransactionAbortCount`, `TransactionMoveCount`.
-* Support for rejecting messages on transactional queues via the `MarkRejected` method (see [MQMarkMessageRejected](https://msdn.microsoft.com/en-us/library/ms707071(v=vs.85).aspx)).
 
 # BusterWood.MsmqPatterns
 
