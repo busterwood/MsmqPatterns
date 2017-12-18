@@ -8,6 +8,7 @@ namespace BusterWood.MsmqPatterns
     public class LabelSubscription 
     {
         const string WildCard = "*";
+        const string AllDecendents = "**";
         static readonly char[] labelSeparator = { '.' };
         readonly Node _root = new Node("");
 
@@ -17,8 +18,12 @@ namespace BusterWood.MsmqPatterns
             Contract.Requires(callback != null);
 
             var star = label.IndexOf('*');
-            if (star >= 0 && star != label.Length-1)
-                throw new ArgumentException("wildcard subscriptions are only supported as the last character");
+            if (star >= 0)
+            {
+                var remain = label.Substring(star);
+                if (remain != WildCard && remain != AllDecendents)
+                    throw new ArgumentException("wildcard subscriptions are only supported as the last character");
+            }
 
             var parts = label.Split(labelSeparator);
             lock (_root)
@@ -45,73 +50,65 @@ namespace BusterWood.MsmqPatterns
             }
         }
 
-        public Action<Message> Subscribers(string label)
-        {
-            Contract.Requires(!string.IsNullOrEmpty(label));
-
-            var parts = label.Split(labelSeparator);
-            lock (_root)
-            {
-
-                var node = _root;
-                foreach (var part in parts)
-                {
-                    if (part.Length == 0)
-                        throw new ArgumentException("label contains an empty part");
-
-                    Contract.Assume(node != null);
-                    Node child;
-                    if (node.ChildNodes == null || !node.ChildNodes.TryGetValue(part, out child))
-                        return null;
-                    Contract.Assume(child != null);
-                    node = child;
-                }
-                return node.Subscriptions;
-            }
-        }
-
         public void Dispatch(Message msg)
         {
             Contract.Requires(msg != null);
+            Contract.Requires(!string.IsNullOrEmpty(msg.Label));
 
-            Action<Message> subscriptions = null;
-            var parts = msg.Label.Split(labelSeparator);
+            Action<Message> subscriptions = Subscribers(msg.Label);
+            if (subscriptions == null)
+                return;
+
+            foreach (Action<Message> callback in subscriptions.GetInvocationList())
+            {
+                try
+                {
+                    callback(msg);
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine("WARN: " + ex);
+                }
+            }
+        }
+
+        public Action<Message> Subscribers(string messageLabel)
+        {
+            Contract.Requires(!string.IsNullOrEmpty(messageLabel));
+
+            var parts = messageLabel.Split(labelSeparator);
             lock (_root)
             {
+                Action<Message> subscriptions = null;
                 var node = _root;
-                for (int i = 0; i < parts.Length-1; i++)
+                for (int i = 0; i < parts.Length - 1; i++)
                 {
                     Node child;
-                    if (node.ChildNodes == null || !node.ChildNodes.TryGetValue(parts[i], out child))
-                        return; // no subscriptions
+                    if (node.ChildNodes == null)
+                        return subscriptions;
+                    if (node.ChildNodes.TryGetValue(AllDecendents, out child))
+                        subscriptions += child.Subscriptions;
+                    if (!node.ChildNodes.TryGetValue(parts[i], out child))
+                        return subscriptions;
                     node = child;
                 }
 
-                var lastPart = parts[parts.Length-1];
-                Node lastChild;
-                if (node.ChildNodes.TryGetValue(lastPart, out lastChild))
-                {
-                    subscriptions += lastChild.Subscriptions;
-                }
-                if (node.ChildNodes.TryGetValue(WildCard, out lastChild)) // wild card subscription
-                {
-                    subscriptions += lastChild.Subscriptions;
-                }
-            }
+                Contract.Assume(node != null);
 
-            if (subscriptions != null)
-            {
-                foreach (Action<Message> callback in subscriptions.GetInvocationList())
-                {
-                    try
-                    {
-                        callback(msg);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.Error.WriteLine("WARN: " + ex);
-                    }
-                }
+                var lastPart = parts[parts.Length - 1];
+
+                Node lastChild;
+
+                if (node.ChildNodes.TryGetValue(lastPart, out lastChild))
+                    subscriptions += lastChild.Subscriptions;
+
+                if (node.ChildNodes.TryGetValue(WildCard, out lastChild))
+                    subscriptions += lastChild.Subscriptions;
+
+                if (node.ChildNodes.TryGetValue(AllDecendents, out lastChild))
+                    subscriptions += lastChild.Subscriptions;
+
+                return subscriptions;
             }
         }
 

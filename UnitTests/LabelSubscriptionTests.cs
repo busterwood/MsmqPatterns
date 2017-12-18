@@ -47,6 +47,8 @@ namespace UnitTests
         [TestCase("hello.world", "hello.world")]
         [TestCase("hello.*", "hello.world")]
         [TestCase("*", "hello")]
+        [TestCase("hello.**", "hello.world")]
+        [TestCase("hello.**", "hello.world.again")]
         public void can_dispatch(string subscriptionLabel, string msgLabel)
         {
             var sub = new LabelSubscription();
