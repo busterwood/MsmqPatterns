@@ -22,6 +22,7 @@ Supports [poison message handling for transactional queues](https://msdn.microso
 ### Differences from System.Messaging
 
 * BusterWood.MSMQ only fully supports private queues at the moment, some public queue message properties are missing
+* Format names are pure MSMQ format names, _they do not accept the `FormatName:` prefix required by System.Messaging`.
 * Direct support for Tasks and `async/await` via `PeekAsync()` and `ReadAsync()` methods.
 * Methods that accept a timeout, e.g. `Peek...()` and `Read...()` methods, return `null` if the timeout was reached _rather than throwing an exception_.
 * You can only open queues using format names.  Use `Queue.TryCreate()` or `Queue.PathToFormatName()` to get a format name from a queue path.
