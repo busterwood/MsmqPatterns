@@ -11,7 +11,7 @@ namespace BusterWood.MsmqPatterns
         protected readonly Func<Message, QueueWriter> _route;
         protected QueueReader _input;
         protected SubQueue _posionQueue;
-        Task _run;
+        Task _running;
 
         /// <summary>Format name of the queue to route messages from</summary>
         public string InputQueueFormatName { get; }
@@ -44,8 +44,8 @@ namespace BusterWood.MsmqPatterns
         public Task<Task> StartAsync()
         {
             _input = new QueueReader(InputQueueFormatName);
-            _run = RunAsync();
-            return Task.FromResult(_run);
+            _running = RunAsync();
+            return Task.FromResult(_running);
         }
 
         protected abstract Task RunAsync();        
@@ -70,7 +70,7 @@ namespace BusterWood.MsmqPatterns
         {
             _input?.Dispose();
             _posionQueue?.Dispose();
-            return _run;
+            return _running;
         }
 
         public void Dispose()

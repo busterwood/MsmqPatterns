@@ -74,6 +74,11 @@ namespace BusterWood.MsmqPatterns
             Contract.Requires(!string.IsNullOrEmpty(message.Label));
 
             Action<Message> subscriptions = Subscribers(message.Label);
+            TryInvokeAll(message, subscriptions);
+        }
+
+        public void TryInvokeAll(Message message, Action<Message> subscriptions)
+        {
             if (subscriptions == null)
                 return;
 

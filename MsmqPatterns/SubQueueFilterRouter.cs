@@ -18,7 +18,7 @@ namespace BusterWood.MsmqPatterns
         QueueReader _input;
         SubQueue _posionSubQueue;
         QueueTransaction _transaction;
-        Task _run;
+        Task _running;
 
         /// <summary>Name of the subqueue to move messages to when they cannot be routed, or the router function returns null.</summary>
         public string UnroutableSubQueue { get; set; } = "Poison";
@@ -43,8 +43,8 @@ namespace BusterWood.MsmqPatterns
             _input = new QueueReader(_inputFormatName);
             if (Queue.IsTransactional(_input.FormatName) == QueueTransactional.Transactional)
                 _transaction = QueueTransaction.Single;
-            _run = RunAsync();
-            return Task.FromResult(_run);
+            _running = RunAsync();
+            return Task.FromResult(_running);
         }
 
         async Task RunAsync()
@@ -100,7 +100,7 @@ namespace BusterWood.MsmqPatterns
         {
             _input?.Dispose(); // this will stop any pending peek operations
             _posionSubQueue?.Dispose();
-            return _run;
+            return _running;
         }
 
         public void Dispose()

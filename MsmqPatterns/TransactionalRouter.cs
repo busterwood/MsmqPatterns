@@ -78,7 +78,6 @@ namespace BusterWood.MsmqPatterns
             catch (Exception ex)
             {
                 Console.Error.WriteLine("WARNING: " + ex);
-                throw;
             }
         }
 
