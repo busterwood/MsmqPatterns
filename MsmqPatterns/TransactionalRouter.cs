@@ -155,6 +155,7 @@ namespace BusterWood.MsmqPatterns
                 catch (AcknowledgmentException ex)
                 {
                     Console.Error.WriteLine("WARN:" + ex);
+                    //TODO: use QueueReader.MarkRejected to send a reject acknowledgement?
                     Queue.MoveMessage(_batchQueue, _posionQueue, item.LookupId, QueueTransaction.Single);
                 }
                 catch (AggregateException ex)

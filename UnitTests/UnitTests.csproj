@@ -45,6 +45,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="LabelSubscriptionTests.cs" />
+    <Compile Include="QueueDispatcherTests.cs" />
     <Compile Include="SubQueueReaderTests.cs" />
     <Compile Include="SenderTests.cs" />
     <Compile Include="TransactionalRouterTests.cs" />
