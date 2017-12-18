@@ -27,6 +27,14 @@ namespace BusterWood.MsmqPatterns
 
         public void Dispose()
         {
+            try
+            {
+                StopAsync().Wait();
+            }
+            catch
+            {
+                // dispose should never throw exceptions
+            }
         }
 
         public Task<Task> StartAsync()
