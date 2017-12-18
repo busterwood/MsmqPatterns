@@ -5,13 +5,30 @@ using System.Diagnostics.Contracts;
 
 namespace BusterWood.MsmqPatterns
 {
+    /// <summary>
+    /// A class to manage subscriptions to messages based on the message label.
+    /// You can subscribe with <see cref="WildCard"/>, e.g. "hello.*" will match a message with label "hello.world".
+    /// You can subscribe with <see cref="AllDecendents"/> , e.g. "hello.**" will match a message with label "hello.world.1.2.3".
+    /// </summary>
     public class LabelSubscription 
     {
-        const string WildCard = "*";
-        const string AllDecendents = "**";
-        static readonly char[] labelSeparator = { '.' };
         readonly Node _root = new Node("");
 
+        /// <summary>The path separator to use, defaults to dot (.)</summary>
+        public char Separator { get; set; } = '.';
+
+        /// <summary>The wild-card string to use, defaults to star (*) </summary>
+        public string WildCard { get; set; } = "*";
+
+        /// <summary>The all descendants wild-card string to use, defaults to star-star (**) </summary>
+        public string AllDecendents { get; set; } = "**";
+
+        /// <summary>
+        /// Subscribe to messages with a matching <paramref name="label"/>, invoking the <paramref name="callback"/> when <see cref="Dispatch(Message)"/> is called.
+        /// You can subscribe with <see cref="WildCard"/>, e.g. "hello.*" will match a message with label "hello.world".
+        /// You can subscribe with <see cref="AllDecendents"/> , e.g. "hello.**" will match a message with label "hello.world.1.2.3".
+        /// </summary>
+        /// <returns>A handle to that unsubscribes when it is Disposed</returns>
         public IDisposable Subscribe(string label, Action<Message> callback)
         {
             Contract.Requires(!string.IsNullOrEmpty(label));
@@ -25,7 +42,7 @@ namespace BusterWood.MsmqPatterns
                     throw new ArgumentException("wildcard subscriptions are only supported as the last character");
             }
 
-            var parts = label.Split(labelSeparator);
+            var parts = label.Split(Separator);
             lock (_root)
             {
                 var node = _root;
@@ -50,12 +67,13 @@ namespace BusterWood.MsmqPatterns
             }
         }
 
-        public void Dispatch(Message msg)
+        /// <summary>Sends the message to the all the subscribers.</summary>
+        public void Dispatch(Message message)
         {
-            Contract.Requires(msg != null);
-            Contract.Requires(!string.IsNullOrEmpty(msg.Label));
+            Contract.Requires(message != null);
+            Contract.Requires(!string.IsNullOrEmpty(message.Label));
 
-            Action<Message> subscriptions = Subscribers(msg.Label);
+            Action<Message> subscriptions = Subscribers(message.Label);
             if (subscriptions == null)
                 return;
 
@@ -63,7 +81,7 @@ namespace BusterWood.MsmqPatterns
             {
                 try
                 {
-                    callback(msg);
+                    callback(message);
                 }
                 catch (Exception ex)
                 {
@@ -72,11 +90,12 @@ namespace BusterWood.MsmqPatterns
             }
         }
 
+        /// <summary>Returns the subscriber callbacks for a message label</summary>
         public Action<Message> Subscribers(string messageLabel)
         {
             Contract.Requires(!string.IsNullOrEmpty(messageLabel));
 
-            var parts = messageLabel.Split(labelSeparator);
+            var parts = messageLabel.Split(Separator);
             lock (_root)
             {
                 Action<Message> subscriptions = null;
