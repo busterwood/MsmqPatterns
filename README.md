@@ -30,7 +30,7 @@ Supports [poison message handling for transactional queues](https://msdn.microso
 * `Body` has a type of `byte[]`, and is either a byte array, ACSII or UTF-16 string
 * All the `Read..` and `Peek...` methods accept a `Properties` parameter (default is `All`), _which replaces the `Message.MessageReadFilter`_.
 * The `QueueTransaction` class automatically starts a transaction when it is created, _and replaces `MessageQueueTransaction` class_.
-* `MessageQueueTransactionType` enum is replaced with the static fields `QueueTransaction.None`, `QueueTransaction.Single` or `QueueTransaction.Dtc`.
+* `QueueTransaction.None`, `QueueTransaction.Single` or `QueueTransaction.Dtc` static fields replace _`MessageQueueTransactionType` enum_. 
 * Additional message properties are supported, e.g. `TransactionFirst`, `TransactionLast`, `TransactionAbortCount`, `TransactionMoveCount`.
 
 # BusterWood.MsmqPatterns
