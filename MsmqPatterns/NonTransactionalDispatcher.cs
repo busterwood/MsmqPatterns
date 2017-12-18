@@ -17,12 +17,10 @@ namespace BusterWood.MsmqPatterns
         /// <summary>Format name of the queue to route messages from</summary>
         public string InputQueueFormatName { get; }
 
-        /// <summary>The filter used when peeking messages, the default does NOT include the message body</summary>
-        public Properties PeekFilter { get; set; } = Properties.Label | Properties.LookupId;
-
         public NonTransactionalDispatcher(string inputQueueFormatName)
         {
             Contract.Requires(!string.IsNullOrEmpty(inputQueueFormatName));
+            Contract.Requires(Queue.IsTransactional(inputQueueFormatName) == QueueTransactional.None);
             InputQueueFormatName = inputQueueFormatName;
             _subscriptions = new LabelSubscription();
         }
@@ -40,19 +38,21 @@ namespace BusterWood.MsmqPatterns
 
         async Task RunAsync()
         {
+            Properties peekFilter = Properties.Label | Properties.LookupId;
             try
             {
                 for (;;)
                 {
-                    Message msg = _input.Peek(PeekFilter, TimeSpan.Zero); // peek next without waiting
+                    Message msg = _input.Peek(peekFilter, TimeSpan.Zero); // peek next without waiting
                     if (msg == null)
-                        msg = await _input.PeekAsync(PeekFilter); // no message, we must wait
+                        msg = await _input.PeekAsync(peekFilter); // no message, we must wait
 
+                    // at this point we only have the label and lookup id of the message
                     var subscribers = _subscriptions.Subscribers(msg.Label);
                     if (subscribers == null)
                     {
                         // no subscribers, remove message from input queue anyway
-                        _input.Lookup(PeekFilter, msg.LookupId, LookupAction.ReceiveCurrent, TimeSpan.Zero);
+                        _input.Lookup(peekFilter, msg.LookupId, LookupAction.ReceiveCurrent, TimeSpan.Zero);
                         continue; 
                     }
 
