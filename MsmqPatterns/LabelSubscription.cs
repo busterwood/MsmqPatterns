@@ -1,13 +1,13 @@
 ﻿using BusterWood.Msmq;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Diagnostics.Contracts;
 
 namespace BusterWood.MsmqPatterns
 {
     public class LabelSubscription 
     {
+        const string WildCard = "*";
         static readonly char[] labelSeparator = { '.' };
         readonly Node _root = new Node("");
 
@@ -91,7 +91,7 @@ namespace BusterWood.MsmqPatterns
                 {
                     subscriptions += lastChild.Subscriptions;
                 }
-                if (node.ChildNodes.TryGetValue("*", out lastChild)) // wild card subscription
+                if (node.ChildNodes.TryGetValue(WildCard, out lastChild)) // wild card subscription
                 {
                     subscriptions += lastChild.Subscriptions;
                 }
