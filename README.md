@@ -48,7 +48,7 @@ The following patterns then use the `Postman`:
 * Route batches of messages between transactional queues with the `TransactionalRouter` class
 * Route messages between non-transactional queues with the `NonTransactionalRouter` class
 
-The following patterns do no use `Postman`:
+The following patterns do not use `Postman`:
 * Route messages to [subqueues](https://msdn.microsoft.com/en-us/library/ms711414(v=vs.85).aspx) with the `SubQueueFilterRouter` class
 
 All classes are `async` code bulit on `System.Threading.Tasks.Task`.
