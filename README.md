@@ -32,6 +32,7 @@ Supports [poison message handling for transactional queues](https://msdn.microso
 * The `QueueTransaction` class automatically starts a transaction when it is created, _and replaces `MessageQueueTransaction` class_.
 * `QueueTransaction.None`, `QueueTransaction.Single` or `QueueTransaction.Dtc` static fields replace _`MessageQueueTransactionType` enum_. 
 * Additional message properties are supported, e.g. `TransactionFirst`, `TransactionLast`, `TransactionAbortCount`, `TransactionMoveCount`.
+* `QueueReader.Lookup` method _replaces `ReceiveByLookupId`_ and additionally supports lookup of first, last, previous and next messages.
 
 # BusterWood.MsmqPatterns
 
