@@ -43,7 +43,7 @@ namespace BusterWood.MsmqPatterns
             {
                 for (;;)
                 {
-                    Message msg = _input.Peek(peekFilter, TimeSpan.Zero); // peek next without waiting
+                    Message msg = _input.Peek(peekFilter, TimeSpan.Zero); // try to Bpeek next without waiting
                     if (msg == null)
                         msg = await _input.PeekAsync(peekFilter); // no message, we must wait
 
@@ -58,6 +58,11 @@ namespace BusterWood.MsmqPatterns
 
                     // read the whole message now, remove it from the queue, and invoke the subscription callbacks
                     msg = _input.Lookup(Properties.All, msg.LookupId, LookupAction.ReceiveCurrent, TimeSpan.Zero); 
+                    if (msg == null)
+                    {
+                        Console.Error.WriteLine($"WARNING: we peeked message but it was removed before we could read it {{label={msg.Label}, lookupId={msg.LookupId}}}");
+                        continue;
+                    }
                     _subscriptions.TryInvokeAll(msg, subscribers);
                 }
             }
@@ -87,6 +92,11 @@ namespace BusterWood.MsmqPatterns
         /// You can subscribe with <see cref="LabelSubscription.AllDecendents"/> , e.g. "hello.**" will match a message with label "hello.world.1.2.3".
         /// </summary>
         /// <returns>A handle to that unsubscribes when it is Disposed</returns>
-        public IDisposable Subscribe(string label, Action<Message> callback) => _subscriptions.Subscribe(label, callback);
+        public IDisposable Subscribe(string label, Action<Message> callback)
+        {
+            Contract.Requires(!string.IsNullOrEmpty(label));
+            Contract.Requires(callback != null);
+            return _subscriptions.Subscribe(label, callback);
+        }
     }
 }
