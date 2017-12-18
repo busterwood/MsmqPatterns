@@ -58,6 +58,8 @@ namespace BusterWood.MsmqPatterns
                 {
                     if (part.Length == 0)
                         throw new ArgumentException("label contains an empty part");
+
+                    Contract.Assume(node != null);
                     Node child;
                     if (node.ChildNodes == null || !node.ChildNodes.TryGetValue(part, out child))
                         return null;
