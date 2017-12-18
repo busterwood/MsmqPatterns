@@ -13,7 +13,11 @@ namespace BusterWood.MsmqPatterns
         protected SubQueue _posionQueue;
         Task _run;
 
+        /// <summary>Format name of the queue to route messages from</summary>
         public string InputQueueFormatName { get; }
+
+        /// <summary>Name of the subqueue to move messages to when they cannot be routed, or the router function returns null.</summary>
+        public string UnroutableSubQueue { get; set; } = "Poison";
 
         /// <summary>The filter used when peeking messages, the default does NOT include the message body</summary>
         public Properties PeekFilter { get; set; } = Properties.AppSpecific | Properties.Label | Properties.Extension | Properties.LookupId;
@@ -77,10 +81,9 @@ namespace BusterWood.MsmqPatterns
         private void MoveToPoisonSubqueue(QueueReader fromQueue, long lookupId, QueueTransaction transaction)
         {
             Contract.Requires(fromQueue != null);
-            const string poisonSubqueue = "Poison";
             if (_posionQueue == null)
             {
-                _posionQueue = new SubQueue(InputQueueFormatName + ";Poison");
+                _posionQueue = new SubQueue(InputQueueFormatName + ";" + UnroutableSubQueue);
             }
             try
             {
@@ -89,7 +92,7 @@ namespace BusterWood.MsmqPatterns
             }
             catch (QueueException e)
             {
-                Console.Error.WriteLine($"WARN Failed to move message {{lookupId={lookupId}}} {{subqueue={poisonSubqueue}}} {{error={e.Message}}}");
+                Console.Error.WriteLine($"WARN Failed to move message {{lookupId={lookupId}}} {{subqueue={UnroutableSubQueue}}} {{error={e.Message}}}");
             }            
         }
 

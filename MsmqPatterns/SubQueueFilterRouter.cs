@@ -20,10 +20,13 @@ namespace BusterWood.MsmqPatterns
         QueueTransaction _transaction;
         Task _run;
 
+        /// <summary>Name of the subqueue to move messages to when they cannot be routed, or the router function returns null.</summary>
+        public string UnroutableSubQueue { get; set; } = "Poison";
+
         /// <summary>The filter used when peeking messages, the default does NOT include the message body</summary>
         public Properties PeekFilter { get; } = Properties.AppSpecific | Properties.Label | Properties.Extension | Properties.LookupId;
 
-        /// <summary>Handle messages that cannot be routed.  Defaults to moving messages to a "Poison" subqueue of the input queue</summary>
+        /// <summary>Handle messages that cannot be routed.  Defaults to moving messages to <see cref="UnroutableSubQueue"/> of the input queue</summary>
         public Action<long, QueueTransaction> BadMessageHandler { get; set; }
 
         public SubQueueFilterRouter(string inputFormatName, Func<Message, SubQueue> router) 
@@ -32,7 +35,7 @@ namespace BusterWood.MsmqPatterns
             Contract.Requires(router != null);
             _inputFormatName = inputFormatName;
             _router = router;
-            BadMessageHandler = MoveToPoisonSubqueue;
+            BadMessageHandler = MoveToUnroutableSubQueue;
         }
 
         public Task<Task> StartAsync()
@@ -59,7 +62,7 @@ namespace BusterWood.MsmqPatterns
                     catch (RouteException ex)
                     {
                         if (peeked.LookupId != 0)
-                            MoveToPoisonSubqueue(peeked.LookupId, _transaction);
+                            MoveToUnroutableSubQueue(peeked.LookupId, _transaction);
                     }
                 }
             }
@@ -105,19 +108,19 @@ namespace BusterWood.MsmqPatterns
             StopAsync()?.Wait();
         }
 
-        private void MoveToPoisonSubqueue(long lookupId, QueueTransaction transaction)
+        private void MoveToUnroutableSubQueue(long lookupId, QueueTransaction transaction)
         {
             try
             {
                 if (_posionSubQueue == null)
-                    _posionSubQueue = new SubQueue(_input.FormatName + ";Poison");
+                    _posionSubQueue = new SubQueue(_input.FormatName + ";" + UnroutableSubQueue);
 
                 Queue.MoveMessage(_input, _posionSubQueue, lookupId, transaction);
                 return;
             }
             catch (QueueException e)
             {
-                Console.Error.WriteLine($"WARN Failed to move message {{lookupId={lookupId}}} {{subqueue={_posionSubQueue?.SubQueueName()}}} {{error={e.Message}}}");
+                Console.Error.WriteLine($"WARN Failed to move message {{lookupId={lookupId}}} {{subqueue={UnroutableSubQueue}}} {{error={e.Message}}}");
             }
         }
 

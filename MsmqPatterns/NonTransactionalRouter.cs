@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 namespace BusterWood.MsmqPatterns
 {
     /// <summary>
-    /// Routes messages between local <see cref = "MessageQueue"/>.  
-    /// Note this is not safe in the event of process termination as a received message maybe lost.
+    /// Routes messages between non-transactional message queues.
+    /// Note in the event of process termination message maybe routed TWICE, but will not be lost.
     /// </summary>
     public class NonTransactionalRouter : Router
     {

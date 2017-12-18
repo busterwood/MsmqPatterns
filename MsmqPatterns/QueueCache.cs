@@ -6,7 +6,10 @@ using System.Diagnostics.Contracts;
 
 namespace BusterWood.MsmqPatterns
 {
-    public class QueueCache<T> where T: Queue
+    /// <summary>
+    /// A cache that maybe useful if you are opening a lot of queues, e.g. a lot of sub queues.
+    /// </summary>
+    public class QueueCache<T> where T : Queue
     {
         readonly Cache<Key, T> _cache;
 
@@ -32,6 +35,9 @@ namespace BusterWood.MsmqPatterns
             }
         }
 
+        /// <summary>
+        /// Get the existing Queue or open a new Queue using the factory method.
+        /// </summary>
         public T Open(string formatName, QueueAccessMode mode, QueueShareReceive share = QueueShareReceive.Shared)
         {
             Contract.Requires(!string.IsNullOrWhiteSpace(formatName));
@@ -46,6 +52,10 @@ namespace BusterWood.MsmqPatterns
             }
         }
 
+        /// <summary>
+        /// Takes the existing <see cref="Queue"/> or open a new Queue using the factory method.  Removes the queue from the cache.
+        /// After you have finished with the borrowed queue call <see cref="Return(T)"/>
+        /// </summary>
         public T Borrow(string formatName, QueueAccessMode mode, QueueShareReceive share = QueueShareReceive.Shared)
         {
             Contract.Requires(!string.IsNullOrWhiteSpace(formatName));
@@ -61,6 +71,9 @@ namespace BusterWood.MsmqPatterns
             return queue == null || queue.IsClosed ? _factory(formatName, mode, share) : queue;
         }
 
+        /// <summary>
+        /// Replaces the existing cached Queue, to be called after you have finished with the queue returned from <see cref="Borrow(string, QueueAccessMode, QueueShareReceive)"/>.
+        /// </summary>
         public void Return(T queue)
         {
             Contract.Requires(queue != null);
