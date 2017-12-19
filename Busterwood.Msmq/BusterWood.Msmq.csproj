@@ -177,6 +177,7 @@
     <Compile Include="Native.QueueProperties.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Msmq.nuspec" />
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
