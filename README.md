@@ -1,5 +1,5 @@
 # BusterWood.Msmq.Patterns
-
+[![Nuget](https://img.shields.io/nuget/v/BusterWood.Msmq.svg)](https://www.nuget.org/packages/BusterWood.MsmqPatterns)
 Easy to use messaging patterns for .NET built on `BusterWood.Msmq` (see below).
 
 ### Summary
