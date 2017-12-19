@@ -1,11 +1,32 @@
-# BusterWood.MSMQ
+# BusterWood.Msmq.Patterns
+
+Easy to use messaging patterns for MSMQ built on `BusterWood.Msmq` (see below).
+
+### Summary
+
+The core pattern is the `Postman`, which supports sending messages with confirmation of delivery to the destination queue (and receiving), _or_ an error if it cannot be delivered or was not received in time.
+
+The following patterns then use the `Postman`:
+* Send requests and wait for reply with the `RequestReply`class
+* Route batches of messages between transactional queues with the `TransactionalRouter` class
+* Route messages between non-transactional queues with the `NonTransactionalRouter` class
+
+Additionally, BusterWood.Msmq.Patterns implements the following: (not using `Postman`)
+* `QueueDispatcher` is used for publish/subcribe messaging (i.e. via multicast)
+* `SubQueueFilterRouter` is used to route messages to [subqueues](https://msdn.microsoft.com/en-us/library/ms711414(v=vs.85).aspx)
+* `QueueCache<T>` is used to cache open queues, as opening queues is not cheap
+* `MessageCache` is used to cache the last message coming from an input queue (i.e. via multicast).  Messages are stored by label, you can requests the last message for a label by sending a message with the label prefixed by `last.` and the message `ResponseQueue` property set.
+
+All classes are `async` code bulit on `System.Threading.Tasks.Task`.
+
+# BusterWood.Msmq
 
 A .NET library for MSMQ (Microsoft Message Queuing).
 
 My motivation for creating this library is to create useable components for MSMQ (see BusterWood.Msmq.Patterns below), but found `System.Messaging` to be
 missing features from MSMQ 3.0, i.e. [subqueues](https://msdn.microsoft.com/en-us/library/ms711414(v=vs.85).aspx) and [poison message handling](https://msdn.microsoft.com/en-us/library/ms703179(v=vs.85).aspx) for transactional queues.
 
-### Feature summary
+### Summary
 
 New a `QueueReader` to peek or read messages from a queue.
 
@@ -38,23 +59,3 @@ New a `QueueTransaction` to begin a MSMQ transaction, or use the static fields `
 * `QueueTransaction.None`, `QueueTransaction.Single` or `QueueTransaction.Dtc` static fields replace _`MessageQueueTransactionType` enum_. 
 * Additional message properties are supported, e.g. `TransactionFirst`, `TransactionLast`, `TransactionAbortCount`, `TransactionMoveCount`.
 
-# BusterWood.Msmq.Patterns
-
-Reuseable messaging patterns for MSMQ built on `BusterWood.MSMQ`.
-
-## Summary
-
-The core pattern is the `Postman`, which supports sending messages with confirmation of delivery to the destination queue (and receiving), _or_ an error if it cannot be delivered or was not received in time.
-
-The following patterns then use the `Postman`:
-* Send requests and wait for reply with the `RequestReply`class
-* Route batches of messages between transactional queues with the `TransactionalRouter` class
-* Route messages between non-transactional queues with the `NonTransactionalRouter` class
-
-Additionally, BusterWood.Msmq.Patterns implements the following: (not using `Postman`)
-* `QueueDispatcher` is used for publish/subcribe messaging (i.e. via multicast)
-* `SubQueueFilterRouter` is used to route messages to [subqueues](https://msdn.microsoft.com/en-us/library/ms711414(v=vs.85).aspx)
-* `QueueCache<T>` is used to cache open queues, as opening queues is not cheap
-* `MessageCache` is used to cache the last message coming from an input queue (i.e. via multicast).  Messages are stored by label, you can requests the last message for a label by sending a message with the label prefixed by `last.` and the message `ResponseQueue` property set.
-
-All classes are `async` code bulit on `System.Threading.Tasks.Task`.
