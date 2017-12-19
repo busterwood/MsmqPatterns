@@ -134,7 +134,7 @@ namespace BusterWood.Msmq.Patterns
 
                 // route to message to the destination
                 var dest = GetRoute(msg);
-                sent.Add(Sender.RequestDelivery(msg, txn, dest));
+                sent.Add(Sender.RequestDelivery(msg, dest, txn));
             }
         }
 

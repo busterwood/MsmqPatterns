@@ -71,7 +71,7 @@ namespace UnitTests.Cache
             {
                 var cachedMsg = new Message { Label = "some.value", AppSpecific = 234 };
                 cachedMsg.BodyASCII("hello world!");
-                await postman.DeliverAsync(cachedMsg, QueueTransaction.None, inputWriter);
+                await postman.DeliverAsync(cachedMsg, inputWriter, QueueTransaction.None);
 
                 var request = new Message { Label = "last.some.value" };
                 var reply = await rr.SendRequestAsync(request);

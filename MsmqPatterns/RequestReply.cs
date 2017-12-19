@@ -36,7 +36,7 @@ namespace BusterWood.Msmq.Patterns
             Contract.Ensures(Contract.Result<Message>() != null);
 
             SetupRequest(request);
-            var tracking = _postman.RequestDelivery(request, null, _requestQueue);
+            var tracking = _postman.RequestDelivery(request, _requestQueue, null);
             _postman.WaitForDelivery(tracking).Wait();
             _postman.WaitToBeReceived(tracking).Wait();
             return _responseQueue.ReadByCorrelationId(request.Id);
@@ -62,7 +62,7 @@ namespace BusterWood.Msmq.Patterns
             Contract.Requires(request != null);
 
             SetupRequest(request);
-            var tracking = _postman.RequestDelivery(request, null, _requestQueue);
+            var tracking = _postman.RequestDelivery(request, _requestQueue, null);
             await _postman.WaitForDelivery(tracking);
             await _postman.WaitToBeReceived(tracking);
             return await _responseQueue.ReadByCorrelationIdAsync(request.Id);

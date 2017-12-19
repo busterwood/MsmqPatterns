@@ -122,7 +122,7 @@ namespace BusterWood.Msmq.Patterns
         /// <summary>
         /// Posts a <paramref name="message"/> to the <paramref name="queue"/> with acknowledgement requested to be sent to <see cref="AdminQueueFormatName"/>. 
         /// </summary>
-        public Tracking RequestDelivery(Message message, QueueTransaction transaction, QueueWriter queue)
+        public Tracking RequestDelivery(Message message, QueueWriter queue, QueueTransaction transaction = null)
         {
             Contract.Requires(message != null);
             Contract.Requires(queue != null);
@@ -144,14 +144,14 @@ namespace BusterWood.Msmq.Patterns
         /// <returns>Task that completes when the message has been delivered</returns>
         /// <exception cref="TimeoutException">Thrown if the message does not reach the queue before the <see cref="ReachQueueTimeout"/> has been reached</exception>
         /// <exception cref="AcknowledgmentException">Thrown if something bad happens, e.g. message could not be sent, access denied, the queue was purged, etc</exception>
-        public Task DeliverAsync(Message message, QueueTransaction transaction, QueueWriter queue)
+        public Task DeliverAsync(Message message, QueueWriter queue, QueueTransaction transaction = null)
         {
             Contract.Requires(message != null);
             Contract.Requires(queue != null);
             Contract.Requires(transaction == null || transaction == QueueTransaction.None || transaction == QueueTransaction.Single);
             Contract.Assert(_run != null);
 
-            RequestDelivery(message, transaction, queue);
+            RequestDelivery(message, queue, transaction);
             return WaitForDelivery(new Tracking(queue.FormatName, message.Id));
         }
 

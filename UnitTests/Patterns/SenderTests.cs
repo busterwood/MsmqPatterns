@@ -44,7 +44,7 @@ namespace UnitTests
             {
                 await sender.StartAsync();
                 var msg = new Message { Label = "send1" };
-                await sender.DeliverAsync(msg, QueueTransaction.Single, dest);
+                await sender.DeliverAsync(msg, dest, QueueTransaction.Single);
             }
         }
 
@@ -57,7 +57,7 @@ namespace UnitTests
                 var msg = new Message { Label = "send2" };
                 try
                 {
-                    await sender.DeliverAsync(msg, QueueTransaction.None, dest);
+                    await sender.DeliverAsync(msg, dest, QueueTransaction.None);
                     Assert.Fail("Exception not thrown");
                 }
                 catch (AcknowledgmentException ex)
@@ -78,7 +78,7 @@ namespace UnitTests
                 var msg = new Message { Label = "send3" };
                 try
                 {
-                    await sender.DeliverAsync(msg, QueueTransaction.Single, doesNotExist);
+                    await sender.DeliverAsync(msg, doesNotExist, QueueTransaction.Single);
                     Assert.Fail("Exception not thrown");
                 }
                 catch (AcknowledgmentException ex)
