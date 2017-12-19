@@ -23,6 +23,10 @@ Supports [poison message handling for transactional queues](https://msdn.microso
 
 * BusterWood.MSMQ only fully supports private queues at the moment, some public queue message properties are missing
 * Format names are pure MSMQ format names, _they do not accept the `FormatName:` prefix required by `System.Messaging`_.
+* `QueueReader.Peek` _replaces `MessageQueue.Peek` method_.
+* `QueueReader.Read` _replaces `MessageQueue.Receive` method_.
+* `QueueWriter.Write` _replaces `MessageQueue.Send` method_.
+* `QueueReader.Lookup` method _replaces `ReceiveByLookupId`_ and additionally supports lookup of first, last, previous and next messages.
 * Direct support for Tasks and `async/await` via `PeekAsync()` and `ReadAsync()` methods.
 * Methods that accept a timeout, e.g. `Peek...()` and `Read...()` methods, return `null` if the timeout was reached _rather than throwing an exception_.
 * You can only open queues using format names.  Use `Queue.TryCreate()` or `Queue.PathToFormatName()` to get a format name from a queue path.
@@ -33,7 +37,6 @@ Supports [poison message handling for transactional queues](https://msdn.microso
 * The `QueueTransaction` class automatically starts a transaction when it is created, _and replaces `MessageQueueTransaction` class_.
 * `QueueTransaction.None`, `QueueTransaction.Single` or `QueueTransaction.Dtc` static fields replace _`MessageQueueTransactionType` enum_. 
 * Additional message properties are supported, e.g. `TransactionFirst`, `TransactionLast`, `TransactionAbortCount`, `TransactionMoveCount`.
-* `QueueReader.Lookup` method _replaces `ReceiveByLookupId`_ and additionally supports lookup of first, last, previous and next messages.
 
 # BusterWood.Msmq.Patterns
 
