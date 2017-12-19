@@ -52,6 +52,7 @@ The following patterns then use the `Postman`:
 * Route messages between non-transactional queues with the `NonTransactionalRouter` class
 
 The following patterns do not use `Postman`:
+* `QueueDispatcher` is used for publish/subcribe messaging (i.e. via multicast)
 * Route messages to [subqueues](https://msdn.microsoft.com/en-us/library/ms711414(v=vs.85).aspx) with the `SubQueueFilterRouter` class
 * `QueueCache<T>` is used to cache open queues, as opening queues is not cheap
 * `MessageCache` is used to cache the last message coming from an input queue (i.e. via multicast).  Messages are stored by label, you can requests the last messages for a label by sending a message with the label prefixed by `last.` and the message `ResponseQueue` property set.
