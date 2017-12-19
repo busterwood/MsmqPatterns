@@ -23,7 +23,7 @@ All classes are `async` code bulit on `System.Threading.Tasks.Task`.
 
 A .NET library for MSMQ (Microsoft Message Queuing).
 
-My motivation for creating this library is to create useable components for MSMQ (see BusterWood.Msmq.Patterns below), but found `System.Messaging` to be
+My motivation for creating this library is to create useable patterns for MSMQ (see above), but found `System.Messaging` to be
 missing features from MSMQ 3.0, i.e. [subqueues](https://msdn.microsoft.com/en-us/library/ms711414(v=vs.85).aspx) and [poison message handling](https://msdn.microsoft.com/en-us/library/ms703179(v=vs.85).aspx) for transactional queues.
 
 ### Summary
