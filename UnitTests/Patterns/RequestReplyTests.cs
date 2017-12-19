@@ -76,7 +76,7 @@ namespace UnitTests
                     Assert.AreEqual(request.Label, reply?.Label);
                     Assert.AreEqual(request.AppSpecific, reply?.AppSpecific);
                     sw.Stop();
-                    Console.WriteLine($"took {sw.ElapsedMilliseconds:N0}ms");
+                    Console.WriteLine($"took {sw.Elapsed.TotalMilliseconds:N1}ms");
                     key++;
                 }
             }

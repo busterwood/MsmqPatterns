@@ -100,21 +100,21 @@ namespace BusterWood.Msmq.Patterns
             var last = _cache[key];
             if (last == null)
             {
-                Console.Error.WriteLine($"DEBUG: there is no cached value for '{key}', sending an empty message");
+                //Console.Error.WriteLine($"DEBUG: there is no cached value for '{key}', sending an empty message");
                 last = new Message { Label = key };
             }
 
             var replyQueue = _queueCache.Open(msg.ResponseQueue, QueueAccessMode.Send);
             last.CorrelationId = msg.Id;
             replyQueue.Write(last); 
-            Console.Error.WriteLine($"DEBUG: sent reply for '{key}' to {msg.ResponseQueue}");
+            //Console.Error.WriteLine($"DEBUG: sent reply for '{key}' to {msg.ResponseQueue}");
             // note: we do not wait for confirmation of delivery, we just report errors on via the AdminAsync (_adminTask)
         }
 
         private void StoreLastValue(Message msg)
         {
             _cache[msg.Label] = msg;
-            Console.Error.WriteLine($"DEBUG: stored message for '{msg.Label}'");
+            //Console.Error.WriteLine($"DEBUG: stored message for '{msg.Label}'");
         }
 
         async Task AdminAsync()
