@@ -4,7 +4,7 @@ using System.Diagnostics.Contracts;
 using System.Threading.Tasks;
 using BusterWood.Caching;
 
-namespace BusterWood.Msmq.Cache
+namespace BusterWood.Msmq.Patterns
 {
     public class MessageCache : IProcessor
     {

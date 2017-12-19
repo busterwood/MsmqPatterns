@@ -36,15 +36,10 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Net.Http" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Cache\MessageCacheTests.cs" />
+    <Compile Include="Patterns\MessageCacheTests.cs" />
     <Compile Include="Patterns\LabelSubscriptionTests.cs" />
     <Compile Include="Patterns\QueueDispatcherTests.cs" />
     <Compile Include="SubQueueReaderTests.cs" />
@@ -62,10 +57,6 @@
     <ProjectReference Include="..\Busterwood.Msmq\Msmq.csproj">
       <Project>{cb8a7c8c-db78-4aa7-a0f3-578a7ab2bb2b}</Project>
       <Name>Msmq</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\MsmqCache\MsmqCache.csproj">
-      <Project>{5843a064-5cb4-4d10-a8ce-a1bb87633e44}</Project>
-      <Name>MsmqCache</Name>
     </ProjectReference>
     <ProjectReference Include="..\MsmqPatterns\MsmqPatterns.csproj">
       <Project>{06693915-370D-490F-A491-72A2867DCD94}</Project>

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BusterWood.Msmq.Patterns;
+using System;
 
 namespace BusterWood.Msmq.Cache
 {
