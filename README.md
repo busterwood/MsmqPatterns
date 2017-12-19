@@ -17,7 +17,7 @@ New a `QueueCursor` to peek or receive messages using a MSMQ cursor.
 
 New a `QueueTransaction` to begin a MSMQ transaction, or use the static fields `QueueTransaction.None`, `QueueTransaction.Single` or `QueueTransaction.Dtc`.
 
-Supports [poison message handling for transactional queues](https://msdn.microsoft.com/en-us/library/ms703179(v=vs.85).aspx) via the `TransactionAbortCount` and `TransactionMoveCount`properties and the `MarkRejected` method that sends notification to the message sender that the message was rejected.
+[Poison message handling for transactional queues](https://msdn.microsoft.com/en-us/library/ms703179(v=vs.85).aspx) via the `TransactionAbortCount` and `TransactionMoveCount`properties and the `MarkRejected` method that sends notification to the message sender that the message was rejected.
 
 ### Differences from System.Messaging
 
