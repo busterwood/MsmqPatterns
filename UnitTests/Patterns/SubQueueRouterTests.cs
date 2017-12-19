@@ -8,9 +8,9 @@ using BusterWood.Msmq;
 namespace UnitTests
 {
     [TestFixture, Timeout(10000)]
-    public class SubQueueFilterRouterTests
+    public class SubQueueRouterTests
     {
-        string testQueue = $".\\private$\\{nameof(SubQueueFilterRouterTests)}";
+        string testQueue = $".\\private$\\{nameof(SubQueueRouterTests)}";
         string testQueueFormatName;
 
         [TestFixtureSetUp]
@@ -36,7 +36,7 @@ namespace UnitTests
         public async Task can_route_one_message()
         {
             var key = Environment.TickCount;
-            using (var router = new SubQueueFilterRouter(testQueueFormatName, GetSubQueue))
+            using (var router = new SubQueueRouter(testQueueFormatName, GetSubQueue))
             {
                 await router.StartAsync();
                 try
@@ -65,7 +65,7 @@ namespace UnitTests
         public async Task can_route_multiple_message()
         {
             var key = Environment.TickCount;
-            using (var router = new SubQueueFilterRouter(testQueueFormatName, GetSubQueue))
+            using (var router = new SubQueueRouter(testQueueFormatName, GetSubQueue))
             {
                 await router.StartAsync();
                 try
@@ -96,7 +96,7 @@ namespace UnitTests
         public async Task can_skip_one_then_route_one_message()
         {
             var key = Environment.TickCount;
-            using (var router = new SubQueueFilterRouter(testQueueFormatName, GetSubQueue))
+            using (var router = new SubQueueRouter(testQueueFormatName, GetSubQueue))
             {
                 await router.StartAsync();
                 try
@@ -126,7 +126,7 @@ namespace UnitTests
             using (var input = new QueueWriter(testQueueFormatName))
             using (var out1 = new QueueReader(testQueueFormatName+";one"))
             using (var out2 = new QueueReader(testQueueFormatName+";two"))
-            using (var router = new SubQueueFilterRouter(testQueueFormatName, GetSubQueue))
+            using (var router = new SubQueueRouter(testQueueFormatName, GetSubQueue))
             {
                 out1.Purge();
                 out2.Purge();

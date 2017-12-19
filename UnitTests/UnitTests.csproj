@@ -47,7 +47,7 @@
     <Compile Include="Patterns\TransactionalRouterTests.cs" />
     <Compile Include="Patterns\NonTransactionalRouterTests.cs" />
     <Compile Include="Patterns\RequestReplyTests.cs" />
-    <Compile Include="Patterns\SubQueueFilterRouterTests.cs" />
+    <Compile Include="Patterns\SubQueueRouterTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

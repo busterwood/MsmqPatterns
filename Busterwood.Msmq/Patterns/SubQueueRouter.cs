@@ -11,7 +11,7 @@ namespace BusterWood.Msmq.Patterns
     /// This is a safe way to filter messages with explicit transaction control. The alternative, directly using a cursor, 
     /// is not safe as the cursor position does not update when a receive transaction is rolled-back.
     /// </summary>
-    public class SubQueueFilterRouter : IProcessor
+    public class SubQueueRouter : IProcessor
     {
         readonly string _inputFormatName;
         readonly Func<Message, SubQueue> _router;
@@ -29,7 +29,7 @@ namespace BusterWood.Msmq.Patterns
         /// <summary>Handle messages that cannot be routed.  Defaults to moving messages to <see cref="UnroutableSubQueue"/> of the input queue</summary>
         public Action<long, QueueTransaction> BadMessageHandler { get; set; }
 
-        public SubQueueFilterRouter(string inputFormatName, Func<Message, SubQueue> router) 
+        public SubQueueRouter(string inputFormatName, Func<Message, SubQueue> router) 
         {
             Contract.Requires(inputFormatName != null);
             Contract.Requires(router != null);
