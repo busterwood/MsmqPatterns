@@ -6,7 +6,7 @@ using BusterWood.Caching;
 
 namespace BusterWood.Msmq.Cache
 {
-    internal class MessageCache : IProcessor
+    public class MessageCache : IProcessor
     {
         private const string LastPrefix = "last.";
         readonly QueueCache<QueueWriter> _queueCache;
@@ -95,11 +95,12 @@ namespace BusterWood.Msmq.Cache
             var last = _cache[key];
             if (last == null)
             {
-                Console.Error.WriteLine($"DEBUG: there is no cached value for '{msg.Label}'");
-                return;
+                Console.Error.WriteLine($"DEBUG: there is no cached value for '{msg.Label}', sending an empty message");
+                last = new Message { Label = key };
             }
 
             var replyQueue = _queueCache.Open(msg.ResponseQueue, QueueAccessMode.Send);
+            last.CorrelationId = msg.Id;
             replyQueue.Write(last); 
             // note: we do not wait for confirmation of delivery, we just report errors on via the AdminAsync (_adminTask)
         }

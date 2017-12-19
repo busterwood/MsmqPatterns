@@ -225,7 +225,6 @@ namespace BusterWood.Msmq
                 message.Props.Free();
             }
         }
-
     }
 
     /// <summary>Reads messages from a queue</summary>
@@ -348,13 +347,14 @@ namespace BusterWood.Msmq
 
                 if (Native.NotEnoughMemory(res))
                 {
-                    msg.Props.AdjustMemory();
+                    msg.Props.IncreaseBufferSize();
                     continue; // try again
                 }
 
                 if (Native.IsError(res))
                     throw new QueueException(res);
 
+                msg.Props.ResizeBody();
                 return msg;
             }
         }
@@ -397,13 +397,14 @@ namespace BusterWood.Msmq
 
                 if (Native.NotEnoughMemory(res))
                 {
-                    msg.Props.AdjustMemory();
+                    msg.Props.IncreaseBufferSize();
                     continue; // try again
                 }
 
                 if (Native.IsError(res))
                     throw new QueueException(res);
 
+                msg.Props.ResizeBody();
                 return msg;
             }
         }

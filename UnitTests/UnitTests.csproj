@@ -44,14 +44,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="LabelSubscriptionTests.cs" />
-    <Compile Include="QueueDispatcherTests.cs" />
+    <Compile Include="Cache\MessageCacheTests.cs" />
+    <Compile Include="Patterns\LabelSubscriptionTests.cs" />
+    <Compile Include="Patterns\QueueDispatcherTests.cs" />
     <Compile Include="SubQueueReaderTests.cs" />
-    <Compile Include="SenderTests.cs" />
-    <Compile Include="TransactionalRouterTests.cs" />
-    <Compile Include="NonTransactionalRouterTests.cs" />
-    <Compile Include="RequestReplyTests.cs" />
-    <Compile Include="SubQueueFilterRouterTests.cs" />
+    <Compile Include="Patterns\SenderTests.cs" />
+    <Compile Include="Patterns\TransactionalRouterTests.cs" />
+    <Compile Include="Patterns\NonTransactionalRouterTests.cs" />
+    <Compile Include="Patterns\RequestReplyTests.cs" />
+    <Compile Include="Patterns\SubQueueFilterRouterTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -61,6 +62,10 @@
     <ProjectReference Include="..\Busterwood.Msmq\Msmq.csproj">
       <Project>{cb8a7c8c-db78-4aa7-a0f3-578a7ab2bb2b}</Project>
       <Name>Msmq</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\MsmqCache\MsmqCache.csproj">
+      <Project>{5843a064-5cb4-4d10-a8ce-a1bb87633e44}</Project>
+      <Name>MsmqCache</Name>
     </ProjectReference>
     <ProjectReference Include="..\MsmqPatterns\MsmqPatterns.csproj">
       <Project>{06693915-370D-490F-A491-72A2867DCD94}</Project>

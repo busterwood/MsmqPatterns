@@ -131,13 +131,7 @@ namespace BusterWood.Msmq
                 var len = Props.GetUInt(Native.MESSAGE_PROPID_BODY_SIZE);
                 if (len == 0)
                     return null;
-                var data = Props.GetByteArray(Native.MESSAGE_PROPID_BODY);
-                if (data.Length == len)
-                    return data;
-                var retVal = new byte[len];
-                Array.Copy(data, retVal, len);
-                Props.SetByteArray(Native.MESSAGE_PROPID_BODY, retVal); // store it back in case the body property is read more than once
-                return retVal;
+                return Props.GetByteArray(Native.MESSAGE_PROPID_BODY);
             }
             set
             {

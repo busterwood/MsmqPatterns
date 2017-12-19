@@ -402,7 +402,7 @@ namespace BusterWood.Msmq
             _pinnedStatuses.Free();
         }
 
-        public void AdjustMemory()
+        public void IncreaseBufferSize()
         {
             if (!IsUndefined(Native.MESSAGE_PROPID_ADMIN_QUEUE_LEN))
             {
@@ -458,6 +458,20 @@ namespace BusterWood.Msmq
             //    if (size > Message.DefaultSenderIdSize)
             //        SetByteArray(Native.MESSAGE_PROPID_SENDERID, new byte[size]);
             //}            
+        }
+
+        internal void ResizeBody()
+        {
+            if (IsUndefined(Native.MESSAGE_PROPID_BODY))
+                return;
+
+            int size = GetUInt(Native.MESSAGE_PROPID_BODY_SIZE);
+            var body = GetByteArray(Native.MESSAGE_PROPID_BODY);
+            if (body.Length != size)
+            {
+                Array.Resize(ref body, size);
+                SetByteArray(Native.MESSAGE_PROPID_BODY, body);
+            }
         }
     }
 

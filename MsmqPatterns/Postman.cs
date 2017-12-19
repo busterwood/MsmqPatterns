@@ -127,6 +127,7 @@ namespace BusterWood.Msmq.Patterns
             Contract.Requires(message != null);
             Contract.Requires(queue != null);
             Contract.Assert(_run != null);
+            Contract.Assert(_adminQueue != null);
 
             message.AcknowledgmentTypes |= AcknowledgmentTypes.FullReachQueue;
             message.TimeToReachQueue = ReachQueueTimeout;

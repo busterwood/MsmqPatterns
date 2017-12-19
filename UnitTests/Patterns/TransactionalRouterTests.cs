@@ -137,7 +137,7 @@ namespace UnitTests
             }
         }
 
-        [Test, Timeout(10000)]
+        [Test, Timeout(10000), Ignore("too slow to run every time")]
         public async Task can_route_many()
         {
             using (var router = new TransactionalRouter(inputQueueFormatName, sender, Route))

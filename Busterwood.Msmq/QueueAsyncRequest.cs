@@ -51,7 +51,7 @@ namespace BusterWood.Msmq
                     if (Native.NotEnoughMemory(res))
                     {
                         Message.Props.Free();
-                        Message.Props.AdjustMemory();
+                        Message.Props.IncreaseBufferSize();
                         Props = Message.Props.Allocate();
                         continue; // try again
                     }
@@ -88,6 +88,7 @@ namespace BusterWood.Msmq
                 switch (result)
                 {
                     case 0:
+                        Message.Props.ResizeBody();
                         Tcs.TrySetResult(Message);
                         break;
                     case (int)ErrorCode.InsufficientResources:
@@ -101,7 +102,7 @@ namespace BusterWood.Msmq
                         if (Native.NotEnoughMemory(result))
                         {
                             Message.Props.Free();
-                            Message.Props.AdjustMemory();
+                            Message.Props.IncreaseBufferSize();
                             Props = Message.Props.Allocate();
                             var overlapped = new Overlapped();
                             var nativeOverlapped = overlapped.Pack(EndReceive, null);
@@ -117,7 +118,10 @@ namespace BusterWood.Msmq
                             if (Native.IsError(res))
                                 Tcs.TrySetException(new QueueException(unchecked(res)));
                             else
+                            {
+                                Message.Props.ResizeBody();
                                 Tcs.TrySetResult(Message);
+                            }
                         }
 
                         // some other error
