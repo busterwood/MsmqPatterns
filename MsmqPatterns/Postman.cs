@@ -52,7 +52,7 @@ namespace BusterWood.Msmq.Patterns
             {
                 for (;;)
                 {
-                    var msg = await _adminQueue.ReadAsync(AdminFilter);
+                    var msg = _adminQueue.Read(AdminFilter, TimeSpan.Zero) ?? await _adminQueue.ReadAsync(AdminFilter);
                     var ack = msg.Acknowledgement();
                     switch (ack)
                     {

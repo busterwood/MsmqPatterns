@@ -82,6 +82,12 @@ namespace BusterWood.Msmq
             lock (Outstanding)
                 Outstanding.Remove(this);
 
+            if (code == 995) // operation aborted
+            {
+                Tcs.TrySetException(new QueueException(ErrorCode.OperationCanceled));
+                return;
+            }
+
             var result = Native.GetOverlappedResult(native);
             try
             {
@@ -115,12 +121,11 @@ namespace BusterWood.Msmq
                             Message.Props.Free();
                             Overlapped.Free(nativeOverlapped);
 
-                            if (Native.IsError(res))
-                                Tcs.TrySetException(new QueueException(unchecked(res)));
-                            else
+                            if (!Native.IsError(res))
                             {
                                 Message.Props.ResizeBody();
                                 Tcs.TrySetResult(Message);
+                                return;
                             }
                         }
 

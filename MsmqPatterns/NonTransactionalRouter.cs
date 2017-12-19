@@ -26,7 +26,7 @@ namespace BusterWood.Msmq.Patterns
             {
                 for (;;)
                 {
-                    var msg = await _input.PeekAsync(PeekFilter);
+                    var msg = _input.Peek(PeekFilter, TimeSpan.Zero) ?? await _input.PeekAsync(PeekFilter);
                     await OnNewMessage(msg);
                 }
             }

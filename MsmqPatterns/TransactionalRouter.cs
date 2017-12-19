@@ -57,9 +57,10 @@ namespace BusterWood.Msmq.Patterns
                 await Recover(); // clean up the existing batch (if any)
 
                 var sent = new List<Tracking>();
-                for (; ; )
+                for (;;)
                 {
-                    await _input.PeekAsync(PeekFilter); // wait for next message
+                    if (_input.Peek(PeekFilter, TimeSpan.Zero) == null)
+                        await _input.PeekAsync(PeekFilter); // wait for next message
                     RouteBatch(sent);
                     await WaitForAcknowledgements(sent);
                     sent.Clear();

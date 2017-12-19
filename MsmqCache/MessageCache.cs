@@ -85,29 +85,31 @@ namespace BusterWood.Msmq.Cache
 
         private void SendLastValue(Message msg)
         {
+            var key = msg.Label.Substring(LastPrefix.Length);
             if (string.IsNullOrWhiteSpace(msg.ResponseQueue))
             {
-                Console.Error.WriteLine($"INFO: Received a request for '{msg.Label}' without the response queue being set");
+                Console.Error.WriteLine($"INFO: Received a request for '{key}' without the response queue being set");
                 return;
             }
 
-            var key = msg.Label.Substring(LastPrefix.Length);
             var last = _cache[key];
             if (last == null)
             {
-                Console.Error.WriteLine($"DEBUG: there is no cached value for '{msg.Label}', sending an empty message");
+                Console.Error.WriteLine($"DEBUG: there is no cached value for '{key}', sending an empty message");
                 last = new Message { Label = key };
             }
 
             var replyQueue = _queueCache.Open(msg.ResponseQueue, QueueAccessMode.Send);
             last.CorrelationId = msg.Id;
             replyQueue.Write(last); 
+            Console.Error.WriteLine($"DEBUG: sent reply for '{key}' to {msg.ResponseQueue}");
             // note: we do not wait for confirmation of delivery, we just report errors on via the AdminAsync (_adminTask)
         }
 
         private void StoreLastValue(Message msg)
         {
             _cache[msg.Label] = msg;
+            Console.Error.WriteLine($"DEBUG: stored message for '{msg.Label}'");
         }
 
         async Task AdminAsync()

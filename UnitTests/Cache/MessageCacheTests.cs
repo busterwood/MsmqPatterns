@@ -3,6 +3,7 @@ using BusterWood.Msmq.Cache;
 using BusterWood.Msmq.Patterns;
 using NUnit.Framework;
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace UnitTests.Cache
@@ -57,7 +58,10 @@ namespace UnitTests.Cache
             using (var rr = new RequestReply(cacheInputFormatName, replyFormatName, postman))
             {
                 var msg = new Message { Label = "last.some.value" };
+                var sw = new Stopwatch();
+                sw.Start();
                 var reply = await rr.SendRequestAsync(msg);
+                Console.WriteLine($"took {sw.ElapsedMilliseconds:N0}MS");
                 Assert.AreEqual(null, reply.Body, "Body");
                 Assert.AreEqual("some.value", reply.Label, "Label");
             }
@@ -74,7 +78,10 @@ namespace UnitTests.Cache
                 await postman.DeliverAsync(cachedMsg, inputWriter, QueueTransaction.None);
 
                 var request = new Message { Label = "last.some.value" };
+                var sw = new Stopwatch();
+                sw.Start();
                 var reply = await rr.SendRequestAsync(request);
+                Console.WriteLine($"took {sw.ElapsedMilliseconds:N0}MS");
                 Assert.AreEqual(cachedMsg.Label, reply.Label, "Label");
                 Assert.AreEqual(cachedMsg.AppSpecific, reply.AppSpecific, "AppSpecific");
                 Assert.AreEqual("hello world!", reply.BodyASCII(), "Body");

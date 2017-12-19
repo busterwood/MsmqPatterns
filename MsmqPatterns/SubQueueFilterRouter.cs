@@ -53,7 +53,7 @@ namespace BusterWood.Msmq.Patterns
             {
                 for(;;)
                 {
-                    Message peeked = await _input.PeekAsync(PeekFilter);
+                    Message peeked = _input.Peek(PeekFilter, TimeSpan.Zero) ?? await _input.PeekAsync(PeekFilter);
                     try
                     {
                         var subQueue = GetRoute(peeked);
