@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 
-namespace BusterWood.MsmqPatterns
+namespace BusterWood.Msmq.Patterns
 {
     /// <summary>
     /// A class to manage subscriptions to messages based on the message label.

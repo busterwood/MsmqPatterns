@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using BusterWood.Msmq;
 using System.Diagnostics.Contracts;
 
-namespace BusterWood.MsmqPatterns
+namespace BusterWood.Msmq.Patterns
 {
     /// <summary>
     /// A cache that maybe useful if you are opening a lot of queues, e.g. a lot of sub queues.

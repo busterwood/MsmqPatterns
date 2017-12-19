@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-namespace BusterWood.MsmqPatterns
+namespace BusterWood.Msmq.Patterns
 {
     public interface IProcessor : IDisposable
     {

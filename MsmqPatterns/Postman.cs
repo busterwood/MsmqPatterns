@@ -6,7 +6,7 @@ using BusterWood.Caching;
 using System.Linq;
 using System.Collections.Generic;
 
-namespace BusterWood.MsmqPatterns
+namespace BusterWood.Msmq.Patterns
 {
     /// <summary>
     /// Use this class to send a message and get acknowledgement that is has been sent.

@@ -1,5 +1,5 @@
 ﻿using BusterWood.Msmq;
-using BusterWood.MsmqPatterns;
+using BusterWood.Msmq.Patterns;
 using NUnit.Framework;
 using System;
 

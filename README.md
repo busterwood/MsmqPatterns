@@ -2,7 +2,7 @@
 
 A .NET library for MSMQ (Microsoft Message Queuing).
 
-My motivation for creating this library is to create useable components for MSMQ (see BusterWood.MsmqPatterns below), but found `System.Messaging` to be
+My motivation for creating this library is to create useable components for MSMQ (see BusterWood.Msmq.Patterns below), but found `System.Messaging` to be
 missing features from MSMQ 3.0, i.e. [subqueues](https://msdn.microsoft.com/en-us/library/ms711414(v=vs.85).aspx) and [poison message handling](https://msdn.microsoft.com/en-us/library/ms703179(v=vs.85).aspx) for transactional queues.
 
 ### Feature summary
@@ -35,7 +35,7 @@ Supports [poison message handling for transactional queues](https://msdn.microso
 * Additional message properties are supported, e.g. `TransactionFirst`, `TransactionLast`, `TransactionAbortCount`, `TransactionMoveCount`.
 * `QueueReader.Lookup` method _replaces `ReceiveByLookupId`_ and additionally supports lookup of first, last, previous and next messages.
 
-# BusterWood.MsmqPatterns
+# BusterWood.Msmq.Patterns
 
 Reuseable messaging patterns for MSMQ built on `BusterWood.MSMQ`.
 

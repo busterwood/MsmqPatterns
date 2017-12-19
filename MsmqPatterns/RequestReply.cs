@@ -3,7 +3,7 @@ using System.Diagnostics.Contracts;
 using System.Threading.Tasks;
 using BusterWood.Msmq;
 
-namespace BusterWood.MsmqPatterns
+namespace BusterWood.Msmq.Patterns
 {
     public class RequestReply : IDisposable
     {

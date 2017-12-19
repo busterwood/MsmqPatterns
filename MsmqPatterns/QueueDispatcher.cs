@@ -3,7 +3,7 @@ using System;
 using System.Diagnostics.Contracts;
 using System.Threading.Tasks;
 
-namespace BusterWood.MsmqPatterns
+namespace BusterWood.Msmq.Patterns
 {
     /// <summary>
     /// Receives all messages from an input queue and invokes callback added via the <see cref="Subscribe(string, Action{Message})"/> method.

@@ -4,7 +4,7 @@ using System.Diagnostics.Contracts;
 using BusterWood.Msmq;
 using System.Threading.Tasks;
 
-namespace BusterWood.MsmqPatterns
+namespace BusterWood.Msmq.Patterns
 {
     /// <summary>
     /// Moves selected messages into sub-queues.

@@ -3,7 +3,7 @@ using System.Diagnostics.Contracts;
 using BusterWood.Msmq;
 using System.Threading.Tasks;
 
-namespace BusterWood.MsmqPatterns
+namespace BusterWood.Msmq.Patterns
 {
     /// <summary>
     /// Routes messages between non-transactional message queues.
