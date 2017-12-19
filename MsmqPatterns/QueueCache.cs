@@ -13,7 +13,7 @@ namespace BusterWood.Msmq.Patterns
     {
         readonly Cache<Key, T> _cache;
 
-        public QueueCache(Func<string, QueueAccessMode, QueueShareReceive, T> factory) : this(factory, 500, TimeSpan.FromMinutes(5))
+        public QueueCache(Func<string, QueueAccessMode, QueueShareReceive, T> factory) : this(factory, 100, TimeSpan.FromMinutes(5))
         {
         }
 
