@@ -1,14 +1,19 @@
-﻿using BusterWood.Msmq.Patterns;
-using System;
+﻿using System;
 using System.Diagnostics.Contracts;
 using System.Threading.Tasks;
 using BusterWood.Caching;
 
 namespace BusterWood.Msmq.Patterns
 {
+    /// <summary>
+    /// This caches reads all messages from the <see cref="InputQueueFormatName"/> and either stores them or sends a response message, depending on the <see cref="Message.Label"/>.
+    /// If the <see cref="Message.Label"/> starts with <see cref="LastPrefix"/> then the <see cref="LastPrefix"/> is removed from the label
+    /// and the result used to lookup a message in the cache. The found message, or an empty message if not in the cache, is then sent
+    /// to the input message's <see cref="Message.ResponseQueue"/>.
+    /// </summary>
     public class MessageCache : IProcessor
     {
-        private const string LastPrefix = "last.";
+        public string LastPrefix { get; set; } = "last.";
         readonly QueueCache<QueueWriter> _queueCache;
         Cache<string, Message> _cache;
         QueueReader _input;
