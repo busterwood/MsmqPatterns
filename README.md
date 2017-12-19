@@ -50,5 +50,7 @@ The following patterns then use the `Postman`:
 
 The following patterns do not use `Postman`:
 * Route messages to [subqueues](https://msdn.microsoft.com/en-us/library/ms711414(v=vs.85).aspx) with the `SubQueueFilterRouter` class
+* `QueueCache<T>` is used to cache open queues, as opening queues is not cheap
+* `MessageCache` is used to cache messages coming from an input queue (i.e. via multicast) and response to requests messages where the label starts with `last.`.
 
 All classes are `async` code bulit on `System.Threading.Tasks.Task`.
