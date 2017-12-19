@@ -1,6 +1,6 @@
 # BusterWood.Msmq.Patterns
 
-Easy to use messaging patterns for MSMQ built on `BusterWood.Msmq` (see below).
+Easy to use messaging patterns for .NET built on `BusterWood.Msmq` (see below).
 
 ### Summary
 
