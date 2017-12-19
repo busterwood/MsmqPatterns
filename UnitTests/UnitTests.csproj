@@ -58,10 +58,6 @@
       <Project>{cb8a7c8c-db78-4aa7-a0f3-578a7ab2bb2b}</Project>
       <Name>Msmq</Name>
     </ProjectReference>
-    <ProjectReference Include="..\MsmqPatterns\MsmqPatterns.csproj">
-      <Project>{06693915-370D-490F-A491-72A2867DCD94}</Project>
-      <Name>MsmqPatterns</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

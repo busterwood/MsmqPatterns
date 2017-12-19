@@ -121,11 +121,27 @@
     <DocumentationFile>bin\Release\BusterWood.Msmq.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="BusterWood.Caching, Version=2.1.0.0, Culture=neutral, PublicKeyToken=f1395612722d4ccc, processorArchitecture=MSIL">
+      <HintPath>..\packages\BusterWood.Caching.2.2.0\lib\net45\BusterWood.Caching.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AcknowledgmentTypes.cs" />
     <Compile Include="BodyType.cs" />
+    <Compile Include="Patterns\AcknowledgmentException.cs" />
+    <Compile Include="Patterns\IProcessor.cs" />
+    <Compile Include="Patterns\LabelSubscription.cs" />
+    <Compile Include="Patterns\MessageCache.cs" />
+    <Compile Include="Patterns\NonTransactionalRouter.cs" />
+    <Compile Include="Patterns\Postman.cs" />
+    <Compile Include="Patterns\QueueCache.cs" />
+    <Compile Include="Patterns\QueueDispatcher.cs" />
+    <Compile Include="Patterns\RequestReply.cs" />
+    <Compile Include="Patterns\RouteException.cs" />
+    <Compile Include="Patterns\Router.cs" />
+    <Compile Include="Patterns\SubQueueFilterRouter.cs" />
+    <Compile Include="Patterns\TransactionalRouter.cs" />
     <Compile Include="QueueCursor.cs" />
     <Compile Include="Delivery.cs" />
     <Compile Include="ErrorCode.cs" />
@@ -159,6 +175,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Native.QueueProperties.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27130.2003
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MsmqPatterns", "MsmqPatterns\MsmqPatterns.csproj", "{06693915-370D-490F-A491-72A2867DCD94}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTests", "UnitTests\UnitTests.csproj", "{DC13AD2E-ADCC-4963-9C9B-C2E0F1019D9C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Msmq", "Busterwood.Msmq\Msmq.csproj", "{CB8A7C8C-DB78-4AA7-A0F3-578A7AB2BB2B}"
@@ -24,10 +22,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{06693915-370D-490F-A491-72A2867DCD94}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{06693915-370D-490F-A491-72A2867DCD94}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{06693915-370D-490F-A491-72A2867DCD94}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{06693915-370D-490F-A491-72A2867DCD94}.Release|Any CPU.Build.0 = Release|Any CPU
 		{DC13AD2E-ADCC-4963-9C9B-C2E0F1019D9C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{DC13AD2E-ADCC-4963-9C9B-C2E0F1019D9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DC13AD2E-ADCC-4963-9C9B-C2E0F1019D9C}.Release|Any CPU.ActiveCfg = Release|Any CPU

@@ -51,10 +51,6 @@
       <Project>{cb8a7c8c-db78-4aa7-a0f3-578a7ab2bb2b}</Project>
       <Name>Msmq</Name>
     </ProjectReference>
-    <ProjectReference Include="..\MsmqPatterns\MsmqPatterns.csproj">
-      <Project>{06693915-370d-490f-a491-72a2867dcd94}</Project>
-      <Name>MsmqPatterns</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
