@@ -8,16 +8,15 @@ using System.Threading.Tasks;
 
 namespace ConsoleApplication1
 {
-    /// <summary>
-    /// Sample MsmqCache client
-    /// </summary>
+    /// <summary>Sample MsmqCache client</summary>
     class Program
     {
-
         static void Main(string[] args)
         {
-            //var requestQueueFormatName = "multicast=224.3.9.8:234";
-            var requestQueueFormatName = Queue.PathToFormatName(".\\private$\\cache.input");
+            // Important: if sending multicast messages is slow you need to set the registry parameter
+            // HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\MSQM\Parameters\MulticastRateKbitsPerSec to something bigger than 560, which is the default, say 10000.
+
+            var requestQueueFormatName = "multicast=224.3.9.8:234";
             var requestQueue = new QueueWriter(requestQueueFormatName);
 
             var process = Process.GetCurrentProcess();
@@ -42,7 +41,7 @@ namespace ConsoleApplication1
                 {
                     case "get":
                         {
-                            var msg = new Message { Label = "cache." + bits[1], ResponseQueue = replyQueueFormatName, SenderIdType = SenderIdType.None };
+                            var msg = new Message { Label = "cache." + bits[1], ResponseQueue = replyQueueFormatName, SenderIdType = SenderIdType.None, TimeToBeReceived = TimeSpan.FromSeconds(30) };
                             sw.Restart();
                             var reply = rr.SendRequest(msg);
                             sw.Stop();
@@ -54,31 +53,31 @@ namespace ConsoleApplication1
                         }
                     case "put":
                         {
-                            var msg = new Message { Label = bits[1] };
+                            var msg = new Message { Label = bits[1], TimeToBeReceived = TimeSpan.FromSeconds(30) };
                             if (bits.Length > 2)
                                 msg.BodyUTF8(bits[2]);
-                            postman.Deliver(msg, requestQueue); // multicast
+                            postman.Deliver(msg, requestQueue);
                             break;
                         }
                     case "remove":
                         {
-                            var msg = new Message { Label = "cache." + bits[1], AppSpecific=(int)MessageCacheAction.Remove };
+                            var msg = new Message { Label = "cache." + bits[1], AppSpecific=(int)MessageCacheAction.Remove, TimeToBeReceived = TimeSpan.FromSeconds(30) };
                             if (bits.Length > 2)
                                 msg.BodyUTF8(bits[2]);
-                            postman.Deliver(msg, requestQueue); // multicast
+                            postman.Deliver(msg, requestQueue);
                             break;
                         }
                     case "clear":
                         {
-                            var msg = new Message { Label = "cache", AppSpecific=(int)MessageCacheAction.Clear };
+                            var msg = new Message { Label = "cache", AppSpecific=(int)MessageCacheAction.Clear, TimeToBeReceived = TimeSpan.FromSeconds(30) };
                             if (bits.Length > 2)
                                 msg.BodyUTF8(bits[2]);
-                            postman.Deliver(msg, requestQueue); // multicast
+                            postman.Deliver(msg, requestQueue);
                             break;
                         }
                     case "list":
                         {
-                            var msg = new Message { Label = "cache", AppSpecific=(int)MessageCacheAction.ListKeys, ResponseQueue = replyQueueFormatName };
+                            var msg = new Message { Label = "cache", AppSpecific=(int)MessageCacheAction.ListKeys, ResponseQueue = replyQueueFormatName, TimeToBeReceived = TimeSpan.FromSeconds(30) };
                             sw.Restart();
                             var reply = rr.SendRequest(msg);
                             sw.Stop();
@@ -98,9 +97,9 @@ namespace ConsoleApplication1
                             var tracking = new List<Tracking>(1000);
                             for (int i = 1; i <= 1000; i++)
                             {
-                                var msg = new Message { Label = "price."+i, SenderIdType = SenderIdType.Sid };
+                                var msg = new Message { Label = "price."+i, SenderIdType = SenderIdType.None, TimeToBeReceived=TimeSpan.FromSeconds(30) };
                                 msg.BodyUTF8($"bid={i-0.1m:N1},ask={i + 0.1m:N1}");
-                                tracking.Add(postman.RequestDelivery(msg, requestQueue)); // multicast
+                                tracking.Add(postman.RequestDelivery(msg, requestQueue));
                             }
                             try
                             {

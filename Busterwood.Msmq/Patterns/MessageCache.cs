@@ -23,7 +23,7 @@ namespace BusterWood.Msmq.Patterns
 
         public string CachePrefix { get; set; } = "cache";
 
-        public MessageCache(string inputQueueFormatName, string adminQueueFormatName, int? gen0Limit, TimeSpan? timeToLive)
+        public MessageCache(string inputQueueFormatName, string adminQueueFormatName, int? cacheGen0Limit, TimeSpan? cacheTimeToLive, TimeSpan? replyTimeToLive = null)
         {
             Contract.Requires(!string.IsNullOrEmpty(inputQueueFormatName));
             Contract.Requires(!string.IsNullOrEmpty(adminQueueFormatName));
@@ -34,15 +34,15 @@ namespace BusterWood.Msmq.Patterns
 
             InputQueueFormatName = inputQueueFormatName;
             AdminQueueFormatName = adminQueueFormatName;
-            Gen0Limit = gen0Limit;
-            TimeToLive = timeToLive;
+            CacheGen0Limit = cacheGen0Limit;
+            CacheTimeToLive = cacheTimeToLive;
             _queueCache = new QueueCache<QueueWriter>((fn, mode, share) => new QueueWriter(fn));
         }
 
         public string InputQueueFormatName { get; }
         public string AdminQueueFormatName { get; }
-        public int? Gen0Limit { get; }
-        public TimeSpan? TimeToLive { get; }
+        public int? CacheGen0Limit { get; }
+        public TimeSpan? CacheTimeToLive { get; }
 
         public void Dispose()
         {
@@ -60,7 +60,7 @@ namespace BusterWood.Msmq.Patterns
         {
             _input = new QueueReader(InputQueueFormatName);
             _admin = new QueueReader(AdminQueueFormatName);
-            _cache = new Cache<string, Message>(Gen0Limit, TimeToLive);
+            _cache = new Cache<string, Message>(CacheGen0Limit, CacheTimeToLive);
             _mainTask = RunAsync();
             _adminTask = AdminAsync();
             return Task.FromResult(_mainTask);
