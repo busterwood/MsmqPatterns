@@ -12,7 +12,7 @@ Easy to use messaging patterns for .NET built on `BusterWood.Msmq` (see below).
 * `SubQueueRouter` is used to route messages to [subqueues](https://msdn.microsoft.com/en-us/library/ms711414(v=vs.85).aspx)
 * `TransactionalRouter` is used to route batches of messages between transactional queues
 * `NonTransactionalRouter` is used to route messages between non-transactional queues
-* `MessageCache` is used to cache the last message coming from an input queue (i.e. via multicast).  Messages are stored by label, you can requests the last message for a label by sending a message with the label prefixed by `last.` and the message `ResponseQueue` property set.
+* `MessageCache` is used to cache the last message coming from an input queue (i.e. via multicast).  Messages are stored by label, you can requests the last message for a label by sending a message with the label prefixed by `cache.` and the message `ResponseQueue` property set.
 * `QueueCache<T>` is used to cache open queues, as opening queues is not cheap
 
 # BusterWood.Msmq

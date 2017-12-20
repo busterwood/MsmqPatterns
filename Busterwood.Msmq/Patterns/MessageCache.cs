@@ -7,19 +7,21 @@ namespace BusterWood.Msmq.Patterns
 {
     /// <summary>
     /// This caches reads all messages from the <see cref="InputQueueFormatName"/> and either stores them or sends a response message, depending on the <see cref="Message.Label"/>.
-    /// If the <see cref="Message.Label"/> starts with <see cref="LastPrefix"/> then the <see cref="LastPrefix"/> is removed from the label
+    /// If the <see cref="Message.Label"/> starts with <see cref="CachePrefix"/> then the <see cref="CachePrefix"/> is removed from the label
     /// and the result used to lookup a message in the cache. The found message, or an empty message if not in the cache, is then sent
     /// to the input message's <see cref="Message.ResponseQueue"/>.
+    /// You can send a <see cref="MessageCacheAction"/> in the request <see cref="Message.AppSpecific"/> to remove a key, list all keys or clear the cache.
     /// </summary>
     public class MessageCache : IProcessor
     {
-        public string LastPrefix { get; set; } = "last.";
         readonly QueueCache<QueueWriter> _queueCache;
         Cache<string, Message> _cache;
         QueueReader _input;
         QueueReader _admin;
         Task _mainTask;
         Task _adminTask;
+
+        public string CachePrefix { get; set; } = "cache";
 
         public MessageCache(string inputQueueFormatName, string adminQueueFormatName, int? gen0Limit, TimeSpan? timeToLive)
         {
@@ -66,15 +68,40 @@ namespace BusterWood.Msmq.Patterns
 
         async Task RunAsync()
         {
+            var prefixDot = CachePrefix + ".";
             try
             {
                 for (;;)
                 {
                     var msg = _input.Read(Properties.All, TimeSpan.Zero) ?? await _input.ReadAsync(Properties.All);
-                    if (msg.Label.StartsWith(LastPrefix, StringComparison.OrdinalIgnoreCase))
-                        SendLastValue(msg);
+                    if (msg.Label.StartsWith(prefixDot, StringComparison.OrdinalIgnoreCase))
+                    {
+                        switch ((MessageCacheAction)msg.AppSpecific)
+                        {
+                            case MessageCacheAction.Read:
+                                SendLastValue(msg);
+                                break;
+                            case MessageCacheAction.Remove:
+                                Invalidate(msg);
+                                break;
+                        }
+                    }
+                    else if (msg.Label.Equals(CachePrefix, StringComparison.OrdinalIgnoreCase))
+                    {
+                        switch ((MessageCacheAction)msg.AppSpecific)
+                        {
+                            case MessageCacheAction.ListKeys:
+                                SendKeyList(msg);
+                                break;
+                            case MessageCacheAction.Clear:
+                                ClearCache();
+                                break;
+                        }
+                    }
                     else
+                    {
                         StoreLastValue(msg);
+                    }
                 }
 
             }
@@ -90,7 +117,7 @@ namespace BusterWood.Msmq.Patterns
 
         private void SendLastValue(Message msg)
         {
-            var key = msg.Label.Substring(LastPrefix.Length);
+            var key = LabelWithoutPrefix(msg);
             if (string.IsNullOrWhiteSpace(msg.ResponseQueue))
             {
                 Console.Error.WriteLine($"INFO: Received a request for '{key}' without the response queue being set");
@@ -106,9 +133,32 @@ namespace BusterWood.Msmq.Patterns
 
             var replyQueue = _queueCache.Open(msg.ResponseQueue, QueueAccessMode.Send);
             last.CorrelationId = msg.Id;
-            replyQueue.Write(last); 
+            replyQueue.Write(last);
             //Console.Error.WriteLine($"DEBUG: sent reply for '{key}' to {msg.ResponseQueue}");
             // note: we do not wait for confirmation of delivery, we just report errors on via the AdminAsync (_adminTask)
+        }
+
+        private string LabelWithoutPrefix(Message msg) => msg.Label.Substring(CachePrefix.Length+1); // +1 for "."
+
+        private void SendKeyList(Message msg)
+        {
+            var reply = new Message { CorrelationId = msg.Id };
+            reply.BodyUTF8(string.Join(Environment.NewLine, _cache.Keys()));
+            var replyQueue = _queueCache.Open(msg.ResponseQueue, QueueAccessMode.Send);
+            replyQueue.Write(reply);
+        }
+
+        private void Invalidate(Message msg)
+        {
+            var key = LabelWithoutPrefix(msg);
+            _cache.Remove(key);
+            Console.Error.WriteLine($"INFO: invalidated {key}");
+        }
+
+        private void ClearCache()
+        {
+            _cache.Clear();
+            Console.Error.WriteLine($"INFO: cache cleared");
         }
 
         private void StoreLastValue(Message msg)

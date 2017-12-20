@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Net;
 using System.Text;
@@ -11,6 +12,8 @@ namespace BusterWood.Msmq
     /// <summary>Represents a message queue</summary>
     public abstract class Queue : IDisposable
     {
+        static int tempQueueSeq;
+
         internal QueueHandle _handle;
 
         /// <summary>Gets the full format name of this queue</summary>
@@ -69,6 +72,12 @@ namespace BusterWood.Msmq
         }
 
         public override string ToString() => FormatName;
+
+        /// <summary>Creates a path name for a temporary queue, based on the current process</summary>
+        public static string NextTempQueuePath()
+        {
+            return $".\\private$\\temp.{Guid.NewGuid():D}";
+        }
 
         /// <summary>Creates a message queue (if it does not already exist), returning the format name of the queue.</summary>
         /// <param name="path">the path (NOT format name) of the queue</param>

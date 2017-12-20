@@ -9,7 +9,7 @@
     <licenseUrl>https://github.com/busterwood/MsmqPatterns/blob/master/LICENSE.txt</licenseUrl>
     <releaseNotes>Rename SubQueueRouter class</releaseNotes>
     <dependencies>
-      <dependency id="BusterWood.Caching" version="[2.2,3.0)" />
+      <dependency id="BusterWood.Caching" version="[2.3,3.0)" />
     </dependencies>
   </metadata>
   <files>

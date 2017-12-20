@@ -122,7 +122,8 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="BusterWood.Caching, Version=2.1.0.0, Culture=neutral, PublicKeyToken=f1395612722d4ccc, processorArchitecture=MSIL">
-      <HintPath>..\packages\BusterWood.Caching.2.2.0\lib\net45\BusterWood.Caching.dll</HintPath>
+      <HintPath>..\packages\BusterWood.Caching.2.3.0\lib\net45\BusterWood.Caching.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System" />
   </ItemGroup>
@@ -133,6 +134,7 @@
     <Compile Include="Patterns\IProcessor.cs" />
     <Compile Include="Patterns\LabelSubscription.cs" />
     <Compile Include="Patterns\MessageCache.cs" />
+    <Compile Include="Patterns\MessageCacheAction.cs" />
     <Compile Include="Patterns\NonTransactionalRouter.cs" />
     <Compile Include="Patterns\Postman.cs" />
     <Compile Include="Patterns\QueueCache.cs" />
@@ -177,8 +179,12 @@
     <Compile Include="Native.QueueProperties.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Msmq.nuspec" />
-    <None Include="packages.config" />
+    <None Include="Msmq.nuspec">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="packages.config">
+      <SubType>Designer</SubType>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
