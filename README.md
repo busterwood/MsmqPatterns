@@ -6,20 +6,14 @@ Easy to use messaging patterns for .NET built on `BusterWood.Msmq` (see below).
 
 ### Summary
 
-The core pattern is the `Postman`, which supports sending messages with confirmation of delivery to the destination queue (and receiving), _or_ an error if it cannot be delivered or was not received in time.
-
-The following patterns then use the `Postman`:
-* Send requests and wait for reply with the `RequestReply`class
-* Route batches of messages between transactional queues with the `TransactionalRouter` class
-* Route messages between non-transactional queues with the `NonTransactionalRouter` class
-
-Additionally, BusterWood.Msmq.Patterns implements the following: (not using `Postman`)
-* `SubQueueRouter` is used to route messages to [subqueues](https://msdn.microsoft.com/en-us/library/ms711414(v=vs.85).aspx)
 * `QueueDispatcher` is used for publish/subscribe messaging (i.e. via multicast)
+* `Postman` is used for sending messages with confirmation of delivery _or an error if it cannot be delivered_ or was not received in time
+* `RequestReply` is used to send requests message and wait for replies
+* `SubQueueRouter` is used to route messages to [subqueues](https://msdn.microsoft.com/en-us/library/ms711414(v=vs.85).aspx)
+* `TransactionalRouter` is used to route batches of messages between transactional queues
+* `NonTransactionalRouter` is used to route messages between non-transactional queues
 * `MessageCache` is used to cache the last message coming from an input queue (i.e. via multicast).  Messages are stored by label, you can requests the last message for a label by sending a message with the label prefixed by `last.` and the message `ResponseQueue` property set.
 * `QueueCache<T>` is used to cache open queues, as opening queues is not cheap
-
-All classes are `async` code bulit on `System.Threading.Tasks.Task`.
 
 # BusterWood.Msmq
 
