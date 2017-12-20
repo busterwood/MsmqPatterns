@@ -133,8 +133,24 @@ namespace BusterWood.Msmq.Patterns
             message.TimeToReachQueue = ReachQueueTimeout;
             message.AdministrationQueue = _adminQueue.FormatName;
             queue.Write(message, transaction);
-            return new Tracking(queue.FormatName, message.Id, message.LookupId);
+
+            // acknowledgements for multicast messages get an empty DestinationQueue, so we need to remove it here
+            var formatName = queue.FormatName.StartsWith("multicast=", StringComparison.OrdinalIgnoreCase)? "" : queue.FormatName;
+            return new Tracking(formatName, message.Id, message.LookupId);
         }
+
+        public void Deliver(Message message, QueueWriter queue, QueueTransaction transaction = null)
+        {
+            try
+            {
+                DeliverAsync(message, queue, transaction).Wait();
+            }
+            catch (AggregateException ex)
+            {
+                throw ex.InnerException;
+            }
+        }
+
 
         /// <summary>
         /// Sends a <paramref name="message"/> to the <paramref name="queue"/> and waits for it to be delivered. 
@@ -151,8 +167,8 @@ namespace BusterWood.Msmq.Patterns
             Contract.Requires(transaction == null || transaction == QueueTransaction.None || transaction == QueueTransaction.Single);
             Contract.Assert(_run != null);
 
-            RequestDelivery(message, queue, transaction);
-            return WaitForDelivery(new Tracking(queue.FormatName, message.Id));
+            var t = RequestDelivery(message, queue, transaction);
+            return WaitForDelivery(t);
         }
 
         /// <summary>
@@ -230,7 +246,7 @@ namespace BusterWood.Msmq.Patterns
 
         public Tracking(string formatName, MessageId messageId, long lookupId)
         {
-            Contract.Requires(!string.IsNullOrEmpty(formatName));
+            Contract.Requires(formatName != null); // might be empty if sent to a multicast address
             Contract.Requires(!messageId.IsNullOrEmpty());
             FormatName = formatName;
             MessageId = messageId;

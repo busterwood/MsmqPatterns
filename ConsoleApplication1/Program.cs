@@ -14,11 +14,19 @@ namespace ConsoleApplication1
 
         static void Main(string[] args)
         {
-            var requestQueue = new QueueWriter("multicast=224.3.9.8:234");
+            var requestQueueFormatName = "multicast=224.3.9.8:234";
+            var requestQueue = new QueueWriter(requestQueueFormatName);
 
             var process = Process.GetCurrentProcess();
             var replyQueueFormatName = Queue.TryCreate(Queue.NextTempQueuePath(), QueueTransactional.None, label: process.ProcessName + ":" + process.Id);
-            var replyQueue = new QueueReader(replyQueueFormatName, share: QueueShareReceive.ExclusiveReceive);
+
+            var adminQueueFormatName = Queue.TryCreate(Queue.NextTempQueuePath(), QueueTransactional.None, label: "Admin " + process.ProcessName + ":" + process.Id);
+
+            var postman = new Postman(adminQueueFormatName);
+            postman.StartAsync();
+
+            var rr = new RequestReply(requestQueueFormatName, replyQueueFormatName, postman) { TimeToBeReceived = TimeSpan.FromSeconds(2) };
+
             var sw = new Stopwatch();
             for (;;)
             {
@@ -33,8 +41,7 @@ namespace ConsoleApplication1
                         {
                             var msg = new Message { Label = "cache." + bits[1], ResponseQueue = replyQueueFormatName };
                             sw.Restart();
-                            requestQueue.Write(msg); // multicast
-                            var reply = replyQueue.Read(timeout: TimeSpan.FromSeconds(1));
+                            var reply = rr.SendRequest(msg);
                             sw.Stop();
                             if (reply == null)
                                 Console.Error.WriteLine("*** no reply");
@@ -47,7 +54,7 @@ namespace ConsoleApplication1
                             var msg = new Message { Label = bits[1] };
                             if (bits.Length > 2)
                                 msg.BodyUTF8(bits[2]);
-                            requestQueue.Write(msg); // multicast
+                            postman.Deliver(msg, requestQueue); // multicast
                             break;
                         }
                     case "remove":
@@ -55,7 +62,7 @@ namespace ConsoleApplication1
                             var msg = new Message { Label = "cache." + bits[1], AppSpecific=(int)MessageCacheAction.Remove };
                             if (bits.Length > 2)
                                 msg.BodyUTF8(bits[2]);
-                            requestQueue.Write(msg); // multicast
+                            postman.Deliver(msg, requestQueue); // multicast
                             break;
                         }
                     case "clear":
@@ -63,15 +70,14 @@ namespace ConsoleApplication1
                             var msg = new Message { Label = "cache", AppSpecific=(int)MessageCacheAction.Clear };
                             if (bits.Length > 2)
                                 msg.BodyUTF8(bits[2]);
-                            requestQueue.Write(msg); // multicast
+                            postman.Deliver(msg, requestQueue); // multicast
                             break;
                         }
                     case "list":
                         {
                             var msg = new Message { Label = "cache", AppSpecific=(int)MessageCacheAction.ListKeys, ResponseQueue = replyQueueFormatName };
                             sw.Restart();
-                            requestQueue.Write(msg); // multicast
-                            var reply = replyQueue.Read(timeout: TimeSpan.FromSeconds(1));
+                            var reply = rr.SendRequest(msg);
                             sw.Stop();
                             if (reply == null)
                                 Console.Error.WriteLine("*** no reply");
@@ -80,6 +86,20 @@ namespace ConsoleApplication1
                                 Console.WriteLine(reply.BodyUTF8());
                                 Console.WriteLine($"listing keys took {sw.Elapsed.TotalMilliseconds:N1}MS");
                             }
+                            break;
+                        }
+
+                    case "puts":
+                        {
+                            sw.Restart();
+                            for (int i = 1; i <= 1000; i++)
+                            {
+                                var msg = new Message { Label = "price."+i };
+                                msg.BodyUTF8($"bid={i-0.1m:N1},ask={i + 0.1m:N1}");
+                                requestQueue.Write(msg);
+                                //postman.Deliver(msg, requestQueue); // multicast
+                            }
+                            Console.WriteLine($"Sent 1000 messages in {sw.Elapsed.TotalSeconds:N1} seconds");
                             break;
                         }
                 }
