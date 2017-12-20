@@ -72,7 +72,7 @@ namespace BusterWood.Msmq
                     return "";
 
                 var len = Props.GetUInt(Native.MESSAGE_PROPID_ADMIN_QUEUE_LEN);
-                return len == 0 ? "" : StringFromBytes(Props.GetString(Native.MESSAGE_PROPID_ADMIN_QUEUE), len);
+                return len == 0 ? "" : Native.StringFromBytes(Props.GetString(Native.MESSAGE_PROPID_ADMIN_QUEUE), len);
             }
             set
             {
@@ -83,7 +83,7 @@ namespace BusterWood.Msmq
                 }
                 else
                 {
-                    Props.SetString(Native.MESSAGE_PROPID_ADMIN_QUEUE, StringToBytes(value));
+                    Props.SetString(Native.MESSAGE_PROPID_ADMIN_QUEUE, value);
                     Props.SetUInt(Native.MESSAGE_PROPID_ADMIN_QUEUE_LEN, value.Length);
                 }
             }
@@ -224,7 +224,7 @@ namespace BusterWood.Msmq
                     return "";
 
                 var len = Props.GetUInt(Native.MESSAGE_PROPID_DEST_QUEUE_LEN);
-                return len == 0 ? "" : StringFromBytes(Props.GetString(Native.MESSAGE_PROPID_DEST_QUEUE), len);
+                return len == 0 ? "" : Native.StringFromBytes(Props.GetString(Native.MESSAGE_PROPID_DEST_QUEUE), len);
             }
         }
 
@@ -289,7 +289,7 @@ namespace BusterWood.Msmq
                 if (Props.IsUndefined(Native.MESSAGE_PROPID_LABEL_LEN))
                     return "";
                 var labelLen = Props.GetUInt(Native.MESSAGE_PROPID_LABEL_LEN);
-                return labelLen == 0 ? "" : StringFromBytes(Props.GetString(Native.MESSAGE_PROPID_LABEL), labelLen);
+                return labelLen == 0 ? "" : Native.StringFromBytes(Props.GetString(Native.MESSAGE_PROPID_LABEL), labelLen);
             }
             set
             {
@@ -306,29 +306,10 @@ namespace BusterWood.Msmq
                 }
                 else
                 {
-                    Props.SetString(Native.MESSAGE_PROPID_LABEL, StringToBytes(value));
+                    Props.SetString(Native.MESSAGE_PROPID_LABEL, value);
                     Props.SetUInt(Native.MESSAGE_PROPID_LABEL_LEN, value.Length);
                 }
             }
-        }
-
-        static string StringFromBytes(byte[] bytes, int chars)
-        {
-            //trim the last null char
-            var byteLen = chars * 2;
-            if (chars != 0 && bytes[byteLen - 1] == 0 && bytes[byteLen - 2] == 0)
-                chars--;
-
-            char[] buf = new char[chars];
-            Encoding.Unicode.GetChars(bytes, 0, chars * 2, buf, 0);
-            return new string(buf, 0, chars);
-        }
-
-        internal static byte[] StringToBytes(string value)
-        {
-            byte[] buf = new byte[(value.Length * 2 + 1)]; // one more for null
-            Encoding.Unicode.GetBytes(value.ToCharArray(), 0, value.Length, buf, 0);
-            return buf;
         }
 
         /// <summary>The queue specific ID of this message.  This property is set once the message has been sent.</summary>
@@ -368,7 +349,7 @@ namespace BusterWood.Msmq
                 if (Props.IsUndefined(Native.MESSAGE_PROPID_RESP_QUEUE))
                     return null;
                 var len = Props.GetUInt(Native.MESSAGE_PROPID_RESP_QUEUE_LEN);
-                return len == 0 ? "" : StringFromBytes(Props.GetString(Native.MESSAGE_PROPID_RESP_QUEUE), len);
+                return len == 0 ? "" : Native.StringFromBytes(Props.GetString(Native.MESSAGE_PROPID_RESP_QUEUE), len);
             }
             set
             {
@@ -379,7 +360,7 @@ namespace BusterWood.Msmq
                 }
                 else
                 {
-                    Props.SetString(Native.MESSAGE_PROPID_RESP_QUEUE, StringToBytes(value));
+                    Props.SetString(Native.MESSAGE_PROPID_RESP_QUEUE, value);
                     Props.SetUInt(Native.MESSAGE_PROPID_RESP_QUEUE_LEN, value.Length);
                 }
             }

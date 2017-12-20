@@ -189,6 +189,12 @@ namespace BusterWood.Msmq
 
         public byte[] GetString(int propertyId) => (byte[])_values[propertyId - _basePropertyId];
 
+        public void SetString(int propertyId, string value)
+        {
+            Contract.Requires(value != null);
+            SetString(propertyId, Native.StringToBytes(value));
+        }
+
         public void SetString(int propertyId, byte[] value)
         {
             SetPropertyType(propertyId, VT_LPWSTR);

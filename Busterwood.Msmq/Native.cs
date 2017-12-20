@@ -133,5 +133,23 @@ namespace BusterWood.Msmq
             return (!isInformation && !isSuccessful);
         }
 
+        internal static string StringFromBytes(byte[] bytes, int chars)
+        {
+            //trim the last null char
+            var byteLen = chars * 2;
+            if (chars != 0 && bytes[byteLen - 1] == 0 && bytes[byteLen - 2] == 0)
+                chars--;
+
+            char[] buf = new char[chars];
+            Encoding.Unicode.GetChars(bytes, 0, chars * 2, buf, 0);
+            return new string(buf, 0, chars);
+        }
+
+        internal static byte[] StringToBytes(string value)
+        {
+            byte[] buf = new byte[(value.Length * 2 + 1)]; // one more for null
+            Encoding.Unicode.GetBytes(value.ToCharArray(), 0, value.Length, buf, 0);
+            return buf;
+        }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
+using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -72,17 +73,26 @@ namespace BusterWood.Msmq
         /// <summary>Creates a message queue (if it does not already exist), returning the format name of the queue.</summary>
         /// <param name="path">the path (NOT format name) of the queue</param>
         /// <param name="transactional">create a transactional queue or not?</param>
-        public static string TryCreate(string path, QueueTransactional transactional)
+        /// <param name="quotaKB">Maximum size of the queue, in KB, defaults to 20MB</param>
+        /// <param name="label">the label to add to the queue</param>
+        /// <param name="multicast">the multicast address to attach to the queue</param>
+        public static string TryCreate(string path, QueueTransactional transactional, int quotaKB = 20000, string label = null, IPEndPoint multicast = null)
         {
             Contract.Requires(!string.IsNullOrWhiteSpace(path));
+            Contract.Requires(label == null || label.Length < 125);
             Contract.Ensures(Contract.Result<string>() != null);
 
             const int MaxLabelLength = 124;
 
             //Create properties.
             var properties = new QueueProperties();
-            properties.SetString(Native.QUEUE_PROPID_PATHNAME, Message.StringToBytes(path));
+            properties.SetString(Native.QUEUE_PROPID_PATHNAME, path);
             properties.SetByte(Native.QUEUE_PROPID_TRANSACTION, (byte)transactional);
+            properties.SetUInt(Native.QUEUE_PROPID_QUOTA, quotaKB);
+            if (label != null)
+                properties.SetString(Native.QUEUE_PROPID_LABEL, label);
+            if (multicast != null)
+                properties.SetString(Native.QUEUE_PROPID_MULTICAST_ADDRESS, $"{multicast.Address}:{multicast.Port}");
 
             StringBuilder formatName = new StringBuilder(MaxLabelLength);
             int len = MaxLabelLength;
