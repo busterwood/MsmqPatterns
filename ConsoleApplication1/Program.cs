@@ -3,6 +3,8 @@ using BusterWood.Msmq;
 using System.Linq;
 using BusterWood.Msmq.Patterns;
 using System.Diagnostics;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace ConsoleApplication1
 {
@@ -14,7 +16,8 @@ namespace ConsoleApplication1
 
         static void Main(string[] args)
         {
-            var requestQueueFormatName = "multicast=224.3.9.8:234";
+            //var requestQueueFormatName = "multicast=224.3.9.8:234";
+            var requestQueueFormatName = Queue.PathToFormatName(".\\private$\\cache.input");
             var requestQueue = new QueueWriter(requestQueueFormatName);
 
             var process = Process.GetCurrentProcess();
@@ -22,10 +25,10 @@ namespace ConsoleApplication1
 
             var adminQueueFormatName = Queue.TryCreate(Queue.NextTempQueuePath(), QueueTransactional.None, label: "Admin " + process.ProcessName + ":" + process.Id);
 
-            var postman = new Postman(adminQueueFormatName);
+            var postman = new Postman(adminQueueFormatName) { ReachQueueTimeout = TimeSpan.FromSeconds(30) };
             postman.StartAsync();
 
-            var rr = new RequestReply(requestQueueFormatName, replyQueueFormatName, postman) { TimeToBeReceived = TimeSpan.FromSeconds(2) };
+            var rr = new RequestReply(requestQueueFormatName, replyQueueFormatName, postman);
 
             var sw = new Stopwatch();
             for (;;)
@@ -39,7 +42,7 @@ namespace ConsoleApplication1
                 {
                     case "get":
                         {
-                            var msg = new Message { Label = "cache." + bits[1], ResponseQueue = replyQueueFormatName };
+                            var msg = new Message { Label = "cache." + bits[1], ResponseQueue = replyQueueFormatName, SenderIdType = SenderIdType.None };
                             sw.Restart();
                             var reply = rr.SendRequest(msg);
                             sw.Stop();
@@ -92,14 +95,22 @@ namespace ConsoleApplication1
                     case "puts":
                         {
                             sw.Restart();
+                            var tracking = new List<Tracking>(1000);
                             for (int i = 1; i <= 1000; i++)
                             {
-                                var msg = new Message { Label = "price."+i };
+                                var msg = new Message { Label = "price."+i, SenderIdType = SenderIdType.Sid };
                                 msg.BodyUTF8($"bid={i-0.1m:N1},ask={i + 0.1m:N1}");
-                                requestQueue.Write(msg);
-                                //postman.Deliver(msg, requestQueue); // multicast
+                                tracking.Add(postman.RequestDelivery(msg, requestQueue)); // multicast
                             }
-                            Console.WriteLine($"Sent 1000 messages in {sw.Elapsed.TotalSeconds:N1} seconds");
+                            try
+                            {
+                                Task.WaitAll(tracking.Select(postman.WaitForDelivery).ToArray());
+                                Console.WriteLine($"Sent 1000 messages in {sw.Elapsed.TotalSeconds:N1} seconds");
+                            }
+                            catch (AggregateException ex)
+                            {
+                                Console.Error.WriteLine(ex.InnerException.Message);
+                            }
                             break;
                         }
                 }

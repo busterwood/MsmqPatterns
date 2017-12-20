@@ -30,11 +30,12 @@ namespace BusterWood.Msmq
         TransactionMoveCount = 1 << 22,
         TransactionFirst = 1 << 23,
         TransactionLast = 1 << 24,
+        SenderIdType = 1 << 25,
 
         /// <summary>Read all properties including the body</summary>
         All = Class| AcknowledgementTypes | AdministrationQueue | AppSpecific | Body | CorrelationId | Delivery 
             | DestinationQueue | Extension | Id | Label | LookupId | Priority | ResponseQueue | SentTime
             | TimeToBeReceived | TimeToReachQueue | ArrivedTime | Journal | SourceMachine | TransactionId 
-            | TransactionAbortCount | TransactionMoveCount | TransactionFirst | TransactionLast,
+            | TransactionAbortCount | TransactionMoveCount | TransactionFirst | TransactionLast | SenderIdType,
     }
 }

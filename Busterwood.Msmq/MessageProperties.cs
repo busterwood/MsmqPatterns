@@ -577,6 +577,11 @@ namespace BusterWood.Msmq
                 msgProps.SetByte(Native.MESSAGE_PROPID_PRIORITY, 0);
             }
 
+            if ((read & Properties.SenderIdType) != 0)
+            {
+                msgProps.SetUInt(Native.MESSAGE_PROPID_SENDERID_TYPE, 0);
+            }
+
             //if ((read & Properties.SENDER_ID) != 0)
             //{
             //    MsgProps.SetByteArray(Native.MESSAGE_PROPID_SENDERID, new byte[DefaultSenderIdSize]);

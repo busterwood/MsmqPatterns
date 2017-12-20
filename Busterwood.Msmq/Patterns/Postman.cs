@@ -197,7 +197,7 @@ namespace BusterWood.Msmq.Patterns
 
         /// <summary>
         /// Waits for positive or negative receive of a message.
-        /// Waits for responses from all queues when the <paramref name="destinationFormatName"/> is a multi-element format name.
+        /// Waits for responses from all queues when the <see cref="Tracking.FormatName"/> is a multi-element format name.
         /// </summary>
         public Task WaitToBeReceived(Tracking posted)
         {

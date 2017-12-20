@@ -507,5 +507,25 @@ namespace BusterWood.Msmq
             }
         }
 
+        /// <summary>Attach the sender Id to the message?  The default is <see cref="SenderIdType.Sid"/> which is 2.5 times slower than <see cref="SenderIdType.None"/></summary>
+        public SenderIdType SenderIdType
+        {
+            get
+            {
+                if (Props.IsUndefined(Native.MESSAGE_PROPID_SENDERID_TYPE))
+                    return SenderIdType.Sid;
+                return (SenderIdType)Props.GetUInt(Native.MESSAGE_PROPID_SENDERID_TYPE);
+            }
+            set
+            {
+                if (value == SenderIdType.Sid)
+                    Props.Remove(Native.MESSAGE_PROPID_SENDERID_TYPE);
+                else
+                    Props.SetUInt(Native.MESSAGE_PROPID_SENDERID_TYPE, (int)value);
+            }
+        }
     }
+
+
+
 }

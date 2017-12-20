@@ -173,6 +173,7 @@
     <Compile Include="QueueReaderMode.cs" />
     <Compile Include="QueueShareMode.cs" />
     <Compile Include="QueueTransactional.cs" />
+    <Compile Include="SenderIdType.cs" />
     <Compile Include="Transaction.cs" />
   </ItemGroup>
   <ItemGroup>
