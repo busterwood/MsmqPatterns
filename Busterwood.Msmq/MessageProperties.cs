@@ -273,7 +273,7 @@ namespace BusterWood.Msmq
 
         public void SetNull(int propertyId)
         {
-            SetPropertyType(_propertyCount, VT_NULL);
+            SetPropertyType(propertyId, VT_NULL);
             _values[propertyId - _basePropertyId] = null;
         }
 

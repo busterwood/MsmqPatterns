@@ -106,6 +106,12 @@ namespace BusterWood.Msmq
         [DllImport(MQRT, EntryPoint = "MQSendMessage", CharSet = CharSet.Unicode)]
         public static extern int SendMessage(QueueHandle handle, MQPROPS properties, ITransaction transaction); //MSMQ internal transaction
 
+        [DllImport(MQRT, EntryPoint = "MQMgmtGetInfo", CharSet = CharSet.Unicode)]
+        public static extern int MgmtGetInfo(string machineName, string objectName, MQPROPS queueProperties);
+
+        [DllImport(MQRT, EntryPoint = "MQFreeMemory", CharSet = CharSet.Unicode)]
+        public static extern void FreeMemory(IntPtr memory);
+
         internal static bool NotEnoughMemory(int hresult)
         {
             switch ((ErrorCode)hresult)

@@ -17,5 +17,13 @@
         public const int QUEUE_PROPID_PRIV_LEVEL = QUEUE_PROPID_BASE + 12;        /* VT_UI4       */
         public const int QUEUE_PROPID_TRANSACTION = QUEUE_PROPID_BASE + 13;       /* VT_UI1       */
         public const int QUEUE_PROPID_MULTICAST_ADDRESS = QUEUE_PROPID_BASE + 25; /* VT_LPWSTR */
+
+        public const int MANAGEMENT_BASE = 0;
+        public const int MANAGEMENT_ACTIVEQUEUES = (MANAGEMENT_BASE + 1);   /* VT_LPWSTR | VT_VECTOR */
+        public const int MANAGEMENT_PRIVATEQ = (MANAGEMENT_BASE + 2);      /* VT_LPWSTR | VT_VECTOR  */
+        public const int MANAGEMENT_DSSERVER = (MANAGEMENT_BASE + 3);      /* VT_LPWSTR        */
+        public const int MANAGEMENT_CONNECTED = (MANAGEMENT_BASE + 4);     /* VT_LPWSTR        */
+        public const int MANAGEMENT_TYPE = (MANAGEMENT_BASE + 5);    /* VT_LPWSTR        */
+        public const int BYTES_IN_ALL_QUEUES = (MANAGEMENT_BASE + 6);    /* VT_UI8       */
     }
 }

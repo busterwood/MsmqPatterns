@@ -173,6 +173,7 @@
     <Compile Include="QueueExtensions.cs" />
     <Compile Include="QueueHandle.cs" />
     <Compile Include="QueueReaderMode.cs" />
+    <Compile Include="Queues.cs" />
     <Compile Include="QueueShareMode.cs" />
     <Compile Include="QueueTransactional.cs" />
     <Compile Include="SenderIdType.cs" />
