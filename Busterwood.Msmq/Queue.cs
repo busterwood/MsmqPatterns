@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
@@ -208,11 +209,33 @@ namespace BusterWood.Msmq
     /// <summary>Class that represents a message queue that you can post messages to</summary>
     public class QueueWriter : Queue
     {
+        static int multicastCheck;
+
         /// <summary>Opens a queue using a <paramref name="formatName"/>.  Use <see cref="Queue.PathToFormatName(string)"/> to get the <paramref name="formatName"/> for a queue path.</summary>
         public QueueWriter(string formatName) 
             : base(formatName, QueueAccessMode.Send, QueueShareReceive.Shared)
         {
             Open();
+            CheckMulticastSendRate();
+        }
+
+        /// <summary>Report when multicast is rated limited</summary>
+        private void CheckMulticastSendRate()
+        {
+            if (!FormatName.StartsWith("multicast=", StringComparison.OrdinalIgnoreCase) || Interlocked.CompareExchange(ref multicastCheck, 1, 0) != 0)
+            {
+                return;
+            }
+
+            const string kbpsKey = "SOFTWARE\\Microsoft\\MSMQ\\Parameters";
+            var key = Registry.LocalMachine.OpenSubKey(kbpsKey);
+            if (key == null)
+                return; // MSMQ not installed?
+
+            const string valueName = "MulticastRateKbitsPerSec";
+            var val = key.GetValue(valueName);
+            float mbps = (int)(val ?? 650) / 1000f;
+            Console.Error.WriteLine($"Sending MSMQ multicast messages is limited to {mbps:N1}MB/sec via the registry HKLM\\{kbpsKey}\\{valueName}");
         }
 
         /// <summary>
