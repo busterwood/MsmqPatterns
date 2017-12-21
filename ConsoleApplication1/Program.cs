@@ -94,8 +94,12 @@ namespace ConsoleApplication1
                     case "puts":
                         {
                             sw.Restart();
-                            var tracking = new List<Tracking>(1000);
-                            for (int i = 1; i <= 1000; i++)
+                            int max;
+                            if (bits.Length == 1 || !int.TryParse(bits[1], out max))
+                                max = 1000;
+
+                            var tracking = new List<Tracking>(max);
+                            for (int i = 1; i <= max; i++)
                             {
                                 var msg = new Message { Label = "price."+i, SenderIdType = SenderIdType.None, TimeToBeReceived=TimeSpan.FromSeconds(30) };
                                 msg.BodyUTF8($"bid={i-0.1m:N1},ask={i + 0.1m:N1}");
@@ -104,7 +108,7 @@ namespace ConsoleApplication1
                             try
                             {
                                 Task.WaitAll(tracking.Select(postman.WaitForDelivery).ToArray());
-                                Console.WriteLine($"Sent 1000 messages in {sw.Elapsed.TotalSeconds:N1} seconds");
+                                Console.WriteLine($"Sent {max} messages in {sw.Elapsed.TotalSeconds:N1} seconds");
                             }
                             catch (AggregateException ex)
                             {
