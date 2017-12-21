@@ -132,6 +132,7 @@
     <Compile Include="BodyType.cs" />
     <Compile Include="Patterns\AcknowledgmentException.cs" />
     <Compile Include="Patterns\IProcessor.cs" />
+    <Compile Include="Patterns\FormatNameSubscriptions.cs" />
     <Compile Include="Patterns\LabelSubscription.cs" />
     <Compile Include="Patterns\MessageCache.cs" />
     <Compile Include="Patterns\MessageCacheAction.cs" />
@@ -143,6 +144,7 @@
     <Compile Include="Patterns\RouteException.cs" />
     <Compile Include="Patterns\Router.cs" />
     <Compile Include="Patterns\SubQueueRouter.cs" />
+    <Compile Include="Patterns\PubSubProxy.cs" />
     <Compile Include="Patterns\TransactionalRouter.cs" />
     <Compile Include="QueueCursor.cs" />
     <Compile Include="Delivery.cs" />

@@ -9,7 +9,7 @@ namespace BusterWood.Msmq.Patterns
     /// You can subscribe with <see cref="WildCard"/>, e.g. "hello.*" will match a message with label "hello.world".
     /// You can subscribe with <see cref="AllDecendents"/> , e.g. "hello.**" will match a message with label "hello.world.1.2.3".
     /// </summary>
-    public class LabelSubscription 
+    public class FormatNameSubscriptions
     {
         readonly Node _root = new Node("");
 
@@ -23,15 +23,15 @@ namespace BusterWood.Msmq.Patterns
         public string AllDecendents { get; set; } = "**";
 
         /// <summary>
-        /// Subscribe to messages with a matching <paramref name="label"/>, invoking the <paramref name="callback"/> when <see cref="Dispatch(Message)"/> is called.
+        /// Subscribe to messages with a matching <paramref name="label"/>, invoking the <paramref name="formatName"/> when <see cref="Dispatch(Message)"/> is called.
         /// You can subscribe with <see cref="WildCard"/>, e.g. "hello.*" will match a message with label "hello.world".
         /// You can subscribe with <see cref="AllDecendents"/> , e.g. "hello.**" will match a message with label "hello.world.1.2.3".
         /// </summary>
         /// <returns>A handle to that unsubscribes when it is Disposed</returns>
-        public IDisposable Subscribe(string label, Action<Message> callback)
+        public void Subscribe(string label, string formatName)
         {
             Contract.Requires(!string.IsNullOrEmpty(label));
-            Contract.Requires(callback != null);
+            Contract.Requires(formatName != null);
 
             var star = label.IndexOf('*');
             if (star >= 0)
@@ -61,48 +61,19 @@ namespace BusterWood.Msmq.Patterns
                     node = child;
                 }
 
-                node.Subscriptions += callback;
-                return new Subscription(node, callback, _root);
+                node.Subscriptions.Add(formatName);
             }
         }
-
-        /// <summary>Sends the message to the all the subscribers.</summary>
-        public void Dispatch(Message message)
-        {
-            Contract.Requires(message != null);
-            Contract.Requires(!string.IsNullOrEmpty(message.Label));
-
-            Action<Message> subscriptions = Subscribers(message.Label);
-            TryInvokeAll(message, subscriptions);
-        }
-
-        public void TryInvokeAll(Message message, Action<Message> subscriptions)
-        {
-            if (subscriptions == null)
-                return;
-
-            foreach (Action<Message> callback in subscriptions.GetInvocationList())
-            {
-                try
-                {
-                    callback(message);
-                }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine("WARN: " + ex);
-                }
-            }
-        }
-
+       
         /// <summary>Returns the subscriber callbacks for a message label</summary>
-        public Action<Message> Subscribers(string label)
+        public HashSet<string> Subscribers(string label)
         {
             Contract.Requires(!string.IsNullOrEmpty(label));
 
             var parts = label.Split(Separator);
             lock (_root)
             {
-                Action<Message> subscriptions = null;
+                HashSet<string> subscriptions = new HashSet<string>();
                 var node = _root;
                 for (int i = 0; i < parts.Length - 1; i++)
                 {
@@ -110,7 +81,7 @@ namespace BusterWood.Msmq.Patterns
                     if (node.ChildNodes == null)
                         return subscriptions;
                     if (node.ChildNodes.TryGetValue(AllDecendents, out child))
-                        subscriptions += child.Subscriptions;
+                        subscriptions.UnionWith(child.Subscriptions);
                     if (!node.ChildNodes.TryGetValue(parts[i], out child))
                         return subscriptions;
                     node = child;
@@ -123,20 +94,20 @@ namespace BusterWood.Msmq.Patterns
                 Node lastChild;
 
                 if (node.ChildNodes.TryGetValue(lastPart, out lastChild))
-                    subscriptions += lastChild.Subscriptions;
+                    subscriptions.UnionWith(lastChild.Subscriptions);
 
                 if (node.ChildNodes.TryGetValue(WildCard, out lastChild))
-                    subscriptions += lastChild.Subscriptions;
+                    subscriptions.UnionWith(lastChild.Subscriptions);
 
                 if (node.ChildNodes.TryGetValue(AllDecendents, out lastChild))
-                    subscriptions += lastChild.Subscriptions;
+                    subscriptions.UnionWith(lastChild.Subscriptions);
 
                 return subscriptions;
             }
         }
 
-        /// <summary>Remove ALL subscriptions for a label</summary>
-        public void Unsubscribe(string label)
+        /// <summary>Remove subscriptions for a label and formatName</summary>
+        public void Unsubscribe(string label, string formatName)
         {
             Contract.Requires(!string.IsNullOrEmpty(label));
 
@@ -155,7 +126,7 @@ namespace BusterWood.Msmq.Patterns
                 }
 
                 Contract.Assume(node != null);
-                node.Subscriptions = null; //TODO: clean up, remove node?
+                node.Subscriptions.Remove(formatName);
             }
         }
 
@@ -163,7 +134,7 @@ namespace BusterWood.Msmq.Patterns
         {
             public readonly string Name;
             public Dictionary<string, Node> ChildNodes;
-            public Action<Message> Subscriptions;
+            public HashSet<string> Subscriptions = new HashSet<string>();
 
             public Node(string name)
             {
@@ -171,24 +142,6 @@ namespace BusterWood.Msmq.Patterns
             }
         }
 
-        class Subscription : IDisposable
-        {
-            readonly Action<Message> callback;
-            readonly Node node;
-            readonly Node root;
-
-            public Subscription(Node node, Action<Message> callback, Node root)
-            {
-                this.node = node;
-                this.callback = callback;
-                this.root = root;
-            }
-
-            public void Dispose()
-            {
-                lock(root)
-                    node.Subscriptions -= callback;
-            }
-        }
+      
     }
 }
