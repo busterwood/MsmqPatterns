@@ -172,6 +172,7 @@
     <Compile Include="QueueException.cs" />
     <Compile Include="QueueExtensions.cs" />
     <Compile Include="QueueHandle.cs" />
+    <Compile Include="QueueProperties.cs" />
     <Compile Include="QueueReaderMode.cs" />
     <Compile Include="Queues.cs" />
     <Compile Include="QueueShareMode.cs" />

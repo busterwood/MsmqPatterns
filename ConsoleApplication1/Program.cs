@@ -16,11 +16,7 @@ namespace ConsoleApplication1
             // Important: if sending multicast messages is slow you need to set the registry parameter
             // HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\MSQM\Parameters\MulticastRateKbitsPerSec to something bigger than 560, which is the default, say 10000.
 
-            //foreach (var path in Queues.PrivateQueuePaths())
-            //{
-            //    Console.WriteLine(path);
-            //}
-            //Environment.Exit(0);
+            Queues.DeleteOldTempQueues();
 
             var requestQueueFormatName = "multicast=224.3.9.8:234";
             var requestQueue = new QueueWriter(requestQueueFormatName);
