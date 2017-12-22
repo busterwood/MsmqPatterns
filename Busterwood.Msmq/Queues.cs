@@ -43,8 +43,13 @@ namespace BusterWood.Msmq
             foreach (var q in qis)
             {
                 var bits = q.Label.Split(':');
+
                 int id;
-                if (bits.Length == 2 && int.TryParse(bits[1], out id) && (!procbyId.ContainsKey(id) || !bits[0].Equals(procbyId[id].ProcessName, StringComparison.OrdinalIgnoreCase)))
+                if (bits.Length != 2 || !int.TryParse(bits[1], out id))
+                    continue;
+
+                var procName = bits[0];
+                if (!procbyId.ContainsKey(id) || !procName.Equals(procbyId[id].ProcessName, StringComparison.OrdinalIgnoreCase))
                 {
                     Queue.TryDelete(q.FormatName);
                     Console.Error.WriteLine("INFO deleted old temporary queue " + q.FormatName);
