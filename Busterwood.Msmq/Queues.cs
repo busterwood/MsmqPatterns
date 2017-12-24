@@ -8,7 +8,7 @@ namespace BusterWood.Msmq
     public static class Queues
     {
         /// <summary>Gets the path names of the private queues on a computer, the local computer is the default.</summary>
-        public static string[] PrivateQueuePaths(string machine = null)
+        public static string[] GetPrivateQueuePaths(string machine = null)
         {
             var props = new MessageProperties(6, Native.MANAGEMENT_BASE + 1);
             props.SetNull(Native.MANAGEMENT_PRIVATEQ);
@@ -31,9 +31,12 @@ namespace BusterWood.Msmq
             return queues;
         }
 
+        /// <summary>
+        /// Tries to delete all temporary queues that don't have a running process
+        /// </summary>
         public static void DeleteOldTempQueues()
         {
-            var qis = PrivateQueuePaths()
+            var qis = GetPrivateQueuePaths()
                 .Where(p => p.Contains("\\private$\\temp."))
                 .Select(p => GetInfo(Queue.PathToFormatName(p)))
                 .ToList();
