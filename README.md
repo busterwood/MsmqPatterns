@@ -6,8 +6,8 @@ Easy to use messaging patterns for .NET built on `BusterWood.Msmq` (see below).
 
 ### Summary
 
-* `QueueDispatcher` is used for subscribing to messages (i.e. via multicast) and subscribing to messages based on label matching (with wildcard support).
-* `QueueDispatcherProxy` is used by remote subscribers to get multicast messages based on label matching.
+* `QueueDispatcher` is used for subscribing to a queue (i.e. multicast) and invoking callbacks based on label matching (with wildcard support).
+* `QueueDispatcherProxy` is used by remote subscribers to get copies of multicast messages sent to them based on label matching.
 * `Postman` is used for sending messages with confirmation of delivery _or an error if it cannot be delivered_ or was not received in time
 * `RequestReply` is used to send requests message and wait for replies
 * `SubQueueRouter` is used to route messages to [subqueues](https://msdn.microsoft.com/en-us/library/ms711414(v=vs.85).aspx)
