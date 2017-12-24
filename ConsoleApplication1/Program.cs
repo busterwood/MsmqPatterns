@@ -22,9 +22,9 @@ namespace ConsoleApplication1
             var requestQueue = new QueueWriter(requestQueueFormatName);
 
             var process = Process.GetCurrentProcess();
-            var replyQueueFormatName = Queue.TryCreate(Queue.NextTempQueuePath(), QueueTransactional.None, label: process.ProcessName + ":" + process.Id);
+            var replyQueueFormatName = Queue.TryCreate(Queue.NewTempQueuePath(), QueueTransactional.None, label: process.ProcessName + ":" + process.Id);
 
-            var adminQueueFormatName = Queue.TryCreate(Queue.NextTempQueuePath(), QueueTransactional.None, label: "Admin " + process.ProcessName + ":" + process.Id);
+            var adminQueueFormatName = Queue.TryCreate(Queue.NewTempQueuePath(), QueueTransactional.None, label: "Admin " + process.ProcessName + ":" + process.Id);
 
             var postman = new Postman(adminQueueFormatName) { ReachQueueTimeout = TimeSpan.FromSeconds(30) };
             postman.StartAsync();

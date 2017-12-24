@@ -75,7 +75,7 @@ namespace BusterWood.Msmq
         public override string ToString() => FormatName;
 
         /// <summary>Creates a path name for a temporary queue, based on the current process</summary>
-        public static string NextTempQueuePath()
+        public static string NewTempQueuePath()
         {
             return $".\\private$\\temp.{Guid.NewGuid():D}";
         }

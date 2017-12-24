@@ -15,9 +15,12 @@ namespace BusterWood.Msmq.Patterns
         readonly QueueCache<QueueWriter> _responseQueueCache;
         QueueReader _clientRequestReader;
         QueueReader _inputReader;
+        QueueReader _adminReader;
         Task _subscriptionTask;
         Task _dispatcherTask;
+        Task _adminTask;
         FormatNameSubscriptions _subscriptions;
+        string _adminQueueFormatName;
 
         /// <summary>Queue for receiving subscribe and unsubscribe requests</summary>
         public string ClientRequestQueueFormatName { get; }
@@ -25,6 +28,9 @@ namespace BusterWood.Msmq.Patterns
         /// <summary>Data input queue, i.e. the multicast queue</summary>
         public string MulticastInputQueueFormatName { get; }
 
+        /// <summary>Creates a new proxy</summary>
+        /// <param name="clientRequestQueueFormatName">The queue to listen for subscribe and unsubscribe requests</param>
+        /// <param name="multicastInputQueueFormatName">The queue contains the messages we want to subscribe to</param>
         public PubSubProxy(string clientRequestQueueFormatName, string multicastInputQueueFormatName)
         {
             Contract.Requires(clientRequestQueueFormatName != null);
@@ -33,6 +39,7 @@ namespace BusterWood.Msmq.Patterns
             MulticastInputQueueFormatName = multicastInputQueueFormatName;
             _subscriptions = new FormatNameSubscriptions();
             _responseQueueCache = new QueueCache<QueueWriter>((fn, mode, share) => new QueueWriter(fn));
+            _adminQueueFormatName = Queue.NewTempQueuePath();
         }
 
         public void Dispose()
@@ -51,11 +58,25 @@ namespace BusterWood.Msmq.Patterns
         {
             _clientRequestReader = new QueueReader(ClientRequestQueueFormatName, share: QueueShareReceive.ExclusiveReceive);
             _inputReader = new QueueReader(MulticastInputQueueFormatName);
+            _adminReader = new QueueReader(_adminQueueFormatName, share: QueueShareReceive.ExclusiveReceive);
             _subscriptionTask = SubscriptionLoop();
             _dispatcherTask = MulticastInputDispatcher();
+            _adminTask = AdminTask();
             return Task.FromResult(_subscriptionTask);
         }
 
+        public Task StopAsync()
+        {
+            if (_clientRequestReader == null || _clientRequestReader.IsClosed)
+                return Task.FromResult(true); // not started
+
+            _clientRequestReader.Dispose();
+            _inputReader.Dispose();
+            _adminReader.Dispose();
+            return Task.WhenAll(_subscriptionTask, _dispatcherTask, _adminTask);
+        }
+
+        /// <summary>Read messages from the input queue and forward to subscribers</summary>
         async Task MulticastInputDispatcher()
         {
             await Task.Yield();
@@ -65,6 +86,7 @@ namespace BusterWood.Msmq.Patterns
                 {
                     var msg = _inputReader.Read(Properties.All, TimeSpan.Zero) ?? await _inputReader.ReadAsync(Properties.All);
 
+                    // we could avoid the lock by using an immutable collection
                     HashSet<string> subscribers;
                     lock (_subscriptions)
                         subscribers = _subscriptions.Subscribers(msg.Label);
@@ -74,6 +96,8 @@ namespace BusterWood.Msmq.Patterns
 
                     var fn = string.Join(",", subscribers); // create a multi-element format name
                     var q = _responseQueueCache.Open(fn, QueueAccessMode.Send);
+
+                    msg.AdministrationQueue = _adminQueueFormatName;
                     q.Write(msg);
                 }
             }
@@ -91,8 +115,7 @@ namespace BusterWood.Msmq.Patterns
             }
         }
 
-        //TODO: acknowledgement handling, i.e. wrong transaction type, access denied
-
+        /// <summary>Respond to requests to subscribe or unsubscribe</summary>
         async Task SubscriptionLoop()
         {
             await Task.Yield();
@@ -117,7 +140,10 @@ namespace BusterWood.Msmq.Patterns
                             lock (_subscriptions)
                                 _subscriptions.Unsubscribe(msg.Label, msg.ResponseQueue);
                             break;
-                        //TODO: unsubscribe all for a msg.ResponseQueue
+                        case PubSubProxyAction.UnsubscribeAll:
+                            lock (_subscriptions)
+                                _subscriptions.UnsubscribeAll(msg.ResponseQueue);
+                            break;
                         default:
                             Console.Error.WriteLine($"Request with invalid {nameof(msg.AppSpecific)} {msg.AppSpecific}, ignoring request for '{msg.Label}' for '{msg.ResponseQueue}'");
                             break;
@@ -138,25 +164,56 @@ namespace BusterWood.Msmq.Patterns
             }
         }
 
-        public Task StopAsync()
+        /// <summary>Report any failure to send to destination queues</summary>
+        async Task AdminTask()
         {
-            _clientRequestReader?.Dispose();
-            _inputReader?.Dispose();
-            if (_subscriptionTask == null && _dispatcherTask == null)
-                return Task.FromResult(true);
-            return Task.WhenAll(_subscriptionTask, _dispatcherTask);
-
+            await Task.Yield();
+            var props = Properties.Class | Properties.DestinationQueue;
+            try
+            {
+                for (;;)
+                {
+                    var msg = _adminReader.Read(props, TimeSpan.Zero) ?? await _adminReader.ReadAsync(props);
+                    var ack = msg.Acknowledgement();
+                    switch (ack)
+                    {
+                        case MessageClass.ReachQueueTimeout:
+                        case MessageClass.AccessDenied:
+                        case MessageClass.BadDestinationQueue:
+                        case MessageClass.BadEncryption:
+                        case MessageClass.BadSignature:
+                        case MessageClass.CouldNotEncrypt:
+                        case MessageClass.HopCountExceeded:
+                        case MessageClass.NotTransactionalMessage:
+                        case MessageClass.NotTransactionalQueue:
+                        case MessageClass.Deleted:
+                        case MessageClass.QueueDeleted:
+                        case MessageClass.QueuePurged:
+                        case MessageClass.QueueExceedQuota:
+                        case MessageClass.ReceiveTimeout:
+                            Console.Error.WriteLine($"WARNING {ack} sending message to {msg.DestinationQueue}");
+                            break;
+                    }
+                }
+            }
+            catch (QueueException ex) when (ex.ErrorCode == ErrorCode.OperationCanceled)
+            {
+                // stopped
+            }
+            catch (ObjectDisposedException)
+            {
+                // stopped
+            }
         }
-        
+
     }
 
-    /// <summary>
-    /// Set the request <see cref="Message.AppSpecific"/> to this value
-    /// </summary>
+    /// <summary>Set the request <see cref="Message.AppSpecific"/> to this value</summary>
     public enum PubSubProxyAction
     {
         Subscribe = 0,
         Unsubscribe = 1,
+        //List = 5,
         UnsubscribeAll = 9,
     }
 }

@@ -130,6 +130,23 @@ namespace BusterWood.Msmq.Patterns
             }
         }
 
+
+        internal void UnsubscribeAll(string responseQueue)
+        {
+            UnsubscribeAll(_root, responseQueue);
+        }
+
+        void UnsubscribeAll(Node node, string responseQueue)
+        {
+            node.Subscriptions.Remove(responseQueue);
+            if (node.ChildNodes == null)
+                return;
+            foreach (var n in node.ChildNodes.Values)
+            {
+                UnsubscribeAll(n, responseQueue);
+            }
+        }
+
         class Node 
         {
             public readonly string Name;
@@ -142,6 +159,5 @@ namespace BusterWood.Msmq.Patterns
             }
         }
 
-      
     }
 }
