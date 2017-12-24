@@ -168,7 +168,7 @@ namespace BusterWood.Msmq.Patterns
         async Task AdminTask()
         {
             await Task.Yield();
-            var props = Properties.Class | Properties.DestinationQueue;
+            var props = Properties.Class | Properties.DestinationQueue | Properties.Label;
             try
             {
                 for (;;)
@@ -191,7 +191,7 @@ namespace BusterWood.Msmq.Patterns
                         case MessageClass.QueuePurged:
                         case MessageClass.QueueExceedQuota:
                         case MessageClass.ReceiveTimeout:
-                            Console.Error.WriteLine($"WARNING {ack} sending message to {msg.DestinationQueue}");
+                            Console.Error.WriteLine($"WARNING {ack} sending '{msg.Label}' to {msg.DestinationQueue}");
                             break;
                     }
                 }
