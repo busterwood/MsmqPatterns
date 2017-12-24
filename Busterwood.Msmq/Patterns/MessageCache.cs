@@ -68,6 +68,7 @@ namespace BusterWood.Msmq.Patterns
 
         async Task RunAsync()
         {
+            await Task.Yield();
             var prefixDot = CachePrefix + ".";
             try
             {

@@ -144,7 +144,7 @@
     <Compile Include="Patterns\RouteException.cs" />
     <Compile Include="Patterns\Router.cs" />
     <Compile Include="Patterns\SubQueueRouter.cs" />
-    <Compile Include="Patterns\PubSubProxy.cs" />
+    <Compile Include="Patterns\QueueDispatcherProxy.cs" />
     <Compile Include="Patterns\TransactionalRouter.cs" />
     <Compile Include="QueueCursor.cs" />
     <Compile Include="Delivery.cs" />

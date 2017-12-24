@@ -22,6 +22,7 @@ namespace BusterWood.Msmq.Patterns
 
         protected override async Task RunAsync()
         {
+            await Task.Yield();
             try
             {
                 for (;;)

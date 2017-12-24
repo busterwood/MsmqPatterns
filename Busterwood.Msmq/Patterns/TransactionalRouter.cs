@@ -51,6 +51,7 @@ namespace BusterWood.Msmq.Patterns
 
         protected override async Task RunAsync()
         {
+            await Task.Yield();
             _batchQueue = new SubQueue(InputQueueFormatName + ";" + InProgressSubQueue);
             try
             {
@@ -155,14 +156,18 @@ namespace BusterWood.Msmq.Patterns
                 }
                 catch (AcknowledgmentException ex)
                 {
-                    Console.Error.WriteLine("WARN:" + ex);
-                    //TODO: use QueueReader.MarkRejected to send a reject acknowledgement?
-                    Queue.MoveMessage(_batchQueue, _posionQueue, item.LookupId, QueueTransaction.Single);
+                    Console.Error.WriteLine("WARNING " + ex);
+                    using (var txn = new QueueTransaction())
+                    {
+                        _batchQueue.MarkRejected(item.LookupId); // send a acknowledgement that the message has been rejected
+                        Queue.MoveMessage(_batchQueue, _posionQueue, item.LookupId, txn);
+                        txn.Commit();
+                    }
                 }
                 catch (AggregateException ex)
                 {
                     //TODO: handle sent error to multi-element format name
-                    Console.Error.WriteLine($"WARN multi-elements format names are not yet supported");
+                    Console.Error.WriteLine($"WARNING multi-elements format names are not yet supported");
                     throw;
                 }
             }

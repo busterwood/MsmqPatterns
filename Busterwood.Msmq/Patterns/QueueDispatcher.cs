@@ -47,14 +47,13 @@ namespace BusterWood.Msmq.Patterns
 
         async Task RunAsync()
         {
+            await Task.Yield();
             Properties peekFilter = Properties.Label | Properties.LookupId;
             try
             {
                 for (;;)
                 {
-                    Message msg = _input.Peek(peekFilter, TimeSpan.Zero); // try to Bpeek next without waiting
-                    if (msg == null)
-                        msg = await _input.PeekAsync(peekFilter); // no message, we must wait
+                    Message msg = _input.Peek(peekFilter, TimeSpan.Zero) ?? await _input.PeekAsync(peekFilter);
 
                     // at this point we only have the label and lookup id of the message
                     var subscribers = _subscriptions.Subscribers(msg.Label);

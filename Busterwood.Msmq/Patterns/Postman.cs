@@ -48,6 +48,7 @@ namespace BusterWood.Msmq.Patterns
 
         async Task RunAsync()
         {
+            await Task.Yield();
             try
             {
                 for (;;)

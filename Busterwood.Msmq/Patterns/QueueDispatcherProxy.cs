@@ -10,7 +10,7 @@ namespace BusterWood.Msmq.Patterns
     /// Often you multicast between a few servers, but don't want to multicast to hundreds of clients in case one slow client affects every clients multicast traffic.
     /// This proxy would live on a server, and clients subscribe and unsubscribe from multicast traffic by sending messages with the label and app-specific set.
     /// </summary>
-    public class PubSubProxy : IProcessor
+    public class QueueDispatcherProxy : IProcessor
     {
         readonly QueueCache<QueueWriter> _responseQueueCache;
         QueueReader _clientRequestReader;
@@ -31,7 +31,7 @@ namespace BusterWood.Msmq.Patterns
         /// <summary>Creates a new proxy</summary>
         /// <param name="clientRequestQueueFormatName">The queue to listen for subscribe and unsubscribe requests</param>
         /// <param name="multicastInputQueueFormatName">The queue contains the messages we want to subscribe to</param>
-        public PubSubProxy(string clientRequestQueueFormatName, string multicastInputQueueFormatName)
+        public QueueDispatcherProxy(string clientRequestQueueFormatName, string multicastInputQueueFormatName)
         {
             Contract.Requires(clientRequestQueueFormatName != null);
             Contract.Requires(multicastInputQueueFormatName != null);
