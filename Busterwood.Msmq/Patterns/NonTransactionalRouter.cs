@@ -17,7 +17,7 @@ namespace BusterWood.Msmq.Patterns
             Contract.Requires(inputQueueFormatName != null);
             Contract.Requires(sender != null);
             Contract.Requires(route != null);
-            PeekFilter = Properties.All;
+            PeekProperties = Properties.All;
         }
 
         protected override async Task RunAsync()
@@ -27,7 +27,7 @@ namespace BusterWood.Msmq.Patterns
             {
                 for (;;)
                 {
-                    var msg = _input.Peek(PeekFilter, TimeSpan.Zero) ?? await _input.PeekAsync(PeekFilter);
+                    var msg = _input.Peek(PeekProperties, TimeSpan.Zero) ?? await _input.PeekAsync(PeekProperties);
                     await OnNewMessage(msg);
                 }
             }

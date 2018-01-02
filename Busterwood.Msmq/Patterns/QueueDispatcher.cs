@@ -69,19 +69,19 @@ namespace BusterWood.Msmq.Patterns
         async Task RunAsync()
         {
             await Task.Yield();
-            Properties peekFilter = Properties.Label | Properties.LookupId;
+            Properties peekProps = Properties.Label | Properties.LookupId;
             try
             {
                 for (;;)
                 {
-                    Message msg = _input.Peek(peekFilter, TimeSpan.Zero) ?? await _input.PeekAsync(peekFilter);
+                    Message msg = _input.Peek(peekProps, TimeSpan.Zero) ?? await _input.PeekAsync(peekProps);
 
                     // at this point we only have the label and lookup id of the message
                     var subscribers = _subscriptions.Subscribers(msg.Label);
                     if (subscribers == null)
                     {
                         // no subscribers, remove message from input queue anyway
-                        _input.Lookup(peekFilter, msg.LookupId, LookupAction.ReceiveCurrent, TimeSpan.Zero);
+                        _input.Lookup(peekProps, msg.LookupId, LookupAction.ReceiveCurrent, TimeSpan.Zero);
                         continue; 
                     }
 

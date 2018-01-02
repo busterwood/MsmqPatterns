@@ -24,7 +24,7 @@ namespace BusterWood.Msmq.Patterns
         public string UnroutableSubQueue { get; set; } = "Poison";
 
         /// <summary>The filter used when peeking messages, the default does NOT include the message body</summary>
-        public Properties PeekFilter { get; } = Properties.AppSpecific | Properties.Label | Properties.Extension | Properties.LookupId;
+        public Properties PeekProperties { get; } = Properties.AppSpecific | Properties.Label | Properties.Extension | Properties.LookupId;
 
         /// <summary>Handle messages that cannot be routed.  Defaults to moving messages to <see cref="UnroutableSubQueue"/> of the input queue</summary>
         public Action<long, QueueTransaction> BadMessageHandler { get; set; }
@@ -54,7 +54,7 @@ namespace BusterWood.Msmq.Patterns
             {
                 for(;;)
                 {
-                    Message peeked = _input.Peek(PeekFilter, TimeSpan.Zero) ?? await _input.PeekAsync(PeekFilter);
+                    Message peeked = _input.Peek(PeekProperties, TimeSpan.Zero) ?? await _input.PeekAsync(PeekProperties);
                     try
                     {
                         var subQueue = GetRoute(peeked);

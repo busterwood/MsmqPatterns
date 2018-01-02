@@ -25,7 +25,7 @@ namespace BusterWood.Msmq.Patterns
 
         public string AdminQueueFormatName { get; }
 
-        public Properties AdminFilter { get; } = Properties.CorrelationId  | Properties.Class | Properties.ResponseQueue;
+        public Properties AdminProperties { get; } = Properties.CorrelationId  | Properties.Class | Properties.ResponseQueue;
 
         /// <summary>The time allowed for a message to reach a destination queue before a <see cref="TimeoutException"/> is thrown by <see cref="SendAsync(Message, Queue)"/></summary>
         public TimeSpan ReachQueueTimeout { get; set; } = TimeSpan.FromSeconds(1);
@@ -53,7 +53,7 @@ namespace BusterWood.Msmq.Patterns
             {
                 for (;;)
                 {
-                    var msg = _adminQueue.Read(AdminFilter, TimeSpan.Zero) ?? await _adminQueue.ReadAsync(AdminFilter);
+                    var msg = _adminQueue.Read(AdminProperties, TimeSpan.Zero) ?? await _adminQueue.ReadAsync(AdminProperties);
                     var ack = msg.Acknowledgement();
                     switch (ack)
                     {

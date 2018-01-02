@@ -20,7 +20,7 @@ namespace BusterWood.Msmq.Patterns
         public string UnroutableSubQueue { get; set; } = "Poison";
 
         /// <summary>The filter used when peeking messages, the default does NOT include the message body</summary>
-        public Properties PeekFilter { get; set; } = Properties.AppSpecific | Properties.Label | Properties.Extension | Properties.LookupId;
+        public Properties PeekProperties { get; set; } = Properties.AppSpecific | Properties.Label | Properties.Extension | Properties.LookupId;
 
         public Postman Sender { get; }
 

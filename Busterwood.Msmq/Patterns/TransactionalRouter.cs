@@ -60,8 +60,8 @@ namespace BusterWood.Msmq.Patterns
                 var sent = new List<Tracking>();
                 for (;;)
                 {
-                    if (_input.Peek(PeekFilter, TimeSpan.Zero) == null)
-                        await _input.PeekAsync(PeekFilter); // wait for next message
+                    if (_input.Peek(PeekProperties, TimeSpan.Zero) == null)
+                        await _input.PeekAsync(PeekProperties); // wait for next message
                     RouteBatch(sent);
                     await WaitForAcknowledgements(sent);
                     sent.Clear();
@@ -88,7 +88,7 @@ namespace BusterWood.Msmq.Patterns
             var sent = new List<Tracking>();
             for (; ; )
             {
-                var msg = _batchQueue.Peek(PeekFilter, TimeSpan.Zero);
+                var msg = _batchQueue.Peek(PeekProperties, TimeSpan.Zero);
                 if (msg == null)
                     break;
             }
