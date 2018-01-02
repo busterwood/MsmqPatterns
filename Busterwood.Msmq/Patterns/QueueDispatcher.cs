@@ -18,6 +18,27 @@ namespace BusterWood.Msmq.Patterns
         /// <summary>Format name of the queue to route messages from</summary>
         public string InputQueueFormatName { get; }
 
+        /// <summary>The path separator to use, defaults to dot (.)</summary>
+        public char Separator
+        {
+            get { return _subscriptions.Separator; }
+            set { _subscriptions.Separator = value; }
+        }
+
+        /// <summary>The wild-card string to use, defaults to star (*) </summary>
+        public string WildCard
+        {
+            get { return _subscriptions.WildCard; }
+            set { _subscriptions.WildCard = value; }
+        }
+
+        /// <summary>The all descendants wild-card string to use, defaults to star-star (**) </summary>
+        public string AllDecendents
+        {
+            get { return _subscriptions.AllDecendents; }
+            set { _subscriptions.AllDecendents = value; }
+        }
+
         public QueueDispatcher(string inputQueueFormatName)
         {
             Contract.Requires(!string.IsNullOrEmpty(inputQueueFormatName));

@@ -9,7 +9,7 @@ namespace BusterWood.Msmq.Patterns
     /// You can subscribe with <see cref="WildCard"/>, e.g. "hello.*" will match a message with label "hello.world".
     /// You can subscribe with <see cref="AllDecendents"/> , e.g. "hello.**" will match a message with label "hello.world.1.2.3".
     /// </summary>
-    public class FormatNameSubscriptions
+    class FormatNameSubscriptions
     {
         readonly Node _root = new Node("");
 

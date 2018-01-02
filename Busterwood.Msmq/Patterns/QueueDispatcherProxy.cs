@@ -28,6 +28,27 @@ namespace BusterWood.Msmq.Patterns
         /// <summary>Data input queue, i.e. the multicast queue</summary>
         public string MulticastInputQueueFormatName { get; }
 
+        /// <summary>The path separator to use, defaults to dot (.)</summary>
+        public char Separator
+        {
+            get { return _subscriptions.Separator; }
+            set { _subscriptions.Separator = value; }
+        }
+
+        /// <summary>The wild-card string to use, defaults to star (*) </summary>
+        public string WildCard
+        {
+            get { return _subscriptions.WildCard; }
+            set { _subscriptions.WildCard = value; }
+        }
+
+        /// <summary>The all descendants wild-card string to use, defaults to star-star (**) </summary>
+        public string AllDecendents
+        {
+            get { return _subscriptions.AllDecendents; }
+            set { _subscriptions.AllDecendents = value; }
+        }
+
         /// <summary>Creates a new proxy</summary>
         /// <param name="clientRequestQueueFormatName">The queue to listen for subscribe and unsubscribe requests</param>
         /// <param name="multicastInputQueueFormatName">The queue contains the messages we want to subscribe to</param>
