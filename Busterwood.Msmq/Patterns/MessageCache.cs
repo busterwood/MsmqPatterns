@@ -27,9 +27,9 @@ namespace BusterWood.Msmq.Patterns
         {
             Contract.Requires(!string.IsNullOrEmpty(inputQueueFormatName));
             Contract.Requires(!string.IsNullOrEmpty(adminQueueFormatName));
-            if (Queue.IsTransactional(inputQueueFormatName) != QueueTransactional.None)
+            if (Queues.IsTransactional(inputQueueFormatName) != QueueTransactional.None)
                 throw new ArgumentException(inputQueueFormatName + " must be non-transactional");
-            if (Queue.IsTransactional(adminQueueFormatName) != QueueTransactional.None)
+            if (Queues.IsTransactional(adminQueueFormatName) != QueueTransactional.None)
                 throw new ArgumentException(adminQueueFormatName + " must be non-transactional");
 
             InputQueueFormatName = inputQueueFormatName;

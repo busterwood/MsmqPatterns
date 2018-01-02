@@ -24,10 +24,10 @@ namespace UnitTests.Cache
         [SetUp]
         public void Setup()
         {
-            cacheInputFormatName = Queue.TryCreate(CacheInputPath, QueueTransactional.None);
-            cacheAdminFormatName = Queue.TryCreate(CacheAdminPath, QueueTransactional.None);
-            replyFormatName = Queue.TryCreate(ReplyPath, QueueTransactional.None);
-            replyAdminFormatName = Queue.TryCreate(ReplyAdminPath, QueueTransactional.None);
+            cacheInputFormatName = Queues.TryCreate(CacheInputPath, QueueTransactional.None);
+            cacheAdminFormatName = Queues.TryCreate(CacheAdminPath, QueueTransactional.None);
+            replyFormatName = Queues.TryCreate(ReplyPath, QueueTransactional.None);
+            replyAdminFormatName = Queues.TryCreate(ReplyAdminPath, QueueTransactional.None);
 
             using (var q = new QueueReader(cacheInputFormatName))
                 q.Purge();

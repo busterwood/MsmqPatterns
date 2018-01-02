@@ -16,7 +16,7 @@ namespace UnitTests
         [TestFixtureSetUp]
         public void FixtureSetup()
         {
-            testQueueFormatName = Queue.TryCreate(testQueue, QueueTransactional.None);
+            testQueueFormatName = Queues.TryCreate(testQueue, QueueTransactional.None);
         }
 
         [SetUp]

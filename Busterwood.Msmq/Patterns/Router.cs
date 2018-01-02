@@ -87,7 +87,7 @@ namespace BusterWood.Msmq.Patterns
             }
             try
             {
-                Queue.MoveMessage(fromQueue, _posionQueue, lookupId, transaction);
+                Queues.MoveMessage(fromQueue, _posionQueue, lookupId, transaction);
                 return;
             }
             catch (QueueException e)

@@ -21,9 +21,9 @@ namespace UnitTests
         [SetUp]
         public void Setup()
         {
-            requestQueueFormatName = Queue.TryCreate(requestQueuePath, QueueTransactional.None);
-            replyQueueFormatName = Queue.TryCreate(replyQueuePath, QueueTransactional.None);
-            adminQueueFormatName = Queue.TryCreate(adminQueuePath, QueueTransactional.None);
+            requestQueueFormatName = Queues.TryCreate(requestQueuePath, QueueTransactional.None);
+            replyQueueFormatName = Queues.TryCreate(replyQueuePath, QueueTransactional.None);
+            adminQueueFormatName = Queues.TryCreate(adminQueuePath, QueueTransactional.None);
 
             using (var q = new QueueReader(requestQueueFormatName))
                 q.Purge();

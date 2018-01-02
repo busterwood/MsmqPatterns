@@ -30,10 +30,10 @@ namespace UnitTests
         [SetUp]
         public void Setup()
         {
-            inputQueueFormatName = Queue.TryCreate(inputQueuePath, QueueTransactional.None);
-            adminQueueFormatName = Queue.TryCreate(adminQueuePath, QueueTransactional.None);
-            outputQueueFormatName1 = Queue.TryCreate(outputQueuePath1, QueueTransactional.None);
-            outputQueueFormatName2 = Queue.TryCreate(outputQueuePath2, QueueTransactional.None);
+            inputQueueFormatName = Queues.TryCreate(inputQueuePath, QueueTransactional.None);
+            adminQueueFormatName = Queues.TryCreate(adminQueuePath, QueueTransactional.None);
+            outputQueueFormatName1 = Queues.TryCreate(outputQueuePath1, QueueTransactional.None);
+            outputQueueFormatName2 = Queues.TryCreate(outputQueuePath2, QueueTransactional.None);
             deadQueueFormatName = $"{inputQueueFormatName };Poison";
 
             using (var q = new QueueReader(inputQueueFormatName))

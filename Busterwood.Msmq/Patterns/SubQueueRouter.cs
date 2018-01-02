@@ -41,7 +41,7 @@ namespace BusterWood.Msmq.Patterns
         public Task<Task> StartAsync()
         {
             _input = new QueueReader(_inputFormatName);
-            if (Queue.IsTransactional(_input.FormatName) == QueueTransactional.Transactional)
+            if (Queues.IsTransactional(_input.FormatName) == QueueTransactional.Transactional)
                 _transaction = QueueTransaction.Single;
             _running = RunAsync();
             return Task.FromResult(_running);
@@ -58,7 +58,7 @@ namespace BusterWood.Msmq.Patterns
                     try
                     {
                         var subQueue = GetRoute(peeked);
-                        Queue.MoveMessage(_input, subQueue, peeked.LookupId, _transaction);
+                        Queues.MoveMessage(_input, subQueue, peeked.LookupId, _transaction);
                     }
                     catch (RouteException ex)
                     {
@@ -116,7 +116,7 @@ namespace BusterWood.Msmq.Patterns
                 if (_posionSubQueue == null)
                     _posionSubQueue = new SubQueue(_input.FormatName + ";" + UnroutableSubQueue);
 
-                Queue.MoveMessage(_input, _posionSubQueue, lookupId, transaction);
+                Queues.MoveMessage(_input, _posionSubQueue, lookupId, transaction);
                 return;
             }
             catch (QueueException e)

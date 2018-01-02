@@ -14,7 +14,7 @@ namespace UnitTests
         [Test]
         public void can_peek_when_opened_with_move_acces()
         {
-            var fn = Queue.TryCreate(".\\private$\\subqtest", QueueTransactional.None);
+            var fn = Queues.TryCreate(".\\private$\\subqtest", QueueTransactional.None);
             var sqfn = fn + ";sq";
 
             using (var qWriter = new QueueWriter(fn))
@@ -25,7 +25,7 @@ namespace UnitTests
             using (var subQueue = new SubQueue(sqfn))
             {
                 var msg = qReader.Peek(Properties.LookupId);
-                Queue.MoveMessage(qReader, subQueue, msg.LookupId);
+                Queues.MoveMessage(qReader, subQueue, msg.LookupId);
                 var got = subQueue.Read();
                 Assert.AreEqual(234, got.AppSpecific);
             }

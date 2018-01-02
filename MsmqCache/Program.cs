@@ -9,8 +9,8 @@ namespace BusterWood.Msmq.Cache
         static void Main(string[] args)
         {
             //TODO: configuration of multiple caches for different input queues, via config file?
-            var inputFN = Queue.TryCreate(".\\private$\\cache.input", QueueTransactional.None, multicast:new IPEndPoint(IPAddress.Parse("224.3.9.8"), 234));
-            var adminFN = Queue.TryCreate(".\\private$\\cache.admin", QueueTransactional.None);
+            var inputFN = Queues.TryCreate(".\\private$\\cache.input", QueueTransactional.None, multicast:new IPEndPoint(IPAddress.Parse("224.3.9.8"), 234));
+            var adminFN = Queues.TryCreate(".\\private$\\cache.admin", QueueTransactional.None);
             var mc = new MessageCache(inputFN, adminFN, null, TimeSpan.FromDays(1));
             mc.StartAsync();
             Console.WriteLine("Started cache listening on " + mc.InputQueueFormatName);

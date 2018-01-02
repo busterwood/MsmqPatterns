@@ -21,7 +21,7 @@ namespace BusterWood.Msmq.Patterns
         public QueueDispatcher(string inputQueueFormatName)
         {
             Contract.Requires(!string.IsNullOrEmpty(inputQueueFormatName));
-            Contract.Requires(Queue.IsTransactional(inputQueueFormatName) == QueueTransactional.None);
+            Contract.Requires(Queues.IsTransactional(inputQueueFormatName) == QueueTransactional.None);
             InputQueueFormatName = inputQueueFormatName;
             _subscriptions = new LabelSubscription();
         }

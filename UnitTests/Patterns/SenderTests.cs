@@ -19,8 +19,8 @@ namespace UnitTests
         [SetUp]
         public void Setup()
         {
-            destFormatName = Queue.TryCreate(destQueuePath, QueueTransactional.Transactional);
-            adminFormatName = Queue.TryCreate(adminQueuePath, QueueTransactional.None);
+            destFormatName = Queues.TryCreate(destQueuePath, QueueTransactional.Transactional);
+            adminFormatName = Queues.TryCreate(adminQueuePath, QueueTransactional.None);
             using (var purgeDest = new QueueReader(destFormatName))
             {
                 purgeDest.Purge();

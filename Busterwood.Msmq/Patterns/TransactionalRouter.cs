@@ -132,7 +132,7 @@ namespace BusterWood.Msmq.Patterns
                 lookupId = msg.LookupId;
 
                 // move to the batch subqueue so we know what we sent
-                Queue.MoveMessage(_input, _batchQueue, msg.LookupId, txn);
+                Queues.MoveMessage(_input, _batchQueue, msg.LookupId, txn);
 
                 // route to message to the destination
                 var dest = GetRoute(msg);
@@ -160,7 +160,7 @@ namespace BusterWood.Msmq.Patterns
                     using (var txn = new QueueTransaction())
                     {
                         _batchQueue.MarkRejected(item.LookupId); // send a acknowledgement that the message has been rejected
-                        Queue.MoveMessage(_batchQueue, _posionQueue, item.LookupId, txn);
+                        Queues.MoveMessage(_batchQueue, _posionQueue, item.LookupId, txn);
                         txn.Commit();
                     }
                 }

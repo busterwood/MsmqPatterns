@@ -39,7 +39,7 @@ namespace BusterWood.Msmq.Patterns
             MulticastInputQueueFormatName = multicastInputQueueFormatName;
             _subscriptions = new FormatNameSubscriptions();
             _responseQueueCache = new QueueCache<QueueWriter>((fn, mode, share) => new QueueWriter(fn));
-            _adminQueueFormatName = Queue.NewTempQueuePath();
+            _adminQueueFormatName = Queues.NewTempQueuePath();
         }
 
         public void Dispose()

@@ -19,7 +19,7 @@ namespace BusterWood.Msmq.Examples
         public PriorityTransactionalRouter(string inputQueueFormatName)
         {
             Contract.Requires(inputQueueFormatName != null);
-            if (Queue.IsTransactional(inputQueueFormatName) == QueueTransactional.None)
+            if (Queues.IsTransactional(inputQueueFormatName) == QueueTransactional.None)
                 throw new ArgumentException(inputQueueFormatName + " is not a transactional queue");
 
             InputQueueFormatName = inputQueueFormatName;

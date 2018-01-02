@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>BusterWood.Msmq</id>
-    <version>0.2.0</version>
+    <version>0.3.0</version>
     <authors>BusterWood</authors>
     <description>Easy to use messaging patterns for MSMQ</description>
     <projectUrl>https://github.com/busterwood/MsmqPatterns</projectUrl>
