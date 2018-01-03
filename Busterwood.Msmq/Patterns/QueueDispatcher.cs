@@ -81,7 +81,7 @@ namespace BusterWood.Msmq.Patterns
                     if (subscribers == null)
                     {
                         // no subscribers, remove message from input queue anyway
-                        _input.Lookup(peekProps, msg.LookupId, LookupAction.ReceiveCurrent, TimeSpan.Zero);
+                        _input.Lookup(Properties.LookupId, msg.LookupId, LookupAction.ReceiveCurrent, TimeSpan.Zero);
                         continue; 
                     }
 
@@ -92,6 +92,7 @@ namespace BusterWood.Msmq.Patterns
                         Console.Error.WriteLine($"WARNING: we peeked message but it was removed before we could read it {{label={msg.Label}, lookupId={msg.LookupId}}}");
                         continue;
                     }
+
                     _subscriptions.TryInvokeAll(msg, subscribers);
                 }
             }

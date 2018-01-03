@@ -46,7 +46,7 @@ namespace BusterWood.Msmq.Patterns
         * 6) for each message in batch
         * 7)   wait for ack 
         *         on success remove message from "batch" subqueue (Transaction.Single)
-        *         on failure ?  move to dead letter?
+        *         on failure move to InProgressSubQueue
         */
 
         protected override async Task RunAsync()
