@@ -2,7 +2,7 @@
 
 [![Nuget](https://img.shields.io/nuget/v/BusterWood.Msmq.svg)](https://www.nuget.org/packages/BusterWood.Msmq)
 
-Easy to use [messaging patterns]([BusterWood.Msmq](https://github.com/busterwood/MsmqPatterns/wiki/BusterWood.Msmq.Patterns) for .NET built on [BusterWood.Msmq](https://github.com/busterwood/MsmqPatterns/wiki/BusterWood.Msmq).
+Easy to use [messaging patterns](https://github.com/busterwood/MsmqPatterns/wiki/BusterWood.Msmq.Patterns) for .NET built on [BusterWood.Msmq](https://github.com/busterwood/MsmqPatterns/wiki/BusterWood.Msmq).
 
 # BusterWood.Msmq
 
