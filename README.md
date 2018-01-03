@@ -2,19 +2,7 @@
 
 [![Nuget](https://img.shields.io/nuget/v/BusterWood.Msmq.svg)](https://www.nuget.org/packages/BusterWood.Msmq)
 
-Easy to use messaging patterns for .NET built on `BusterWood.Msmq` (see below).
-
-### Summary
-
-* `QueueDispatcher` is used for subscribing to a queue (i.e. multicast) and invoking callbacks based on label matching (with wildcard support).
-* `QueueDispatcherProxy` is used by remote subscribers to get copies of multicast messages sent to them based on label matching.
-* `Postman` is used for sending messages with confirmation of delivery _or an error if it cannot be delivered_ or was not received in time
-* `RequestReply` is used to send requests message and wait for replies
-* `SubQueueRouter` is used to route messages to [subqueues](https://msdn.microsoft.com/en-us/library/ms711414(v=vs.85).aspx)
-* `TransactionalRouter` is used to route batches of messages between transactional queues
-* `NonTransactionalRouter` is used to route messages between non-transactional queues
-* `MessageCache` is used to cache the last message coming from an input queue (i.e. via multicast).  Messages are stored by label, you can requests the last message for a label by sending a message with the label prefixed by `cache.` and the message `ResponseQueue` property set.
-* `QueueCache<T>` is used to cache open queues, as opening queues is not cheap
+Easy to use [messaging patterns]([BusterWood.Msmq](https://github.com/busterwood/MsmqPatterns/wiki/BusterWood.Msmq.Patterns) for .NET built on [BusterWood.Msmq](https://github.com/busterwood/MsmqPatterns/wiki/BusterWood.Msmq).
 
 # BusterWood.Msmq
 
@@ -22,20 +10,6 @@ A .NET library for MSMQ (Microsoft Message Queuing).
 
 My motivation for creating this library is to create useable patterns for MSMQ (see above), but found `System.Messaging` to be
 missing features from MSMQ 3.0, i.e. [subqueues](https://msdn.microsoft.com/en-us/library/ms711414(v=vs.85).aspx) and [poison message handling](https://msdn.microsoft.com/en-us/library/ms703179(v=vs.85).aspx) for transactional queues.
-
-### Summary
-
-New a `QueueReader` to peek or read messages from a queue.
-
-New a `QueueWriter` to send messages to a queue.
-
-New a `SubQueue` to peek or read message, and to move messages to [subqueues](https://msdn.microsoft.com/en-us/library/ms711414(v=vs.85).aspx) via `Queue.MoveMessage` method.
-
-New a `QueueCursor` to peek or receive messages using a MSMQ cursor.
-
-New a `QueueTransaction` to begin a MSMQ transaction, or use the static fields `QueueTransaction.None`, `QueueTransaction.Single` or `QueueTransaction.Dtc`.
-
-[Poison message handling for transactional queues](https://msdn.microsoft.com/en-us/library/ms703179(v=vs.85).aspx) via the `TransactionAbortCount` and `TransactionMoveCount`properties and the `MarkRejected` method that sends notification to the message sender that the message was rejected.
 
 ### Differences from System.Messaging
 
@@ -55,4 +29,3 @@ New a `QueueTransaction` to begin a MSMQ transaction, or use the static fields `
 * The `QueueTransaction` class automatically starts a transaction when it is created, _and replaces `MessageQueueTransaction` class_.
 * `QueueTransaction.None`, `QueueTransaction.Single` or `QueueTransaction.Dtc` static fields replace _`MessageQueueTransactionType` enum_. 
 * Additional message properties are supported, e.g. `TransactionFirst`, `TransactionLast`, `TransactionAbortCount`, `TransactionMoveCount`.
-
