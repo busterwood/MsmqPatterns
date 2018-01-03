@@ -1,7 +1,6 @@
 ﻿using System;
 using BusterWood.Caching;
 using System.Collections.Generic;
-using BusterWood.Msmq;
 using System.Diagnostics.Contracts;
 
 namespace BusterWood.Msmq.Patterns

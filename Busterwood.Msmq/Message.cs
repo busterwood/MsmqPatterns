@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics.Contracts;
 using System.Linq;
-using System.Text;
 
 namespace BusterWood.Msmq
 {

@@ -1,7 +1,5 @@
 ﻿using System;
-using System.ComponentModel;
 using System.Diagnostics.Contracts;
-using BusterWood.Msmq;
 using System.Threading.Tasks;
 
 namespace BusterWood.Msmq.Patterns

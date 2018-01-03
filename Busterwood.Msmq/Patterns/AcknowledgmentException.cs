@@ -1,5 +1,4 @@
-﻿using BusterWood.Msmq;
-using System;
+﻿using System;
 using System.Runtime.Serialization;
 
 namespace BusterWood.Msmq.Patterns
