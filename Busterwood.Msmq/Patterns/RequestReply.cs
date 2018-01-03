@@ -37,19 +37,9 @@ namespace BusterWood.Msmq.Patterns
 
             SetupRequest(request);
             var tracking = _postman.RequestDelivery(request, _requestQueue, null);
-            _postman.WaitForDelivery(tracking).Wait();
-            _postman.WaitToBeReceived(tracking).Wait();
+            _postman.WaitForDelivery(tracking);
+            _postman.WaitToBeReceived(tracking);
             return _responseQueue.ReadByCorrelationId(request.Id);
-        }
-
-        private void SetupRequest(Message request)
-        {
-            request.Delivery = Delivery.Express;
-            request.ResponseQueue = _responseQueue.FormatName;
-
-            // setup timeout with negative acknowledgement
-            request.TimeToBeReceived = TimeToBeReceived;
-            request.AcknowledgmentTypes = AcknowledgmentTypes.FullReachQueue | AcknowledgmentTypes.FullReceive;
         }
 
         /// <summary>Sends a request message and waits for a reply.</summary>
@@ -63,9 +53,17 @@ namespace BusterWood.Msmq.Patterns
 
             SetupRequest(request);
             var tracking = _postman.RequestDelivery(request, _requestQueue, null);
-            await _postman.WaitForDelivery(tracking);
-            await _postman.WaitToBeReceived(tracking);
+            await _postman.WaitForDeliveryAsync(tracking);
+            await _postman.WaitToBeReceivedAsync(tracking);
             return await _responseQueue.ReadByCorrelationIdAsync(request.Id);
+        }
+
+        void SetupRequest(Message request)
+        {
+            // setup timeout with negative acknowledgement
+            request.TimeToBeReceived = TimeToBeReceived;
+            request.AcknowledgmentTypes = AcknowledgmentTypes.FullReachQueue | AcknowledgmentTypes.FullReceive;
+            request.ResponseQueue = _responseQueue.FormatName;
         }
 
         public void Dispose()

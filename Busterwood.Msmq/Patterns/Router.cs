@@ -75,7 +75,15 @@ namespace BusterWood.Msmq.Patterns
 
         public void Dispose()
         {
-            StopAsync()?.Wait();
+            try
+            {
+                StopAsync()?.Wait();
+            }
+            catch (Exception)
+            {
+                // don't allow exceptions in Dispose method
+                throw;
+            }
         }
         
         private void MoveToPoisonSubqueue(QueueReader fromQueue, long lookupId, QueueTransaction transaction)

@@ -109,7 +109,7 @@ namespace ConsoleApplication1
                             }
                             try
                             {
-                                Task.WaitAll(tracking.Select(postman.WaitForDelivery).ToArray());
+                                Task.WaitAll(tracking.Select(postman.WaitForDeliveryAsync).ToArray());
                                 Console.WriteLine($"Sent {max} messages in {sw.Elapsed.TotalSeconds:N1} seconds");
                             }
                             catch (AggregateException ex)

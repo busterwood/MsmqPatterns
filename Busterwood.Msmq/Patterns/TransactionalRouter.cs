@@ -151,7 +151,7 @@ namespace BusterWood.Msmq.Patterns
             {
                 try
                 {
-                    await Sender.WaitForDelivery(item);
+                    await Sender.WaitForDeliveryAsync(item);
                     _batchQueue.Lookup(Properties.LookupId, item.LookupId, timeout: TimeSpan.Zero, transaction: QueueTransaction.Single);
                 }
                 catch (AcknowledgmentException ex)

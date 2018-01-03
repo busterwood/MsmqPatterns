@@ -23,11 +23,12 @@ namespace BusterWood.Msmq.Patterns
         QueueReader _adminQueue;
         Task _run;
 
+        /// <summary>The format name of the administration queue used for acknowledgement messages</summary>
         public string AdminQueueFormatName { get; }
 
         public Properties AdminProperties { get; } = Properties.CorrelationId  | Properties.Class | Properties.ResponseQueue;
 
-        /// <summary>The time allowed for a message to reach a destination queue before a <see cref="TimeoutException"/> is thrown by <see cref="SendAsync(Message, Queue)"/></summary>
+        /// <summary>The time allowed for a message to reach a destination queue before a <see cref="TimeoutException"/> is thrown by <see cref="DeliverAsync(Message, QueueWriter, QueueTransaction)"/></summary>
         public TimeSpan ReachQueueTimeout { get; set; } = TimeSpan.FromSeconds(1);
 
         /// <summary>Creates a new sender that waits for confirmation of deliver</summary>
@@ -152,7 +153,6 @@ namespace BusterWood.Msmq.Patterns
             }
         }
 
-
         /// <summary>
         /// Sends a <paramref name="message"/> to the <paramref name="queue"/> and waits for it to be delivered. 
         /// Waits for responses from all queues when the <paramref name="queue"/> is a multi-element format name.
@@ -169,14 +169,30 @@ namespace BusterWood.Msmq.Patterns
             Contract.Assert(_run != null);
 
             var t = RequestDelivery(message, queue, transaction);
-            return WaitForDelivery(t);
+            return WaitForDeliveryAsync(t);
         }
 
         /// <summary>
         /// Waits for positive or negative delivery of a message.
         /// Waits for responses from all queues when the <see cref="Tracking.FormatName"/> is a multi-element format name.
         /// </summary>
-        public Task WaitForDelivery(Tracking posted)
+        public void WaitForDelivery(Tracking posted)
+        {
+            try
+            {
+                WaitForDeliveryAsync(posted).Wait();
+            }
+            catch (AggregateException e)  when (e.InnerException != null)
+            {
+                throw e.InnerException;
+            }
+        }
+
+        /// <summary>
+        /// Waits for positive or negative delivery of a message.
+        /// Waits for responses from all queues when the <see cref="Tracking.FormatName"/> is a multi-element format name.
+        /// </summary>
+        public Task WaitForDeliveryAsync(Tracking posted)
         {
             Contract.Requires(!posted.IsEmpty);
 
@@ -200,7 +216,23 @@ namespace BusterWood.Msmq.Patterns
         /// Waits for positive or negative receive of a message.
         /// Waits for responses from all queues when the <see cref="Tracking.FormatName"/> is a multi-element format name.
         /// </summary>
-        public Task WaitToBeReceived(Tracking posted)
+        public void WaitToBeReceived(Tracking posted)
+        {
+            try
+            {
+                WaitToBeReceivedAsync(posted).Wait();
+            }
+            catch (AggregateException e) when (e.InnerException != null)
+            {
+                throw e.InnerException;
+            }
+        }
+
+        /// <summary>
+        /// Waits for positive or negative receive of a message.
+        /// Waits for responses from all queues when the <see cref="Tracking.FormatName"/> is a multi-element format name.
+        /// </summary>
+        public Task WaitToBeReceivedAsync(Tracking posted)
         {
             Contract.Requires(!posted.IsEmpty);
 
@@ -224,7 +256,7 @@ namespace BusterWood.Msmq.Patterns
         {
             Contract.Requires(sent != null);
             Contract.Requires(sent.Count > 0);
-            return Task.WhenAll(sent.Select(WaitForDelivery));
+            return Task.WhenAll(sent.Select(WaitForDeliveryAsync));
         }
 
         TaskCompletionSource<MessageClass> ReachQueueCompletionSource(Tracking key) => _reachQueue.GetOrAdd(key, _ => new TaskCompletionSource<MessageClass>());
@@ -233,12 +265,19 @@ namespace BusterWood.Msmq.Patterns
         
     }
 
+    /// <summary>Delivery tracking information for the <see cref="Postman"/></summary>
     public struct Tracking : IEquatable<Tracking>
     {
+        /// <summary>The queue the message was sent to</summary>
         public string FormatName { get; }
+
+        /// <summary>The Id of the message that was sent</summary>
         public MessageId MessageId { get; }
+
+        /// <summary>The queue-specific lookup Id of the message</summary>
         public long LookupId { get; }
 
+        /// <summary>If this the default tracking information?</summary>
         public bool IsEmpty => FormatName == null;
 
         public Tracking(string formatName, MessageId messageId) : this(formatName, messageId, 0)
@@ -254,15 +293,11 @@ namespace BusterWood.Msmq.Patterns
             LookupId = lookupId;
         }
 
-        public bool Equals(Tracking other)
-        {
-            return StringComparer.OrdinalIgnoreCase.Equals(FormatName, other.FormatName)
-                && MessageId.Equals(other.MessageId);
-        }
+        public bool Equals(Tracking other) => StringComparer.OrdinalIgnoreCase.Equals(FormatName, other.FormatName) && MessageId.Equals(other.MessageId);
 
         public override bool Equals(object obj) => obj is Tracking && Equals((Tracking)obj);
 
-        public override int GetHashCode() => StringComparer.OrdinalIgnoreCase.GetHashCode(FormatName) ^ MessageId.GetHashCode();
+        public override int GetHashCode() => IsEmpty ? 0 : StringComparer.OrdinalIgnoreCase.GetHashCode(FormatName) ^ MessageId.GetHashCode();
     }
 
 }
