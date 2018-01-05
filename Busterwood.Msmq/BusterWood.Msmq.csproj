@@ -131,9 +131,11 @@
     <Compile Include="AcknowledgmentTypes.cs" />
     <Compile Include="BodyType.cs" />
     <Compile Include="Patterns\AcknowledgmentException.cs" />
+    <Compile Include="Patterns\DeduplicatingQueueReader.cs" />
     <Compile Include="Patterns\IProcessor.cs" />
     <Compile Include="Patterns\FormatNameSubscriptions.cs" />
     <Compile Include="Patterns\LabelSubscription.cs" />
+    <Compile Include="Patterns\LimitedTransaction.cs" />
     <Compile Include="Patterns\MessageCache.cs" />
     <Compile Include="Patterns\MessageCacheAction.cs" />
     <Compile Include="Patterns\NonTransactionalRouter.cs" />
