@@ -59,7 +59,16 @@ namespace UnitTests
         }
 
         [TearDown]
-
+        public void TearDown()
+        {
+            sender.Dispose();
+            input.Dispose();
+            dead.Dispose();
+            outRead1.Dispose();
+            outSend1.Dispose();
+            outRead2.Dispose();
+            outSend2.Dispose();
+        }
 
         [Test]
         public async Task can_route_non_transactional()
