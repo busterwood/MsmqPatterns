@@ -2,7 +2,7 @@
 {
     /// <summary>
     /// The priority of a message on a non-transactional queue.
-    /// Messages on transaction queues always have priority <see cref="Lowest"/>
+    /// Messages on transactional queues always have priority <see cref="Lowest"/>
     /// </summary>
     public enum Priority
     {

@@ -175,11 +175,14 @@
     <Compile Include="QueueExtensions.cs" />
     <Compile Include="QueueHandle.cs" />
     <Compile Include="QueueProperties.cs" />
+    <Compile Include="QueueReader.cs" />
     <Compile Include="QueueReaderMode.cs" />
     <Compile Include="Queues.cs" />
     <Compile Include="QueueShareMode.cs" />
     <Compile Include="QueueTransactional.cs" />
+    <Compile Include="QueueWriter.cs" />
     <Compile Include="SenderIdType.cs" />
+    <Compile Include="SubQueue.cs" />
     <Compile Include="Transaction.cs" />
   </ItemGroup>
   <ItemGroup>

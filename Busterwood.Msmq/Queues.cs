@@ -10,6 +10,7 @@ namespace BusterWood.Msmq
 {
     public static class Queues
     {
+        /// <summary>Creates a path name for a temporary queue, based on the current process</summary>
         public static string NewTempQueuePath()
         {
             return $".\\private$\\temp.{Guid.NewGuid():D}";
@@ -215,6 +216,7 @@ namespace BusterWood.Msmq
             return new QueueInformation { FormatName = formatName, Label = label };
         }
     }
+
     public class QueueInformation
     {
         public string FormatName { get; internal set; }

@@ -20,6 +20,7 @@ namespace BusterWood.Msmq
         public static void BodyUTF8(this Message msg, string text)
         {
             Contract.Requires(msg != null);
+            Contract.Requires(text != null);
 
             msg.Body = utf8NoBom.GetBytes(text);
             msg.BodyType = BodyType.ByteArray;
@@ -37,6 +38,7 @@ namespace BusterWood.Msmq
         public static void BodyASCII(this Message msg, string text)
         {
             Contract.Requires(msg != null);
+            Contract.Requires(text != null);
 
             var count = Encoding.ASCII.GetByteCount(text);
             var buf = new byte[count + 1]; // one extra for null char
@@ -59,6 +61,7 @@ namespace BusterWood.Msmq
         public static void BodyUTF16(this Message msg, string text)
         {
             Contract.Requires(msg != null);
+            Contract.Requires(text != null);
 
             var count = Encoding.Unicode.GetByteCount(text);
             var buf = new byte[count + 2]; // 2 extra for null char
@@ -81,6 +84,7 @@ namespace BusterWood.Msmq
         public static void ExtensionUTF8(this Message msg, string text)
         {
             Contract.Requires(msg != null);
+            Contract.Requires(text != null);
 
             msg.Extension = utf8NoBom.GetBytes(text);
         }
@@ -95,6 +99,7 @@ namespace BusterWood.Msmq
         public static void ExtensionASCII(this Message msg, string text)
         {
             Contract.Requires(msg != null);
+            Contract.Requires(text != null);
 
             var count = Encoding.ASCII.GetByteCount(text);
             var buf = new byte[count + 1]; // one extra for null char
@@ -113,7 +118,8 @@ namespace BusterWood.Msmq
         }
 
         /// <summary>
-        /// Uses a <see cref="QueueCursor"/> to look for messages with a matching <paramref name="correlationId"/>
+        /// Uses a <see cref="QueueCursor"/> to look for messages with a matching <paramref name="correlationId"/>.
+        /// Returns the matching message or NULL if no matching message can be found with the allowed <paramref name="timeout"/>.
         /// </summary>
         public static Message ReadByCorrelationId(this QueueReader queue, MessageId correlationId, Properties properties = Properties.All, TimeSpan? timeout = null, QueueTransaction transaction = null)
         {
@@ -142,6 +148,7 @@ namespace BusterWood.Msmq
 
         /// <summary>
         /// Uses a <see cref="QueueCursor"/> to look for messages with a matching <paramref name="correlationId"/>
+        /// Returns the matching message or NULL if no matching message can be found with the allowed <paramref name="timeout"/>.
         /// </summary>
         public static async Task<Message> ReadByCorrelationIdAsync(this QueueReader queue, MessageId correlationId, Properties properties = Properties.All, TimeSpan? timeout = null, QueueTransaction transaction = null)
         {
