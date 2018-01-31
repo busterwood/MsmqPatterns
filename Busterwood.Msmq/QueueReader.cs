@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,7 +8,7 @@ namespace BusterWood.Msmq
 {
 
     /// <summary>Reads messages from a queue</summary>
-    public class QueueReader : Queue, IQueueReader
+    public class QueueReader : Queue, IQueueReader, IEnumerable<Message>
     {
         /// <summary>The maximum amount of time for queue operations</summary>
         public static TimeSpan Infinite = TimeSpan.FromMilliseconds(uint.MaxValue);
@@ -204,5 +205,18 @@ namespace BusterWood.Msmq
                 throw new QueueException(res);
         }
 
+        /// <summary>Peeks at all the messages currently in the queue using a <see cref="QueueCursor"/></summary>
+        public IEnumerator<Message> GetEnumerator()
+        {
+            using (var c = new QueueCursor(this))
+            {
+                for (var msg = c.Peek(timeout:TimeSpan.Zero); msg != null; msg = c.PeekNext(timeout: TimeSpan.Zero))
+                {
+                    yield return msg;
+                }
+            }
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }
