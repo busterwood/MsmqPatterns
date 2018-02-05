@@ -14,7 +14,7 @@ namespace BusterWood.Msmq
         public static string NewTempQueuePath()
         {
             return $".\\private$\\temp.{Guid.NewGuid():D}";
-        }
+        }        
 
         /// <summary>Creates a message queue (if it does not already exist), returning the format name of the queue.</summary>
         /// <param name="path">the path (NOT format name) of the queue</param>

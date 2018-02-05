@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>BusterWood.Msmq</id>
-    <version>0.3.0</version>
+    <version>0.3.1</version>
     <authors>BusterWood</authors>
     <description>Easy to use messaging patterns for MSMQ</description>
     <projectUrl>https://github.com/busterwood/MsmqPatterns</projectUrl>
@@ -11,6 +11,9 @@
     <dependencies>
       <dependency id="BusterWood.Caching" version="[2.3,3.0)" />
     </dependencies>
+    <references>
+      <reference file="BusterWood.Msmq.dll" />
+    </references>
   </metadata>
   <files>
     <file src="Bin\Release\BusterWood.Msmq.dll" target="lib\net45"/>
