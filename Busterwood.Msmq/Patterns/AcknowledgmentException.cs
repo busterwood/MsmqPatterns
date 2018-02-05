@@ -16,7 +16,7 @@ namespace BusterWood.Msmq.Patterns
         {
         }
 
-        public AcknowledgmentException(string message, MessageClass @class) : base(message)
+        public AcknowledgmentException(string message, MessageClass @class) : base($"{@class} from {message}")
         {
             this.Acknowledgment = @class;
         }
