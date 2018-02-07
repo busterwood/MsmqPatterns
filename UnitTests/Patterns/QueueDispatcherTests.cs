@@ -59,7 +59,7 @@ namespace UnitTests
 
             var sw = new Stopwatch();
             sw.Start();
-            await postman.DeliverAsync(request, inputWriter, QueueTransaction.None);
+            await inputWriter.DeliverAsync(request, postman, QueueTransaction.None);
             var actual = await tcs.Task;
             Assert.AreEqual(key, actual?.AppSpecific);
             Assert.AreEqual("hello.world", actual?.Label);

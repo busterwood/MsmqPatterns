@@ -56,7 +56,7 @@ namespace UnitTests.Cache
         {
             using (var rr = new RequestReply(cacheInputFormatName, replyFormatName, postman))
             {
-                var msg = new Message { Label = "last.some.value" };
+                var msg = new Message { Label = "cache.some.value" };
                 var sw = new Stopwatch();
                 sw.Start();
                 var reply = await rr.SendRequestAsync(msg);
@@ -74,9 +74,9 @@ namespace UnitTests.Cache
             {
                 var cachedMsg = new Message { Label = "some.value", AppSpecific = 234 };
                 cachedMsg.BodyASCII("hello world!");
-                await postman.DeliverAsync(cachedMsg, inputWriter, QueueTransaction.None);
+                await inputWriter.DeliverAsync(cachedMsg, postman, QueueTransaction.None);
 
-                var request = new Message { Label = "last.some.value" };
+                var request = new Message { Label = "cache.some.value" };
                 var sw = new Stopwatch();
                 sw.Start();
                 var reply = await rr.SendRequestAsync(request);
@@ -94,10 +94,10 @@ namespace UnitTests.Cache
             using (var rr = new RequestReply(cacheInputFormatName, replyFormatName, postman))
             {
                 var cachedMsg = new Message { Label = "some.value.1", AppSpecific = 1 };
-                await postman.DeliverAsync(cachedMsg, inputWriter, QueueTransaction.None);
+                await inputWriter.DeliverAsync(cachedMsg, postman, QueueTransaction.None);
 
                 var cachedMsg2 = new Message { Label = "some.value.2", AppSpecific = 2 };
-                await postman.DeliverAsync(cachedMsg2, inputWriter, QueueTransaction.None);
+                await inputWriter.DeliverAsync(cachedMsg2, postman, QueueTransaction.None);
 
                 var sw = new Stopwatch();
                 for (int j = 0; j < 5; j++)
@@ -105,7 +105,7 @@ namespace UnitTests.Cache
                     for (int i = 1; i <= 2; i++)
                     {
                         sw.Restart();
-                        var request = new Message { Label = "last.some.value." + i };
+                        var request = new Message { Label = "cache.some.value." + i };
                         var reply = await rr.SendRequestAsync(request);
                         Console.WriteLine($"took {sw.Elapsed.TotalMilliseconds:N1}MS");
                         Assert.AreEqual("some.value." + i, reply.Label, "Label");

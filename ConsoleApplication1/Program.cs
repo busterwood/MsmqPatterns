@@ -58,7 +58,7 @@ namespace ConsoleApplication1
                             var msg = new Message { Label = bits[1], TimeToBeReceived = TimeSpan.FromSeconds(30) };
                             if (bits.Length > 2)
                                 msg.BodyUTF8(bits[2]);
-                            postman.Deliver(msg, requestQueue);
+                            requestQueue.Deliver(msg, postman);
                             break;
                         }
                     case "remove":
@@ -66,7 +66,7 @@ namespace ConsoleApplication1
                             var msg = new Message { Label = "cache." + bits[1], AppSpecific=(int)MessageCacheAction.Remove, TimeToBeReceived = TimeSpan.FromSeconds(30) };
                             if (bits.Length > 2)
                                 msg.BodyUTF8(bits[2]);
-                            postman.Deliver(msg, requestQueue);
+                            requestQueue.Deliver(msg, postman);
                             break;
                         }
                     case "clear":
@@ -74,7 +74,7 @@ namespace ConsoleApplication1
                             var msg = new Message { Label = "cache", AppSpecific=(int)MessageCacheAction.Clear, TimeToBeReceived = TimeSpan.FromSeconds(30) };
                             if (bits.Length > 2)
                                 msg.BodyUTF8(bits[2]);
-                            postman.Deliver(msg, requestQueue);
+                            requestQueue.Deliver(msg, postman);
                             break;
                         }
                     case "list":

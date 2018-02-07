@@ -28,7 +28,7 @@ namespace BusterWood.Msmq.Patterns
         public Properties AdminProperties { get; } = Properties.CorrelationId  | Properties.Class | Properties.ResponseQueue;
 
         /// <summary>The time allowed for a message to reach a destination queue before a <see cref="TimeoutException"/> is thrown by <see cref="DeliverAsync(Message, QueueWriter, QueueTransaction)"/></summary>
-        public TimeSpan ReachQueueTimeout { get; set; } = TimeSpan.FromSeconds(1);
+        public TimeSpan ReachQueueTimeout { get; set; } = TimeSpan.FromSeconds(5);
 
         /// <summary>Creates a new sender that waits for confirmation of deliver</summary>
         /// <param name="adminQueueFormatName">The format name of the <see cref="Message.AdministrationQueue"/></param>
@@ -79,11 +79,11 @@ namespace BusterWood.Msmq.Patterns
                             Task.Run(() => tcs1.TrySetException(new AcknowledgmentException(msg.ResponseQueue, ack))); // set result is synchronous by default, make it async
                             break;
                         case MessageClass.Received:
-                            var tcs2 = ReachQueueCompletionSource(new Tracking(msg.ResponseQueue, msg.CorrelationId));
+                            var tcs2 = ReceiveCompletionSource(new Tracking(msg.ResponseQueue, msg.CorrelationId));
                             Task.Run(() => tcs2.TrySetResult(ack)); // set result is synchronous by default, make it async
                             break; 
                         case MessageClass.ReceiveTimeout:
-                            var tcs3 = ReachQueueCompletionSource(new Tracking(msg.ResponseQueue, msg.CorrelationId));
+                            var tcs3 = ReceiveCompletionSource(new Tracking(msg.ResponseQueue, msg.CorrelationId));
                             Task.Run(() => tcs3.TrySetException(new AcknowledgmentException(msg.ResponseQueue, ack))); // set result is synchronous by default, make it async
                             break; 
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
@@ -138,37 +138,6 @@ namespace BusterWood.Msmq.Patterns
             // acknowledgements for multicast messages get an empty DestinationQueue, so we need to remove it here
             var formatName = queue.FormatName.StartsWith("multicast=", StringComparison.OrdinalIgnoreCase)? "" : queue.FormatName;
             return new Tracking(formatName, message.Id, message.LookupId);
-        }
-
-        public void Deliver(Message message, QueueWriter queue, QueueTransaction transaction = null)
-        {
-            try
-            {
-                DeliverAsync(message, queue, transaction).Wait();
-            }
-            catch (AggregateException ex)
-            {
-                throw ex.InnerException;
-            }
-        }
-
-        /// <summary>
-        /// Sends a <paramref name="message"/> to the <paramref name="queue"/> and waits for it to be delivered. 
-        /// Waits for responses from all queues when the <paramref name="queue"/> is a multi-element format name.
-        /// Note that the transaction MUST commit before the acknowledgements are received.
-        /// </summary>
-        /// <returns>Task that completes when the message has been delivered</returns>
-        /// <exception cref="TimeoutException">Thrown if the message does not reach the queue before the <see cref="ReachQueueTimeout"/> has been reached</exception>
-        /// <exception cref="AcknowledgmentException">Thrown if something bad happens, e.g. message could not be sent, access denied, the queue was purged, etc</exception>
-        public Task DeliverAsync(Message message, QueueWriter queue, QueueTransaction transaction = null)
-        {
-            Contract.Requires(message != null);
-            Contract.Requires(queue != null);
-            Contract.Requires(transaction == null || transaction == QueueTransaction.None || transaction == QueueTransaction.Single);
-            Contract.Assert(_run != null);
-
-            var t = RequestDelivery(message, queue, transaction);
-            return WaitForDeliveryAsync(t);
         }
 
         /// <summary>
@@ -260,7 +229,7 @@ namespace BusterWood.Msmq.Patterns
 
         TaskCompletionSource<MessageClass> ReachQueueCompletionSource(Tracking key) => _reachQueue.GetOrAdd(key, _ => new TaskCompletionSource<MessageClass>());
 
-        TaskCompletionSource<MessageClass> ReceiveCompletionSource(Tracking key) => _reachQueue.GetOrAdd(key, _ => new TaskCompletionSource<MessageClass>());
+        TaskCompletionSource<MessageClass> ReceiveCompletionSource(Tracking key) => _receiveQueue.GetOrAdd(key, _ => new TaskCompletionSource<MessageClass>());
         
     }
 
@@ -299,4 +268,55 @@ namespace BusterWood.Msmq.Patterns
         public override int GetHashCode() => IsEmpty ? 0 : StringComparer.OrdinalIgnoreCase.GetHashCode(FormatName) ^ MessageId.GetHashCode();
     }
 
+
+    public static class Extensions
+    {
+        public static Tracking RequestDelivery(this QueueWriter queue, Message message, Postman postman, QueueTransaction txn = null) => postman.RequestDelivery(message, queue, txn);
+
+        public static void WaitForDelivery(this Tracking tracking, Postman postman) => postman.WaitForDelivery(tracking);
+
+        public static Task WaitForDeliveryAsync(this Tracking tracking, Postman postman) => postman.WaitForDeliveryAsync(tracking);
+
+        public static void WaitToBeReceived(this Tracking tracking, Postman postman) => postman.WaitToBeReceived(tracking);
+
+        public static Task WaitToBeReceivedAsync(this Tracking tracking, Postman postman) => postman.WaitToBeReceivedAsync(tracking);
+
+        /// <summary>
+        /// Sends a <paramref name="message"/> to the <paramref name="queue"/> and waits for it to be delivered. 
+        /// Waits for responses from all queues when the <paramref name="queue"/> is a multi-element format name.
+        /// Note that the transaction MUST commit before the acknowledgements are received.
+        /// </summary>
+        /// <exception cref="TimeoutException">Thrown if the message does not reach the queue before the <see cref="ReachQueueTimeout"/> has been reached</exception>
+        /// <exception cref="AcknowledgmentException">Thrown if something bad happens, e.g. message could not be sent, access denied, the queue was purged, etc</exception>
+        public static void Deliver(this QueueWriter queue, Message message, Postman postman, QueueTransaction transaction = null)
+        {
+            Contract.Requires(queue != null);
+            Contract.Requires(message != null);
+            Contract.Requires(postman != null);
+            Contract.Requires(transaction == null || transaction == QueueTransaction.None || transaction == QueueTransaction.Single);
+
+            var t = postman.RequestDelivery(message, queue, transaction);
+            postman.WaitForDelivery(t);
+        }
+
+        /// <summary>
+        /// Sends a <paramref name="message"/> to the <paramref name="queue"/> and waits for it to be delivered. 
+        /// Waits for responses from all queues when the <paramref name="queue"/> is a multi-element format name.
+        /// Note that the transaction MUST commit before the acknowledgements are received.
+        /// </summary>
+        /// <returns>Task that completes when the message has been delivered</returns>
+        /// <exception cref="TimeoutException">Thrown if the message does not reach the queue before the <see cref="ReachQueueTimeout"/> has been reached</exception>
+        /// <exception cref="AcknowledgmentException">Thrown if something bad happens, e.g. message could not be sent, access denied, the queue was purged, etc</exception>
+        public static Task DeliverAsync(this QueueWriter queue, Message message, Postman postman, QueueTransaction transaction = null)
+        {
+            Contract.Requires(queue != null);
+            Contract.Requires(message != null);
+            Contract.Requires(postman != null);
+            Contract.Requires(transaction == null || transaction == QueueTransaction.None || transaction == QueueTransaction.Single);
+
+            var t = postman.RequestDelivery(message, queue, transaction);
+            return postman.WaitForDeliveryAsync(t);
+        }
+
+    }
 }

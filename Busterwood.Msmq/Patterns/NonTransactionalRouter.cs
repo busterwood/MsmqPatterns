@@ -51,7 +51,7 @@ namespace BusterWood.Msmq.Patterns
             try
             {
                 dest = GetRoute(msg);
-                await Sender.DeliverAsync(msg, dest, QueueTransaction.None);
+                await dest.DeliverAsync(msg, Sender, QueueTransaction.None);
                 var removed = _input.Lookup(Properties.LookupId, lookupId, timeout: TimeSpan.Zero); // remove message from queue
                 if (removed == null)
                     Console.Error.WriteLine($"WARN: router message to {dest.FormatName} but could not remove message from input queue");

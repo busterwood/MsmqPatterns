@@ -41,6 +41,7 @@
   <ItemGroup>
     <Compile Include="Patterns\MessageCacheTests.cs" />
     <Compile Include="Patterns\LabelSubscriptionTests.cs" />
+    <Compile Include="Patterns\PostmanTests.cs" />
     <Compile Include="Patterns\QueueDispatcherTests.cs" />
     <Compile Include="SubQueueReaderTests.cs" />
     <Compile Include="Patterns\SenderTests.cs" />

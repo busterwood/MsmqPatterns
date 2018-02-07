@@ -39,9 +39,17 @@ namespace BusterWood.Msmq.Patterns
             _queueCache = new QueueCache<QueueWriter>((fn, mode, share) => new QueueWriter(fn));
         }
 
+        /// <summary>The format name of the queue that data and cache requests are read from</summary>
         public string InputQueueFormatName { get; }
+
+        /// <summary>The format name of the queue acknowledgement messages are read from - create a temporary queue if needed via <see cref="Queues.NewTempQueuePath"/></summary>
         public string AdminQueueFormatName { get; }
+
+        /// <summary>
+        /// 
+        /// </summary>
         public int? CacheGen0Limit { get; }
+
         public TimeSpan? CacheTimeToLive { get; }
 
         public void Dispose()
@@ -128,14 +136,14 @@ namespace BusterWood.Msmq.Patterns
             var last = _cache[key];
             if (last == null)
             {
-                //Console.Error.WriteLine($"DEBUG: there is no cached value for '{key}', sending an empty message");
+                Console.Error.WriteLine($"DEBUG: there is no cached value for '{key}', sending an empty message");
                 last = new Message { Label = key };
             }
 
             var replyQueue = _queueCache.Open(msg.ResponseQueue, QueueAccessMode.Send);
             last.CorrelationId = msg.Id;
             replyQueue.Write(last);
-            //Console.Error.WriteLine($"DEBUG: sent reply for '{key}' to {msg.ResponseQueue}");
+            Console.Error.WriteLine($"DEBUG: sent reply for '{key}' to {msg.ResponseQueue}");
             // note: we do not wait for confirmation of delivery, we just report errors on via the AdminAsync (_adminTask)
         }
 
