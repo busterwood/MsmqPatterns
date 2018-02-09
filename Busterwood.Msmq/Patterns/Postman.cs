@@ -160,23 +160,22 @@ namespace BusterWood.Msmq.Patterns
         /// Waits for positive or negative delivery of a message.
         /// Waits for responses from all queues when the <see cref="Tracking.FormatName"/> is a multi-element format name.
         /// </summary>
-        public Task WaitForDeliveryAsync(Tracking posted)
+        public Task WaitForDeliveryAsync(Tracking tracking)
         {
-            Contract.Requires(!posted.IsEmpty);
+            Contract.Requires(!tracking.IsEmpty);
 
             // handle multiple destination format names (comma separated list)
-            if (posted.FormatName.IndexOf(',') >= 0)
+            if (tracking.FormatName.IndexOf(',') >= 0)
             {
-                return Task.WhenAll(posted.FormatName.Split(',')
-                    .Select(formatName => new Tracking(formatName, posted.MessageId))
+                return Task.WhenAll(tracking.FormatName.Split(',')
+                    .Select(formatName => new Tracking(formatName, tracking.MessageId))
                     .Select(ReachQueueCompletionSource)
                     .Select(qtcs => qtcs.Task)
                 );
             }
 
             // single element format name
-            var key = new Tracking(posted.FormatName, posted.MessageId);
-            var tcs = ReachQueueCompletionSource(key);
+            var tcs = ReachQueueCompletionSource(tracking);
             return tcs.Task;
         }
 
@@ -200,23 +199,22 @@ namespace BusterWood.Msmq.Patterns
         /// Waits for positive or negative receive of a message.
         /// Waits for responses from all queues when the <see cref="Tracking.FormatName"/> is a multi-element format name.
         /// </summary>
-        public Task WaitToBeReceivedAsync(Tracking posted)
+        public Task WaitToBeReceivedAsync(Tracking tracking)
         {
-            Contract.Requires(!posted.IsEmpty);
+            Contract.Requires(!tracking.IsEmpty);
 
             // handle multiple destination format names (comma separated list)
-            if (posted.FormatName.IndexOf(',') >= 0)
+            if (tracking.FormatName.IndexOf(',') >= 0)
             {
-                return Task.WhenAll(posted.FormatName.Split(',')
-                    .Select(formatName => new Tracking(formatName, posted.MessageId))
+                return Task.WhenAll(tracking.FormatName.Split(',')
+                    .Select(formatName => new Tracking(formatName, tracking.MessageId))
                     .Select(ReceiveCompletionSource)
                     .Select(qtcs => qtcs.Task)
                 );
             }
 
             // single element format name
-            var key = new Tracking(posted.FormatName, posted.MessageId);
-            var tcs = ReceiveCompletionSource(key);
+            var tcs = ReceiveCompletionSource(tracking);
             return tcs.Task;
         }
 
