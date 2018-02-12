@@ -109,16 +109,12 @@ namespace BusterWood.Msmq.Patterns
                     var msg = _inputReader.Read(Properties.All, TimeSpan.Zero) ?? await _inputReader.ReadAsync(Properties.All);
 
                     // we could avoid the lock by using an immutable collection
-                    HashSet<string> subscribers;
-                    lock (_subscriptions)
-                        subscribers = _subscriptions.GetSubscribers(msg.Label);
-
-                    if (subscribers.Count <= 0)
+                    var subscribers = _subscriptions.GetSubscribers(msg.Label);
+                    if (subscribers.Count == 0)
                         continue;
 
-                    var fn = string.Join(",", subscribers); // create a multi-element format name
+                    var fn = string.Join(",", subscribers.Select(s => s.FormatName).Distinct()); // create a multi-element format name
                     var q = _responseQueueCache.Open(fn, QueueAccessMode.Send);
-
                     msg.AdministrationQueue = _adminQueueFormatName;
                     q.Write(msg);
                 }
@@ -139,10 +135,11 @@ namespace BusterWood.Msmq.Patterns
 
         /// <summary>Respond to requests to subscribe or unsubscribe</summary>
         /// <remarks>
-        /// Add Subscription: label: cache.tag, AppSpecific: Add, ResponseQueue: subscriber identity, Body: UTF-8 subjects, one per line
-        /// Set Subscriptions: label: cache.tag, AppSpecific: Set, ResponseQueue: subscriber identity, Body: UTF-8 subjects, one per line
-        /// Remove Subscriptions: label: cache.tag, AppSpecific: Remove, ResponseQueue: subscriber identity, Body: UTF-8 subjects, one per line
-        /// Clear Subscriptions: label: cache.tag, AppSpecific: Clear, ResponseQueue: subscriber identity, Body: UTF-8 subjects, one per line
+        /// Add Subscription: label: tag, AppSpecific: Add, ResponseQueue: subscriber identity, Body: UTF-8 subjects, one per line
+        /// Set Subscriptions: label: tag, AppSpecific: Set, ResponseQueue: subscriber identity, Body: UTF-8 subjects, one per line
+        /// Remove Subscriptions: label: tag, AppSpecific: Remove, ResponseQueue: subscriber identity, Body: UTF-8 subjects, one per line
+        /// Clear Subscriptions: label: tag, AppSpecific: Clear, ResponseQueue: subscriber identity
+        /// List Subscriptions: label: tag, AppSpecific: List, ResponseQueue: subscriber identity
         /// </remarks>
         async Task SubscriptionLoop()
         {
@@ -153,63 +150,61 @@ namespace BusterWood.Msmq.Patterns
                 for (;;)
                 {
                     var msg = _clientRequestReader.Read(props, TimeSpan.Zero) ?? await _clientRequestReader.ReadAsync(props);
-                    if (msg.ResponseQueue.Length == 0)
+                    var tag = msg.Label;
+                    string responseQueue = msg.ResponseQueue;
+                    var labels = msg.BodyUTF8().Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+                    if (responseQueue.Length == 0)
                     {
-                        Console.Error.WriteLine("Request with no response queue, ignoring: " + msg.Label);
+                        Console.Error.WriteLine("Request with no response queue, ignoring message: " + msg.Id);
                         continue;
                     }
-                    var labels = msg.BodyUTF8().Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-                    switch ((PubSubAction)msg.AppSpecific)
+
+                    PubSubAction action = (PubSubAction)msg.AppSpecific;
+                    switch (action)
                     {
                         case PubSubAction.Add:
-                            lock (_subscriptions)
+                            lock (_subscriptions.SyncRoot)
                             {
                                 foreach (var l in labels)
-                                    _subscriptions.Add(l, msg.ResponseQueue);//TODO: only tag
+                                    _subscriptions.Add(l, responseQueue, tag);
                             }
                             break;
                         case PubSubAction.Remove:
-                            lock (_subscriptions)
+                            lock (_subscriptions.SyncRoot)
                             {
                                 foreach (var l in labels)
-                                    _subscriptions.Remove(l, msg.ResponseQueue); //TODO: only tag
+                                    _subscriptions.Remove(l, responseQueue, tag);
                             }
                             break;
                         case PubSubAction.Set:
                             var targetSubs = new HashSet<string>(labels);
-                            lock (_subscriptions)
+                            lock (_subscriptions.SyncRoot)
                             {
-                                var currentSubs = _subscriptions.GetSubscriptions(msg.ResponseQueue);  //TODO: only tag
+                                var currentSubs = _subscriptions.GetSubscriptions(responseQueue, tag);
 
                                 foreach (var l in targetSubs.Where(l => !currentSubs.Contains(l)))
                                 {
-                                    _subscriptions.Add(l, msg.ResponseQueue); //TODO: only tag
+                                    _subscriptions.Add(l, responseQueue, tag);
                                 }
                                 foreach (var l in currentSubs.Where(l => !targetSubs.Contains(l)))
                                 {
-                                    _subscriptions.Remove(l, msg.ResponseQueue); //TODO: only tag
+                                    _subscriptions.Remove(l, responseQueue, tag);
                                 }
                             }
                             break;
                         case PubSubAction.Clear:
-                            lock (_subscriptions)
-                            {
-                                _subscriptions.Clear(msg.ResponseQueue);  //TODO: only tag
-                            }
+                            _subscriptions.Clear(responseQueue, tag);
                             break;
                         case PubSubAction.List:
-                            HashSet<string> current;
-                            lock (_subscriptions)
-                            {
-                                current = _subscriptions.GetSubscriptions(msg.ResponseQueue);  //TODO: only tag
-                            }
-                            var reply = new Message { AdministrationQueue = _adminQueueFormatName, Label = "cache.subscriptions", CorrelationId = msg.Id };
-                            reply.BodyUTF8(string.Join(Environment.NewLine, current));
-                            var q = _responseQueueCache.Open(msg.ResponseQueue, QueueAccessMode.Send);
+                            HashSet<string> current = _subscriptions.GetSubscriptions(responseQueue, tag);
+                            var reply = new Message { AdministrationQueue = _adminQueueFormatName, Label = tag, CorrelationId = msg.Id };
+                            reply.BodyUTF8(string.Join(Environment.NewLine, current.OrderBy(l => l)));
+                            var q = _responseQueueCache.Open(responseQueue, QueueAccessMode.Send);
                             q.Write(reply);
                             break;
                         default:
-                            Console.Error.WriteLine($"Request with invalid {nameof(msg.AppSpecific)} {msg.AppSpecific}, ignoring request for '{msg.Label}' for '{msg.ResponseQueue}'");
+                            Console.Error.WriteLine($"Request with invalid {nameof(msg.AppSpecific)} {action}, ignoring request, message id '{msg.Id}' for '{responseQueue}'");
                             break;
                     }
                 }

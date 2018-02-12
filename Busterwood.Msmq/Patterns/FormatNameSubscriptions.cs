@@ -1,18 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
-using System.Linq;
 
 namespace BusterWood.Msmq.Patterns
 {
     /// <summary>
-    /// A class to manage subscriptions to messages based on the message label.
+    /// A class to manage subscriptions to messages based on the message label.  All methods are thread-safe.
     /// You can subscribe with <see cref="WildCard"/>, e.g. "hello.*" will match a message with label "hello.world".
     /// You can subscribe with <see cref="AllDecendents"/> , e.g. "hello.**" will match a message with label "hello.world.1.2.3".
     /// </summary>
     class FormatNameSubscriptions
     {
-        readonly Dictionary<string, HashSet<string>> _subscriptionsByFormatName = new Dictionary<string, HashSet<string>>();
+        readonly Dictionary<Subscriber, HashSet<string>> _subscriptionsByKey = new Dictionary<Subscriber, HashSet<string>>();
         readonly Node _root = new Node("");
 
         /// <summary>The path separator to use, defaults to dot (.)</summary>
@@ -24,13 +23,15 @@ namespace BusterWood.Msmq.Patterns
         /// <summary>The all descendants wild-card string to use, defaults to star-star (**) </summary>
         public string AllDecendents { get; set; } = "**";
 
+        public object SyncRoot => _root;
+
         /// <summary>
         /// Subscribe to messages with a matching <paramref name="label"/>, invoking the <paramref name="formatName"/> when <see cref="Dispatch(Message)"/> is called.
         /// You can subscribe with <see cref="WildCard"/>, e.g. "hello.*" will match a message with label "hello.world".
         /// You can subscribe with <see cref="AllDecendents"/> , e.g. "hello.**" will match a message with label "hello.world.1.2.3".
         /// </summary>
         /// <returns>A handle to that unsubscribes when it is Disposed</returns>
-        public void Add(string label, string formatName)
+        public void Add(string label, string formatName, string tag = null)
         {
             Contract.Requires(!string.IsNullOrEmpty(label));
             Contract.Requires(formatName != null);
@@ -43,6 +44,7 @@ namespace BusterWood.Msmq.Patterns
                     throw new ArgumentException("wildcard subscriptions are only supported as the last character");
             }
 
+            var key = new Subscriber(formatName, tag);
             var parts = label.Split(Separator);
             lock (_root)
             {
@@ -63,25 +65,26 @@ namespace BusterWood.Msmq.Patterns
                     node = child;
                 }
 
-                node.Subscriptions.Add(formatName);
+                node.Subscriptions.Add(key);
 
                 // add to format name specific set of subscriptions
                 HashSet<string> subs;
-                if (!_subscriptionsByFormatName.TryGetValue(formatName, out subs))
+                if (!_subscriptionsByKey.TryGetValue(key, out subs))
                     subs = new HashSet<string>();
                 subs.Add(label);
             }
         }
        
         /// <summary>Returns the response queue format names that are subscribed to a label</summary>
-        public HashSet<string> GetSubscribers(string label)
+        public HashSet<Subscriber> GetSubscribers(string label, string tag = null)
         {
             Contract.Requires(!string.IsNullOrEmpty(label));
 
             var parts = label.Split(Separator);
+
             lock (_root)
             {
-                HashSet<string> subscriptions = new HashSet<string>();
+                HashSet<Subscriber> subscriptions = new HashSet<Subscriber>();
                 var node = _root;
                 for (int i = 0; i < parts.Length - 1; i++)
                 {
@@ -115,22 +118,23 @@ namespace BusterWood.Msmq.Patterns
         }
 
         /// <summary>Remove subscriptions for a label and formatName</summary>
-        public void Remove(string label, string formatName)
+        public void Remove(string label, string formatName, string tag = null)
         {
             Contract.Requires(!string.IsNullOrEmpty(label));
 
             var parts = label.Split(Separator);
+            var key = new Subscriber(formatName, tag);
             lock (_root)
             {
                 HashSet<string> subs;
-                if (!_subscriptionsByFormatName.TryGetValue(formatName, out subs) || !subs.Remove(label))
+                if (!_subscriptionsByKey.TryGetValue(key, out subs) || !subs.Remove(label))
                     return;
 
-                RemoveCore(parts, formatName);
+                RemoveCore(parts, key);
             }
         }
 
-        public void RemoveCore(string[] labelParts, string formatName)
+        public void RemoveCore(string[] labelParts, Subscriber key)
         {
             var node = _root;
             for (int i = 0; i < labelParts.Length; i++)
@@ -144,35 +148,50 @@ namespace BusterWood.Msmq.Patterns
             }
 
             Contract.Assume(node != null);
-            node.Subscriptions.Remove(formatName);
+            node.Subscriptions.Remove(key);
         }
 
         /// <summary>Removes all subscriptions for a format name</summary>
-        public void Clear(string formatName)
+        public void Clear(string formatName, string tag = null)
         {
-            lock(_root)
+            var key = new Subscriber(formatName, tag);
+
+            lock (_root)
             {
                 HashSet<string> labels;
-                if (!_subscriptionsByFormatName.TryGetValue(formatName, out labels))
+                if (!_subscriptionsByKey.TryGetValue(key, out labels))
                     return;
 
                 foreach (var label in labels)
                 {
                     var parts = label.Split(Separator);
-                    RemoveCore(parts, formatName);
+                    RemoveCore(parts, key);
                 }
             }
         }
 
         /// <summary>Gets the labels that a format name is currently subscribed too</summary>
-        public HashSet<string> GetSubscriptions(string formatName)
+        public HashSet<string> GetSubscriptions(string formatName, string tag = null)
         {
+            var key = new Subscriber(formatName, tag);
             lock (_root)
             {
                 HashSet<string> subs;
-                if (!_subscriptionsByFormatName.TryGetValue(formatName, out subs))
+                if (!_subscriptionsByKey.TryGetValue(key, out subs))
                     return new HashSet<string>();
                 return new HashSet<string>(subs);
+            }
+        }
+
+        public struct Subscriber
+        {
+            public string FormatName { get; }
+            public string Tag { get; }
+
+            public Subscriber(string formatName, string tag) : this()
+            {
+                FormatName = formatName;
+                Tag = tag;
             }
         }
 
@@ -185,7 +204,7 @@ namespace BusterWood.Msmq.Patterns
             public Dictionary<string, Node> ChildNodes;
 
             /// <summary>The format names of the response queues that are subscribed to this node</summary>
-            public HashSet<string> Subscriptions = new HashSet<string>();
+            public HashSet<Subscriber> Subscriptions = new HashSet<Subscriber>();
 
             public Node(string name)
             {
