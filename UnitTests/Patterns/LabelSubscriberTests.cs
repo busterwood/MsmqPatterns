@@ -26,19 +26,16 @@ namespace UnitTests
         {
             inputQueueFormatName = Queues.TryCreate(inputQueuePath, QueueTransactional.None);
             adminQueueFormatName = Queues.TryCreate(adminQueuePath, QueueTransactional.None);
-
-            using (var q = new QueueReader(inputQueueFormatName))
-                q.Purge();
-            using (var q = new QueueReader(adminQueueFormatName))
-                q.Purge();
+            Queues.Purge(inputQueueFormatName);
+            Queues.Purge(adminQueueFormatName);
 
             inputWriter = new QueueWriter(inputQueueFormatName);
 
             dispatcher = new LabelSubscriber(inputQueueFormatName);
-            dispatcher.StartAsync();
+            dispatcher.StartAsync().Wait();
 
             postman = new Postman(adminQueueFormatName);
-            postman.StartAsync();
+            postman.StartAsync().Wait();
         }
 
         [TearDown]

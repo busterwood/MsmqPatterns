@@ -21,10 +21,7 @@ namespace UnitTests
         {
             destFormatName = Queues.TryCreate(destQueuePath, QueueTransactional.Transactional);
             adminFormatName = Queues.TryCreate(adminQueuePath, QueueTransactional.None);
-            using (var purgeDest = new QueueReader(destFormatName))
-            {
-                purgeDest.Purge();
-            }
+            Queues.Purge(destFormatName);
             dest = new QueueWriter(destFormatName);
             admin = new QueueReader(adminFormatName);
             admin.Purge();

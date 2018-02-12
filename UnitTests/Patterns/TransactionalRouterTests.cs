@@ -36,14 +36,10 @@ namespace UnitTests
             outputQueueFormatName2 = Queues.TryCreate(outputQueuePath2, QueueTransactional.Transactional);
             deadQueueFormatName = $"{inputQueueFormatName };Poison";
 
-            using (var q = new QueueReader(inputQueueFormatName))
-                q.Purge();
-            using (var q = new QueueReader(inputQueueFormatName+ ";batch"))
-                q.Purge();
-            using (var q = new QueueReader(outputQueueFormatName1))
-                q.Purge();
-            using (var q = new QueueReader(outputQueueFormatName2))
-                q.Purge();
+            Queues.Purge(inputQueueFormatName);
+            Queues.Purge(inputQueueFormatName+ ";batch");
+            Queues.Purge(outputQueueFormatName1);
+            Queues.Purge(outputQueueFormatName2);
 
             input = new QueueWriter(inputQueueFormatName);
 

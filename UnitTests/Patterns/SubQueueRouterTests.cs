@@ -22,14 +22,9 @@ namespace UnitTests
         [SetUp]
         public void Setup()
         {
-            using (var input = new QueueReader(testQueueFormatName))
-            using (var out1 = new QueueReader(testQueueFormatName + ";one"))
-            using (var out2 = new QueueReader(testQueueFormatName + ";two"))
-            {
-                input.Purge();
-                out1.Purge();
-                out2.Purge();
-            }
+            Queues.Purge(testQueueFormatName);
+            Queues.Purge(testQueueFormatName + ";one");
+            Queues.Purge(testQueueFormatName + ";two");
         }
 
         [Test]

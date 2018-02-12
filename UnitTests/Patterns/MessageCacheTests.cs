@@ -29,14 +29,10 @@ namespace UnitTests.Cache
             replyFormatName = Queues.TryCreate(ReplyPath, QueueTransactional.None);
             replyAdminFormatName = Queues.TryCreate(ReplyAdminPath, QueueTransactional.None);
 
-            using (var q = new QueueReader(cacheInputFormatName))
-                q.Purge();
-            using (var q = new QueueReader(cacheAdminFormatName))
-                q.Purge();
-            using (var q = new QueueReader(replyFormatName))
-                q.Purge();
-            using (var q = new QueueReader(replyAdminFormatName))
-                q.Purge();
+            Queues.Purge(cacheInputFormatName);
+            Queues.Purge(cacheAdminFormatName);
+            Queues.Purge(replyFormatName);
+            Queues.Purge(replyAdminFormatName);
 
             postman = new Postman(replyAdminFormatName);
             postman.StartAsync().Wait();

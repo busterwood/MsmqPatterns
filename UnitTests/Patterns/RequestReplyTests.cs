@@ -25,12 +25,9 @@ namespace UnitTests
             replyQueueFormatName = Queues.TryCreate(replyQueuePath, QueueTransactional.None);
             adminQueueFormatName = Queues.TryCreate(adminQueuePath, QueueTransactional.None);
 
-            using (var q = new QueueReader(requestQueueFormatName))
-                q.Purge();
-            using (var q = new QueueReader(replyQueueFormatName))
-                q.Purge();
-            using (var q = new QueueReader(adminQueueFormatName))
-                q.Purge();
+            Queues.Purge(requestQueueFormatName);;
+            Queues.Purge(replyQueueFormatName);;
+            Queues.Purge(adminQueueFormatName);;
 
             postman = new Postman(adminQueueFormatName);
             postman.StartAsync();

@@ -215,6 +215,13 @@ namespace BusterWood.Msmq
 
             return new QueueInformation { FormatName = formatName, Label = label };
         }
+
+        /// <summary>Returns the transactional property of the queue</summary>
+        public static void Purge(string formatName)
+        {
+            using (var q = new QueueReader(formatName))
+                q.Purge();
+        }
     }
 
     public class QueueInformation
