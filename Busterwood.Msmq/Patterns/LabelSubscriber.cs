@@ -8,7 +8,7 @@ namespace BusterWood.Msmq.Patterns
     /// Receives all messages from an input queue and invokes callback added via the <see cref="Subscribe(string, Action{Message})"/> method.
     /// Only works for non-transactional queues, really intended for use with multicast queues.
     /// </summary>
-    public class QueueDispatcher : IProcessor
+    public class LabelSubscriber : IProcessor
     {
         LabelSubscription _subscriptions;
         QueueReader _input;
@@ -38,7 +38,7 @@ namespace BusterWood.Msmq.Patterns
             set { _subscriptions.AllDecendents = value; }
         }
 
-        public QueueDispatcher(string inputQueueFormatName)
+        public LabelSubscriber(string inputQueueFormatName)
         {
             Contract.Requires(!string.IsNullOrEmpty(inputQueueFormatName));
             Contract.Requires(Queues.IsTransactional(inputQueueFormatName) == QueueTransactional.None);

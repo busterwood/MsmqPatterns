@@ -11,14 +11,14 @@ using System.Threading.Tasks;
 namespace UnitTests
 {
     [TestFixture]
-    public class QueueDispatcherTests
+    public class LabelSubscriberTests
     {
-        readonly string inputQueuePath = $".\\private$\\{nameof(QueueDispatcherTests)}";
-        readonly string adminQueuePath = $".\\private$\\{nameof(QueueDispatcherTests)}.Admin";
+        readonly string inputQueuePath = $".\\private$\\{nameof(LabelSubscriberTests)}";
+        readonly string adminQueuePath = $".\\private$\\{nameof(LabelSubscriberTests)}.Admin";
         string inputQueueFormatName;
         string adminQueueFormatName;
         QueueWriter inputWriter;
-        QueueDispatcher dispatcher;
+        LabelSubscriber dispatcher;
         Postman postman;
 
         [SetUp]
@@ -34,7 +34,7 @@ namespace UnitTests
 
             inputWriter = new QueueWriter(inputQueueFormatName);
 
-            dispatcher = new QueueDispatcher(inputQueueFormatName);
+            dispatcher = new LabelSubscriber(inputQueueFormatName);
             dispatcher.StartAsync();
 
             postman = new Postman(adminQueueFormatName);

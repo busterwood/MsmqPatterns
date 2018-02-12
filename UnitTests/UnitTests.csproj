@@ -42,7 +42,7 @@
     <Compile Include="Patterns\MessageCacheTests.cs" />
     <Compile Include="Patterns\LabelSubscriptionTests.cs" />
     <Compile Include="Patterns\PostmanTests.cs" />
-    <Compile Include="Patterns\QueueDispatcherTests.cs" />
+    <Compile Include="Patterns\LabelSubscriberTests.cs" />
     <Compile Include="SubQueueReaderTests.cs" />
     <Compile Include="Patterns\SenderTests.cs" />
     <Compile Include="Patterns\TransactionalRouterTests.cs" />
