@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
+using System.Linq;
 
 namespace BusterWood.Msmq.Patterns
 {
@@ -11,6 +12,7 @@ namespace BusterWood.Msmq.Patterns
     /// </summary>
     class FormatNameSubscriptions
     {
+        readonly Dictionary<string, HashSet<string>> _subscriptionsByFormatName = new Dictionary<string, HashSet<string>>();
         readonly Node _root = new Node("");
 
         /// <summary>The path separator to use, defaults to dot (.)</summary>
@@ -28,7 +30,7 @@ namespace BusterWood.Msmq.Patterns
         /// You can subscribe with <see cref="AllDecendents"/> , e.g. "hello.**" will match a message with label "hello.world.1.2.3".
         /// </summary>
         /// <returns>A handle to that unsubscribes when it is Disposed</returns>
-        public void Subscribe(string label, string formatName)
+        public void Add(string label, string formatName)
         {
             Contract.Requires(!string.IsNullOrEmpty(label));
             Contract.Requires(formatName != null);
@@ -62,11 +64,17 @@ namespace BusterWood.Msmq.Patterns
                 }
 
                 node.Subscriptions.Add(formatName);
+
+                // add to format name specific set of subscriptions
+                HashSet<string> subs;
+                if (!_subscriptionsByFormatName.TryGetValue(formatName, out subs))
+                    subs = new HashSet<string>();
+                subs.Add(label);
             }
         }
        
-        /// <summary>Returns the subscriber callbacks for a message label</summary>
-        public HashSet<string> Subscribers(string label)
+        /// <summary>Returns the response queue format names that are subscribed to a label</summary>
+        public HashSet<string> GetSubscribers(string label)
         {
             Contract.Requires(!string.IsNullOrEmpty(label));
 
@@ -107,50 +115,76 @@ namespace BusterWood.Msmq.Patterns
         }
 
         /// <summary>Remove subscriptions for a label and formatName</summary>
-        public void Unsubscribe(string label, string formatName)
+        public void Remove(string label, string formatName)
         {
             Contract.Requires(!string.IsNullOrEmpty(label));
 
             var parts = label.Split(Separator);
             lock (_root)
             {
-                var node = _root;
-                for (int i = 0; i < parts.Length; i++)
-                {
-                    Node child;
-                    if (node.ChildNodes == null)
-                        return;
-                    if (!node.ChildNodes.TryGetValue(parts[i], out child))
-                        return;
-                    node = child;
-                }
+                HashSet<string> subs;
+                if (!_subscriptionsByFormatName.TryGetValue(formatName, out subs) || !subs.Remove(label))
+                    return;
 
-                Contract.Assume(node != null);
-                node.Subscriptions.Remove(formatName);
+                RemoveCore(parts, formatName);
             }
         }
 
-
-        internal void UnsubscribeAll(string responseQueue)
+        public void RemoveCore(string[] labelParts, string formatName)
         {
-            UnsubscribeAll(_root, responseQueue);
+            var node = _root;
+            for (int i = 0; i < labelParts.Length; i++)
+            {
+                Node child;
+                if (node.ChildNodes == null)
+                    return;
+                if (!node.ChildNodes.TryGetValue(labelParts[i], out child))
+                    return;
+                node = child;
+            }
+
+            Contract.Assume(node != null);
+            node.Subscriptions.Remove(formatName);
         }
 
-        void UnsubscribeAll(Node node, string responseQueue)
+        /// <summary>Removes all subscriptions for a format name</summary>
+        public void Clear(string formatName)
         {
-            node.Subscriptions.Remove(responseQueue);
-            if (node.ChildNodes == null)
-                return;
-            foreach (var n in node.ChildNodes.Values)
+            lock(_root)
             {
-                UnsubscribeAll(n, responseQueue);
+                HashSet<string> labels;
+                if (!_subscriptionsByFormatName.TryGetValue(formatName, out labels))
+                    return;
+
+                foreach (var label in labels)
+                {
+                    var parts = label.Split(Separator);
+                    RemoveCore(parts, formatName);
+                }
+            }
+        }
+
+        /// <summary>Gets the labels that a format name is currently subscribed too</summary>
+        public HashSet<string> GetSubscriptions(string formatName)
+        {
+            lock (_root)
+            {
+                HashSet<string> subs;
+                if (!_subscriptionsByFormatName.TryGetValue(formatName, out subs))
+                    return new HashSet<string>();
+                return new HashSet<string>(subs);
             }
         }
 
         class Node 
         {
+            /// <summary>The name of this node</summary>
             public readonly string Name;
+
+            /// <summary>The child nodes, if any (can be null)</summary>
             public Dictionary<string, Node> ChildNodes;
+
+            /// <summary>The format names of the response queues that are subscribed to this node</summary>
             public HashSet<string> Subscriptions = new HashSet<string>();
 
             public Node(string name)

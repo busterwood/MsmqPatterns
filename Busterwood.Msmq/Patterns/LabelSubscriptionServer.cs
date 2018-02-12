@@ -1,16 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace BusterWood.Msmq.Patterns
 {
     /// <summary>
-    /// A proxy for multicast queues with label based subscriptions.
+    /// A server based proxy for multicast queues with label based subscriptions.
     /// Often you multicast between a few servers, but don't want to multicast to hundreds of clients in case one slow client affects every clients multicast traffic.
     /// This proxy would live on a server, and clients subscribe and unsubscribe from multicast traffic by sending messages with the label and app-specific set.
     /// </summary>
-    public class LabelSubscriberServer : IProcessor
+    public class LabelSubscriptionServer : IProcessor
     {
         readonly QueueCache<QueueWriter> _responseQueueCache;
         QueueReader _clientRequestReader;
@@ -52,7 +53,7 @@ namespace BusterWood.Msmq.Patterns
         /// <summary>Creates a new proxy</summary>
         /// <param name="clientRequestQueueFormatName">The queue to listen for subscribe and unsubscribe requests</param>
         /// <param name="multicastInputQueueFormatName">The queue contains the messages we want to subscribe to</param>
-        public LabelSubscriberServer(string clientRequestQueueFormatName, string multicastInputQueueFormatName)
+        public LabelSubscriptionServer(string clientRequestQueueFormatName, string multicastInputQueueFormatName)
         {
             Contract.Requires(clientRequestQueueFormatName != null);
             Contract.Requires(multicastInputQueueFormatName != null);
@@ -110,7 +111,7 @@ namespace BusterWood.Msmq.Patterns
                     // we could avoid the lock by using an immutable collection
                     HashSet<string> subscribers;
                     lock (_subscriptions)
-                        subscribers = _subscriptions.Subscribers(msg.Label);
+                        subscribers = _subscriptions.GetSubscribers(msg.Label);
 
                     if (subscribers.Count <= 0)
                         continue;
@@ -137,10 +138,16 @@ namespace BusterWood.Msmq.Patterns
         }
 
         /// <summary>Respond to requests to subscribe or unsubscribe</summary>
+        /// <remarks>
+        /// Add Subscription: label: cache.tag, AppSpecific: Add, ResponseQueue: subscriber identity, Body: UTF-8 subjects, one per line
+        /// Set Subscriptions: label: cache.tag, AppSpecific: Set, ResponseQueue: subscriber identity, Body: UTF-8 subjects, one per line
+        /// Remove Subscriptions: label: cache.tag, AppSpecific: Remove, ResponseQueue: subscriber identity, Body: UTF-8 subjects, one per line
+        /// Clear Subscriptions: label: cache.tag, AppSpecific: Clear, ResponseQueue: subscriber identity, Body: UTF-8 subjects, one per line
+        /// </remarks>
         async Task SubscriptionLoop()
         {
             await Task.Yield();
-            Properties props = Properties.AppSpecific | Properties.Label | Properties.ResponseQueue;
+            Properties props = Properties.AppSpecific | Properties.Label | Properties.ResponseQueue | Properties.Body;
             try
             {
                 for (;;)
@@ -151,19 +158,55 @@ namespace BusterWood.Msmq.Patterns
                         Console.Error.WriteLine("Request with no response queue, ignoring: " + msg.Label);
                         continue;
                     }
-                    switch ((PubSubProxyAction)msg.AppSpecific)
+                    var labels = msg.BodyUTF8().Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                    switch ((PubSubAction)msg.AppSpecific)
                     {
-                        case PubSubProxyAction.Subscribe:
-                            lock(_subscriptions)
-                                _subscriptions.Subscribe(msg.Label, msg.ResponseQueue);
-                            break;
-                        case PubSubProxyAction.Unsubscribe:
+                        case PubSubAction.Add:
                             lock (_subscriptions)
-                                _subscriptions.Unsubscribe(msg.Label, msg.ResponseQueue);
+                            {
+                                foreach (var l in labels)
+                                    _subscriptions.Add(l, msg.ResponseQueue);//TODO: only tag
+                            }
                             break;
-                        case PubSubProxyAction.UnsubscribeAll:
+                        case PubSubAction.Remove:
                             lock (_subscriptions)
-                                _subscriptions.UnsubscribeAll(msg.ResponseQueue);
+                            {
+                                foreach (var l in labels)
+                                    _subscriptions.Remove(l, msg.ResponseQueue); //TODO: only tag
+                            }
+                            break;
+                        case PubSubAction.Set:
+                            var targetSubs = new HashSet<string>(labels);
+                            lock (_subscriptions)
+                            {
+                                var currentSubs = _subscriptions.GetSubscriptions(msg.ResponseQueue);  //TODO: only tag
+
+                                foreach (var l in targetSubs.Where(l => !currentSubs.Contains(l)))
+                                {
+                                    _subscriptions.Add(l, msg.ResponseQueue); //TODO: only tag
+                                }
+                                foreach (var l in currentSubs.Where(l => !targetSubs.Contains(l)))
+                                {
+                                    _subscriptions.Remove(l, msg.ResponseQueue); //TODO: only tag
+                                }
+                            }
+                            break;
+                        case PubSubAction.Clear:
+                            lock (_subscriptions)
+                            {
+                                _subscriptions.Clear(msg.ResponseQueue);  //TODO: only tag
+                            }
+                            break;
+                        case PubSubAction.List:
+                            HashSet<string> current;
+                            lock (_subscriptions)
+                            {
+                                current = _subscriptions.GetSubscriptions(msg.ResponseQueue);  //TODO: only tag
+                            }
+                            var reply = new Message { AdministrationQueue = _adminQueueFormatName, Label = "cache.subscriptions", CorrelationId = msg.Id };
+                            reply.BodyUTF8(string.Join(Environment.NewLine, current));
+                            var q = _responseQueueCache.Open(msg.ResponseQueue, QueueAccessMode.Send);
+                            q.Write(reply);
                             break;
                         default:
                             Console.Error.WriteLine($"Request with invalid {nameof(msg.AppSpecific)} {msg.AppSpecific}, ignoring request for '{msg.Label}' for '{msg.ResponseQueue}'");
@@ -230,11 +273,12 @@ namespace BusterWood.Msmq.Patterns
     }
 
     /// <summary>Set the request <see cref="Message.AppSpecific"/> to this value</summary>
-    public enum PubSubProxyAction
+    public enum PubSubAction
     {
-        Subscribe = 0,
-        Unsubscribe = 1,
-        //List = 5,
-        UnsubscribeAll = 9,
+        Add = 0,
+        Remove = 1,
+        Set = 3,
+        List = 5,
+        Clear = 9,
     }
 }
