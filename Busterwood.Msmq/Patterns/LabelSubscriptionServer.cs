@@ -61,7 +61,7 @@ namespace BusterWood.Msmq.Patterns
             MulticastInputQueueFormatName = multicastInputQueueFormatName;
             _subscriptions = new FormatNameSubscriptions();
             _responseQueueCache = new QueueCache<QueueWriter>((fn, mode, share) => new QueueWriter(fn));
-            _adminQueueFormatName = Queues.NewTempQueuePath();
+            _adminQueueFormatName = Queues.TryCreate(Queues.NewTempQueuePath(), QueueTransactional.None);
         }
 
         public void Dispose()
@@ -87,15 +87,17 @@ namespace BusterWood.Msmq.Patterns
             return Task.FromResult(_subscriptionTask);
         }
 
-        public Task StopAsync()
+        public async Task StopAsync()
         {
             if (_clientRequestReader == null || _clientRequestReader.IsClosed)
-                return Task.FromResult(true); // not started
+                return;
 
             _clientRequestReader.Dispose();
             _inputReader.Dispose();
             _adminReader.Dispose();
-            return Task.WhenAll(_subscriptionTask, _dispatcherTask, _adminTask);
+            await Task.WhenAll(_subscriptionTask, _dispatcherTask, _adminTask);
+
+            Queues.TryDelete(_adminQueueFormatName);
         }
 
         /// <summary>Read messages from the input queue and forward to subscribers</summary>
@@ -152,7 +154,7 @@ namespace BusterWood.Msmq.Patterns
                     var msg = _clientRequestReader.Read(props, TimeSpan.Zero) ?? await _clientRequestReader.ReadAsync(props);
                     var tag = msg.Label;
                     string responseQueue = msg.ResponseQueue;
-                    var labels = msg.BodyUTF8().Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                    var labels = msg.BodyUTF8()?.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
 
                     if (responseQueue.Length == 0)
                     {

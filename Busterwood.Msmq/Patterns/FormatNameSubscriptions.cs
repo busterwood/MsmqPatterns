@@ -70,7 +70,10 @@ namespace BusterWood.Msmq.Patterns
                 // add to format name specific set of subscriptions
                 HashSet<string> subs;
                 if (!_subscriptionsByKey.TryGetValue(key, out subs))
+                {
                     subs = new HashSet<string>();
+                    _subscriptionsByKey.Add(key, subs);
+                }
                 subs.Add(label);
             }
         }
